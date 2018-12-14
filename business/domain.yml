@@ -1,0 +1,32 @@
+intents:
+  - greet
+  - goodbye
+  - mood_affirm
+  - mood_deny
+  - mood_great
+  - mood_unhappy
+
+actions:
+- utter_greet
+- utter_cheer_up
+- utter_did_that_help
+- utter_happy
+- utter_goodbye
+
+templates:
+  utter_greet:
+  - text: "您好，星网小智为您服务，请问有什么需要呢?"
+
+  utter_cheer_up:
+  - text: "人生苦短..."
+    image: "https://i.imgur.com/nGF1K8f.jpg"
+
+  utter_did_that_help:
+  - text: "你觉得呢?"
+
+  utter_happy:
+  - text: "你开心就好!"
+
+  utter_goodbye:
+  - text: "再见"
+
