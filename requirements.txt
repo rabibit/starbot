@@ -78,7 +78,7 @@ requests-toolbelt==0.8.0
 rocketchat-API==0.6.24
 ruamel.yaml==0.15.81
 s3transfer==0.1.13
-scikit-learn==0.20.1
+scikit-learn==0.19
 scipy==1.1.0
 simplejson==3.16.0
 six==1.12.0

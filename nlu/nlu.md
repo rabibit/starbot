@@ -1,50 +1,54 @@
 ## intent:greet
-- hey
+- 你好
 - hello
 - hi
-- good morning
-- good evening
-- hey there
+- 嘿
+- 哈喽
+- 哈罗
 
 ## intent:goodbye
 - bye
 - goodbye
-- see you around
-- see you later
+- 88
+- 再见
+- 晚安
+- 拜拜
+- 再会
+- 慢走
+- 明天见
+- 一会儿再聊
 
 ## intent:mood_affirm
-- yes
-- indeed
-- of course
-- that sounds good
-- correct
+- 是的
+- 对
+- 可以
+- 可以的
+- 没错
+- 好吧
+- 好
+- 行
+- 没问题
+- 就这样吧
+
 
 ## intent:mood_deny
-- no
-- never
-- I don't think so
-- don't like that
-- no way
-- not really
+- 不
+- 不行
+- 不对
+- 不要
+- 不不不
+- 不要这样
+- no 
 
 ## intent:mood_great
-- perfect
-- very good
-- great
-- amazing
-- wonderful
-- I am feeling very good
-- I am great
-- I'm good
+- 完美
+- 不错
+- 漂亮
+- 太好了
+- 优秀
+- 顶你
+- 太棒了
+- 👍
+- 牛逼
+- 膜拜
 
-## intent:mood_unhappy
-- sad
-- very sad
-- unhappy
-- bad
-- very bad
-- awful
-- terrible
-- not very good
-- extremely sad
-- so sad
