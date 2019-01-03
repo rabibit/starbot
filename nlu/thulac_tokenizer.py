@@ -19,6 +19,13 @@ class ThulacTokenizer(Tokenizer, Component):
 
     language_list = ["zh"]
 
+    @property
+    def thulac(self):
+        if not hasattr(self, '_thulac'):
+            import thulac
+            self._thulac = thulac.thulac()
+        return self._thulac
+
     @classmethod
     def required_packages(cls):
         # type: () -> List[Text]
@@ -37,13 +44,10 @@ class ThulacTokenizer(Tokenizer, Component):
 
     def tokenize(self, text):
         # type: (Doc) -> List[Token]
-        import thulac
-
-        thulac = thulac.thulac()
         tokens = []
         start = 0
 
-        for tk, _ in thulac.cut(text):
+        for tk, _ in self.thulac.cut(text):
             tokens.append(Token(tk, start))
             start += len(tk)
 
