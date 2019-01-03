@@ -5,7 +5,7 @@ path: "models"
 pipeline:
 - name: "nlp_mitie"
   model: "total_word_feature_extractor.dat"
-- name: "tokenizer_jieba"
+- name: "tokenizer_thulac"
 - name: "ner_mitie"
 - name: "ner_synonyms"
 - name: "intent_entity_featurizer_regex"
