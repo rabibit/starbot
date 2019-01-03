@@ -4,14 +4,15 @@
 from thulac_tokenizer import ThulacTokenizer
 
 from rasa_nlu.registry import registered_components
-from rasa_core import run
 
 registered_components[ThulacTokenizer.name] = ThulacTokenizer
 
 from rasa_nlu.train import do_train
-from rasa_nlu import config
+from rasa_nlu import config, utils
+import logging
 
 if __name__ == "__main__":
+    utils.configure_colored_logging(logging.INFO)
     do_train(
         cfg=config.load('nlu_config.yml'),
         data='nlu.md',
