@@ -1,5 +1,12 @@
 import logging
 import os
+import sys
+
+sys.path.append(os.path.abspath('nlu'))
+
+from thulac_tokenizer import ThulacTokenizer
+from rasa_nlu.registry import registered_components
+registered_components[ThulacTokenizer.name] = ThulacTokenizer
 
 from rasa_core.broker import PikaProducer
 from rasa_core.interpreter import (
