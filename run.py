@@ -6,11 +6,11 @@ sys.path.append(os.path.abspath('nlu'))
 
 from thulac_tokenizer import ThulacTokenizer
 from rasa_nlu.registry import registered_components
+
 registered_components[ThulacTokenizer.name] = ThulacTokenizer
 
 from rasa_core.broker import PikaProducer
-from rasa_core.interpreter import (
-    NaturalLanguageInterpreter)
+from rasa_core.interpreter import NaturalLanguageInterpreter
 from rasa_core.tracker_store import TrackerStore
 from rasa_core.utils import AvailableEndpoints
 from rasa_core.run import load_agent, serve_application
@@ -52,4 +52,3 @@ if __name__ == '__main__':
                         endpoints=_endpoints)
 
     serve_application(_agent, connector, port, credentials)
-
