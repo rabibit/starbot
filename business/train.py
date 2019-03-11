@@ -6,4 +6,7 @@ if __name__ == "__main__":
     train_dialogue_model(domain_file="domain.yml",
                          stories_file="stories.md",
                          output_path="models",
-                         policy_config="policy_config.yml")
+                         policy_config="policy_config.yml",
+                         kwargs={
+                             "debug_plots": True
+                         })
