@@ -9,7 +9,7 @@ import extpipelines
 from rasa_core.broker import PikaProducer
 from rasa_core.interpreter import NaturalLanguageInterpreter
 from rasa_core.tracker_store import TrackerStore
-from rasa_core.utils import AvailableEndpoints
+from rasa_core import utils as rsutils
 from rasa_core.run import load_agent, serve_application
 
 logger = logging.getLogger()  # get the root logger
@@ -21,6 +21,8 @@ def at_root(p):
 
 if __name__ == '__main__':
     # Running as standalone python application
+    rsutils.configure_colored_logging(logging.DEBUG)
+
     logger.info("Rasa process starting")
 
     core = at_root('business/models')
@@ -34,7 +36,7 @@ if __name__ == '__main__':
     port = 5002
     connector = None
 
-    _endpoints = AvailableEndpoints.read_endpoints(endpoints)
+    _endpoints = rsutils.AvailableEndpoints.read_endpoints(endpoints)
 
     _interpreter = NaturalLanguageInterpreter.create(nlu,
                                                      _endpoints.nlu)
