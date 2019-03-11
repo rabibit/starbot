@@ -3,50 +3,52 @@ intents:
   - bye
   - ok
   - "no"
-  - great
-  - request_music
-  - request_ip
-  - lookup_info
-  - call
+  - book_room
+  - confirm
+  - info
+
+entities:
+  - room_type
+  - guest_name
+  - guest_phone_number
+  - checkin_time
 
 actions:
 - utter_greet
 - utter_bye
 - utter_ok
 - utter_no
-- utter_great
-- utter_give_ip
-- lookup_info
-- utter_call
-- play_music
 - utter_learning
+- book_room
+- utter_ask_room_type
+- utter_ask_guest_name
+- utter_ask_guest_phone_number
+- utter_ask_checkin_time
+- ask_confirm
 
 slots:
-  iptype:
-    type: categorical
-    initial_value: "临时"
-    values:
-      - "临时"
-      - "固定"
-
-  music_name:
+  requested_slot:
     type: text
 
-  music_artist:
+  room_type:
     type: text
 
-  lookup_name:
+  guest_name:
     type: text
 
-  lookup_item:
+  guest_phone_number:
     type: text
 
-  call_name:
+  checkin_time:
     type: text
+
+  confirmed:
+    type: bool
+
 
 templates:
   utter_greet:
-  - text: "您好，星网小智为您服务，请问有什么需要呢?"
+  - text: "您好，这里是未来酒店，请问有什么需要呢?"
 
   utter_bye:
   - text: "拜拜"
@@ -60,11 +62,18 @@ templates:
   utter_great:
   - text: "great"
 
-  utter_give_ip:
-  - text: "您申请的{iptype}IP是:192.168.1.10\n注意，临时IP使用时效为1天，请再到期前续期或从设备上删除"
-
-  utter_call:
-  - text: "正在呼叫{call_name}"
-
   utter_learning:
   - text: "暂时不明白你的意思，我正在努力学习更多的知识"
+
+  utter_ask_room_type:
+  - text: "请问您需要哪种房间？我们有标准间和大床房"
+
+  utter_ask_guest_name:
+  - text: "好的，请问怎么称呼您？"
+
+  utter_ask_guest_phone_number:
+  - text: "您的联系电话?"
+
+  utter_ask_checkin_time:
+  - text: "您什么时候入住呢?"
+
