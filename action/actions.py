@@ -9,20 +9,9 @@ if typing.TYPE_CHECKING:
     from rasa_core_sdk.executor import CollectingDispatcher, Tracker
 
 
-class BookRoomAskConfirm(Action):
+class RoomForm(FormAction):
     def name(self):
-        # type: () -> Text
-        return "ask_confirm"
-
-    def run(self, dispatcher, tracker, domain):
-        # type: (CollectingDispatcher, Tracker, Dict[Text, Any]) -> List[Dict[Text, Any]]
-
-        return []
-
-
-class BookRoom(FormAction):
-    def name(self):
-        return "book_room"
+        return "room_form"
 
     @staticmethod
     def required_slots(tracker):
@@ -33,17 +22,35 @@ class BookRoom(FormAction):
         return [AllSlotsReset()]
 
     def slot_mappings(self):
-        return {'confirmed': [
-            self.from_intent(True, intent='ok'),
-            self.from_intent(True, intent='confirm')
-        ]}
+        return {
+            'room_type': [
+                self.from_entity("room_type"),
+                self.from_text(),
+            ],
+            'guest_name': [
+                self.from_entity("guest_name"),
+                self.from_text(),
+            ],
+            'guest_phone_number': [
+                self.from_entity("guest_phone_number"),
+                self.from_text(),
+            ],
+            'checkin_time': [
+                self.from_entity("checkin_time"),
+                self.from_text(),
+            ],
+            'confirmed': [
+                self.from_intent(True, intent='ok'),
+                self.from_intent(True, intent='confirm')
+            ]
+        }
 
     def request_next_slot(self,
                           dispatcher,  # type: CollectingDispatcher
                           tracker,  # type: Tracker
                           domain  # type: Dict[Text, Any]
                           ):
-        events = super(BookRoom, self).request_next_slot(dispatcher, tracker, domain)
+        events = super(RoomForm, self).request_next_slot(dispatcher, tracker, domain)
         if events is not None and len(events) > 0:
             evt = events[0]
             if evt['event'] == 'slot' and evt['name'] == 'requested_slot' and evt['value'] == 'confirmed':
