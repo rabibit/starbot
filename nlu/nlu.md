@@ -41,8 +41,14 @@
 - 不要
 - 不不不
 - 不要这样
-- no 
+- no
 
+## intent:thankyou
+- 谢谢
+- 好的谢谢
+- 谢了
+- 多谢
+- 非常感谢
 
 ## intent:book_room
 - 我想订一个[房间](room_type)
