@@ -15,7 +15,7 @@ class RoomForm(FormAction):
 
     @staticmethod
     def required_slots(tracker):
-        return ['room_type', 'guest_name', 'guest_phone_number', 'checkin_time', 'confirmed']
+        return ['room_type', 'checkin_time', 'guest_name', 'guest_phone_number', 'confirmed']
 
     def submit(self, dispatcher, tracker, domain):
         dispatcher.utter_message("完成")
