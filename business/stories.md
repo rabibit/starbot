@@ -6,7 +6,7 @@
 * bye
   - utter_bye
 
- ## happy path
+## happy path
 * greet
     - utter_greet
 * book_room
@@ -16,6 +16,15 @@
     - utter_done
 * thankyou
     - utter_noworries
+
+## happy path 1
+* greet
+    - utter_greet
+* book_room
+    - room_form
+    - form{"name": "room_form"}
+    - form{"name": null}
+    - utter_done
 
 ## unhappy path
 * greet
