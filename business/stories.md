@@ -26,6 +26,13 @@
     - form{"name": null}
     - utter_done
 
+## happy path 2
+* book_room
+    - room_form
+    - form{"name": "room_form"}
+    - form{"name": null}
+    - utter_done
+
 ## unhappy path
 * greet
     - utter_greet
