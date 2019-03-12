@@ -67,3 +67,15 @@
 * thankyou
     - utter_noworries
 
+## consultation path
+* consultation
+    - utter_introduction
+    
+## room_available path
+* room_available
+    - utter_room_idle
+    
+## room_price path
+* room_price
+    - utter_room_price
+
