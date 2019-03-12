@@ -101,3 +101,4 @@ websocket-client==0.54.0
 Werkzeug==0.14.1
 zope.interface==4.6.0
 thulac==0.2.0
+mitie==0.7.36
