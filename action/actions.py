@@ -61,6 +61,7 @@ class RoomForm(FormAction):
                     tracker.get_slot("room_type"),
                     tracker.get_slot("checkin_time"),
                 ))
+                dispatcher.utter_message("您看有问题吗？")
         return events
 
 
