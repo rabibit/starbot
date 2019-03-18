@@ -43,6 +43,7 @@ actions:
   - utter_room_idle
   - utter_room_price
   - utter_enha
+  - utter_thankyou
 
 slots:
   requested_slot:
@@ -116,7 +117,11 @@ templates:
     - text: "目前房间充裕，您可以预订未来任何时间的房间"
 
   utter_room_price:
-    - text: "我们设有标准间100元，商务标间300元，豪华包房500元。请问先生您需要什么房间呢？"
+    - text: "我们设有标准间100元，商务标间300元，豪华包房500元。"
+    - text: "请问您需要什么房间呢？"
 
   utter_enha:
     - text: "：）"
+
+  utter_thankyou:
+    - text: "不客气"
