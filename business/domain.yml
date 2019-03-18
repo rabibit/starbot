@@ -12,6 +12,9 @@ intents:
   - deny
   - stop
   - thankyou
+  - consultation
+  - room_available
+  - room_price
 
 forms:
   - room_form
@@ -35,6 +38,9 @@ actions:
   - utter_chitchat
   - utter_done
   - utter_noworries
+  - utter_introduction
+  - utter_room_idle
+  - utter_room_price
 
 slots:
   requested_slot:
@@ -101,3 +107,11 @@ templates:
   utter_done:
     - text: "您的房间已预留，请问还有其他需要么？"
 
+  utter_introduction:
+    - text: "我们酒店是一家集客房，餐饮，足浴为一体的商务酒店，在成都地区是最具中国文化特色的精品酒店风格，它以古朴，典雅，简约，时尚，温馨为主，汇集中国传统文化精华，将为您提供满意周到的精致服务。"
+
+  utter_room_idle:
+    - text: "目前房间充裕，您可以预订未来任何时间的房间"
+
+  utter_room_price:
+    - text: "我们设有标准间100元，商务标间300元，豪华包房500元。请问先生您需要什么房间呢？"
