@@ -45,9 +45,12 @@ class StarMessageProcessor(MessageProcessor):
 
     @staticmethod
     def preprocessor(message, tracker):
+        def is_question(message):
+            return '?' in message.text or '？' in message.text
+
         if tracker:
             q = tracker.latest_bot_utterance
-            if isinstance(q, BotUttered) and q.text:
+            if isinstance(q, BotUttered) and q.text and is_question(q):
                 message.text = q.text + message.text
         return message
 
