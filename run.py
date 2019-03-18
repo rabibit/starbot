@@ -10,13 +10,74 @@ from rasa_core.broker import PikaProducer
 from rasa_core.interpreter import NaturalLanguageInterpreter
 from rasa_core.tracker_store import TrackerStore
 from rasa_core import utils as rsutils
-from rasa_core.run import load_agent, serve_application
+from rasa_core.run import serve_application
+from rasa_core.agent import Agent
+from rasa_core.processor import MessageProcessor
+from rasa_core.events import BotUttered
 
 logger = logging.getLogger()  # get the root logger
 
 
 def at_root(p):
     return os.path.abspath(p)
+
+
+class StarMessageProcessor(MessageProcessor):
+    def log_message(self, message):
+        # type: (UserMessage) -> Optional[DialogueStateTracker]
+
+        # we have a Tracker instance for each user
+        # which maintains conversation state
+        tracker = self._get_tracker(message.sender_id)
+
+        # preprocess message if necessary
+        if self.message_preprocessor is not None:
+            message = self.message_preprocessor(message, tracker)
+
+        if tracker:
+            self._handle_message_with_tracker(message, tracker)
+            # save tracker state to continue conversation from this state
+            self._save_tracker(tracker)
+        else:
+            logger.warning("Failed to retrieve or create tracker for sender "
+                           "'{}'.".format(message.sender_id))
+        return tracker
+
+    @staticmethod
+    def preprocessor(message, tracker):
+        if tracker:
+            q = tracker.latest_bot_utterance
+            if isinstance(q, BotUttered) and q.text:
+                message.text = q.text + message.text
+        return message
+
+
+class StarAgent(Agent):
+    def create_processor(self, preprocessor=None):
+        self._ensure_agent_is_ready()
+        mp = StarMessageProcessor(
+            self.interpreter,
+            self.policy_ensemble,
+            self.domain,
+            self.tracker_store,
+            self.nlg,
+            action_endpoint=self.action_endpoint,
+            message_preprocessor=preprocessor)
+        if preprocessor is None:
+            mp.message_preprocessor = mp.preprocessor
+        return mp
+
+
+def load_agent(core_model, interpreter, endpoints,
+               tracker_store=None):
+    if endpoints.model:
+        raise NotImplementedError
+    else:
+        return StarAgent.load(core_model,
+                              interpreter=interpreter,
+                              generator=endpoints.nlg,
+                              tracker_store=tracker_store,
+                              action_endpoint=endpoints.action)
 
 
 if __name__ == '__main__':
