@@ -15,6 +15,7 @@ intents:
   - consultation
   - room_available
   - room_price
+  - enha
 
 forms:
   - room_form
@@ -41,6 +42,7 @@ actions:
   - utter_introduction
   - utter_room_idle
   - utter_room_price
+  - utter_enha
 
 slots:
   requested_slot:
@@ -115,3 +117,6 @@ templates:
 
   utter_room_price:
     - text: "我们设有标准间100元，商务标间300元，豪华包房500元。请问先生您需要什么房间呢？"
+
+  utter_enha:
+    - text: "：）"
