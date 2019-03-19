@@ -31,8 +31,12 @@ class MDReader(MarkdownReader):
         line = line.strip()
         if line.startswith("@"):
             key, values = line.strip()[1:].split(":")
-            values = values.split('|')
-            self.entity_values[key.strip()].extend([v.strip() for v in values])
+            values = values.strip()
+            if values[:1] == "=":
+                self.entity_values[key.strip()] = self.entity_values[values[1:].strip()]
+            else:
+                values = values.split('|')
+                self.entity_values[key.strip()].extend([v.strip() for v in values])
             return
 
         if line.startswith("?"):

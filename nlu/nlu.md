@@ -142,6 +142,7 @@
 
 ## intent:confirm
 ? 您看有问题吗？
+? 对吗？
 
 - 对的
 - 对的没错
@@ -152,6 +153,17 @@
 - 对的ok
 - 对的yes
 - 对的好的
+
+
+## intent:change_info
+@wrong_time: =checkin_time
+@wrong_name: =guest_name
+
+? 您看有问题吗？
+? 对吗？
+
+- 不是[今天](wrong_time)，是[明天](checkin_time)
+- 不是[张三](wrong_name)，是[李四](guest_name)
 
 
 ## intent:consultation
