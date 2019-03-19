@@ -65,10 +65,14 @@ class MDWriter(MarkdownWriter):
         return '[{}]({})'.format(entity_text, entity_type)
 
 
-if __name__ == '__main__':
+def convert(infilename, outfilename):
     reader = MDReader()
-    data = reader.read("nlu.md")
-    MDWriter(reader.entity_values).dump('nlu-gen.md', data)
+    data = reader.read(infilename)
+    MDWriter(reader.entity_values).dump(outfilename, data)
+
+
+if __name__ == '__main__':
+    convert("nlu.md", "tmp-nlu.md")
 
 
 
