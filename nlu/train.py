@@ -9,7 +9,7 @@ import logging
 
 if __name__ == "__main__":
     utils.configure_colored_logging(logging.INFO)
-    preparemd.convert("nlu.md", "tmp-nlu.md")
+    preparemd.convert("nlu.md", "tmp-nlu.md", multi=1)
 
     do_train(
         cfg=config.load('nlu_config.yml'),
