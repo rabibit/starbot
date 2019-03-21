@@ -28,6 +28,9 @@
 
 
 ## intent:ok
+? 您看有问题吗？
+? 对吗？
+
 - 是的
 - 对
 - 可以
@@ -44,6 +47,9 @@
 
 
 ## intent:no
+? 您看有问题吗？
+? 对吗？
+
 - 不
 - 不行
 - 不对
@@ -166,6 +172,11 @@
 - 不是[张三](wrong_name)，是[李四](guest_name)
 - 名字不对，应该是[大锤](guest_name)
 - 时间错了，是[后天下午](guest_name)
+- 不是[今天](wrong_time)是[明天](checkin_time)
+- 不是[张三](wrong_name)是[李四](guest_name)
+- 不是叫[张三](wrong_name)，我叫[李四](guest_name)
+- 不是[张三](wrong_name)我叫[李四](guest_name)
+- 我不叫[张三](wrong_name)我叫[李四](guest_name)
 
 
 ## intent:consultation
