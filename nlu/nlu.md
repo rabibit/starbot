@@ -164,6 +164,8 @@
 
 - 不是[今天](wrong_time)，是[明天](checkin_time)
 - 不是[张三](wrong_name)，是[李四](guest_name)
+- 名字不对，应该是[大锤](guest_name)
+- 时间错了，是[后天下午](guest_name)
 
 
 ## intent:consultation
