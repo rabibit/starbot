@@ -55,7 +55,7 @@ class RoomForm(FormAction):
             evt = events[0]
             if evt['event'] == 'slot' and evt['name'] == 'requested_slot' and evt['value'] == 'confirmed':
                 dispatcher.messages.pop()
-                dispatcher.utter_message("确认一下您的信息, 姓名:{} 电话：{} 预订一间{}, {}入住".format(
+                dispatcher.utter_message("确认一下您的信息, 姓名:[{}] 电话：[{}] 预订一间[{}], [{}]入住".format(
                     tracker.get_slot("guest_name"),
                     tracker.get_slot("guest_phone_number"),
                     tracker.get_slot("room_type"),
