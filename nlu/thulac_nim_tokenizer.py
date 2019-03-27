@@ -50,5 +50,5 @@ class ThulacTokenizer(Tokenizer, Component):
     def thulac(self):
         if not hasattr(self, '_thulac'):
             import thulac_nim as thulac
-            self._thulac = thulac.Thulac()
+            self._thulac = thulac.Thulac(seg_only=True, prefer_short=True)
         return self._thulac
