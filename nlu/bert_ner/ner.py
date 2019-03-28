@@ -67,7 +67,7 @@ flags.DEFINE_integer("predict_batch_size", 8, "Total batch size for predict.")
 
 flags.DEFINE_float("learning_rate", 5e-5, "The initial learning rate for Adam.")
 
-flags.DEFINE_float("num_train_epochs", 3.0, "Total number of training epochs to perform.")
+flags.DEFINE_float("num_train_epochs", 10.0, "Total number of training epochs to perform.")
 
 
 
@@ -265,7 +265,7 @@ class BertExtractor(EntityExtractor):
             loss = tf.reduce_sum(per_example_loss)
             probabilities = tf.nn.softmax(logits, axis=-1)
             predict = tf.argmax(probabilities, axis=-1)
-            return loss, per_example_loss, logits, predict
+            return loss, per_example_loss, logits, predict, [output_weight, output_bias]
 
     def _model_fn_builder(self, bert_config, num_labels, init_checkpoint, learning_rate,
                          num_train_steps, num_warmup_steps, use_tpu,
@@ -281,7 +281,7 @@ class BertExtractor(EntityExtractor):
             # label_mask = features["label_mask"]
             is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
-            (total_loss, per_example_loss, logits, predicts) = self._create_model(
+            (total_loss, per_example_loss, logits, predicts, tune_vars) = self._create_model(
                 bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
                 num_labels, use_one_hot_embeddings)
             tvars = tf.trainable_variables()
@@ -306,7 +306,9 @@ class BertExtractor(EntityExtractor):
                     init_string = ", *INIT_FROM_CKPT*"
                 tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
                                 init_string)
+
             output_spec = None
+            tf.trainable_variables = lambda: tune_vars
             if mode == tf.estimator.ModeKeys.TRAIN:
                 train_op = optimization.create_optimizer(
                     total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
