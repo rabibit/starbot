@@ -87,7 +87,7 @@
 - 我想订一个[标间](room_type)
 - 帮我订一个[大床房](room_type)
 - 可以帮我订一间[大床房](room_type)吗
-- 我想订个[大床房](room_type), [今晚](checkin_time)入住
+- 我想订个[大床房](room_type),[今晚](checkin_time)入住
 - 我想预订个[大床房](room_type)
 - 我打算预订个[豪华套房](room_type)
 - [今天](checkin_time)入住,还有空房间吗
