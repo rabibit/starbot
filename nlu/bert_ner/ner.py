@@ -14,6 +14,9 @@ from .bert.tokenization import FullTokenizer
 from .bert import modeling
 from .bert import optimization
 import tensorflow as tf
+import os
+
+BERT_MODEL_FILE_NAME = "bert_model.pkl"
 
 flags = tf.flags
 
@@ -157,6 +160,8 @@ class BertExtractor(EntityExtractor):
             eval_batch_size=FLAGS.eval_batch_size,
             predict_batch_size=FLAGS.predict_batch_size)
 
+        self.ent_tagger = estimator
+
         if FLAGS.do_train:
             tf.logging.info("***** Running training *****")
             tf.logging.info("  Num examples = %d", len(train_examples))
@@ -167,7 +172,7 @@ class BertExtractor(EntityExtractor):
                 seq_length=FLAGS.max_seq_length,
                 is_training=True,
                 drop_remainder=True)
-            estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+            self.ent_tagger.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
     def _pad(self, lst, v):
         n = self.input_length - len(lst)
@@ -327,10 +332,28 @@ class BertExtractor(EntityExtractor):
 
     def process(self, message, **kwargs):
         # type: (Message, **Any) -> None
-        pass
+
+        # <class 'dict'>:
+        # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
+        # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
+        extracted = self.add_extractor_name(self._extract_entities(message))
+        message.set("entities", message.get("entities", []) + extracted,
+                    add_to_output=True)
 
     def persist(self, model_dir):
-        pass
+        # type: (Text) -> Optional[Dict[Text, Any]]
+        """Persist this model into the passed directory.
+
+        Returns the metadata necessary to load the model again."""
+
+        from sklearn.externals import joblib
+
+        if self.ent_tagger:
+            model_file_name = os.path.join(model_dir, BERT_MODEL_FILE_NAME)
+
+            joblib.dump(self.ent_tagger, model_file_name)
+
+        return {"classifier_file": BERT_MODEL_FILE_NAME}
 
     def load(cls,
              model_dir=None,  # type: Optional[Text]
@@ -338,4 +361,42 @@ class BertExtractor(EntityExtractor):
              cached_component=None,  # type: Optional[Component]
              **kwargs  # type: **Any
              ):
-        pass
+        # type: (...) -> CRFEntityExtractor
+        from sklearn.externals import joblib
+
+        meta = model_metadata.for_component(cls.name)
+        file_name = meta.get("classifier_file", BERT_MODEL_FILE_NAME)
+        model_file = os.path.join(model_dir, file_name)
+
+        if os.path.exists(model_file):
+            ent_tagger = joblib.load(model_file)
+            return cls(meta, ent_tagger)
+        else:
+            return cls(meta)
+
+    def _extract_entities(self, message):
+        # type: (Message) -> List[Dict[Text, Any]]
+        """Take a sentence and return entities in json format"""
+
+        self.vocab = FullTokenizer('./bert_ner/checkpoint/vocab.txt')  # todo
+        self.dataset = create_dataset(message.text)
+        predict_file = "predict.tf_record"  # todo
+        self._prepare_features(predict_file)
+        if self.ent_tagger is not None:
+            if FLAGS.use_tpu:
+                # Warning: According to tpu_estimator.py Prediction on TPU is an
+                # experimental feature and hence not supported here
+                raise ValueError("Prediction in TPU not supported")
+            predict_drop_remainder = True if FLAGS.use_tpu else False
+
+
+            predict_input_fn = self._file_based_input_fn_builder(
+                input_file=predict_file,
+                seq_length=FLAGS.max_seq_length,
+                is_training=False,
+                drop_remainder=predict_drop_remainder)
+
+            result = self.ent_tagger.predict(input_fn=predict_input_fn)
+            return result
+        else:
+            return []
