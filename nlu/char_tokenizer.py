@@ -13,8 +13,6 @@ from rasa_nlu.training_data import TrainingData
 
 
 class CharTokenizer(Tokenizer, Component):
-    name = "tokenizer_char"
-
     provides = ["tokens"]
 
     language_list = ["zh"]

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from rasa_nlu.training_data.formats.markdown import MarkdownReader, MarkdownWriter, Message
+from rasa_nlu.training_data.formats.markdown import MarkdownReader, MarkdownWriter
+from rasa_nlu.training_data import Message
 from collections import defaultdict
 
 

@@ -13,8 +13,6 @@ from rasa_nlu.training_data import TrainingData
 
 
 class ThulacTokenizer(Tokenizer, Component):
-    name = "tokenizer_thulac"
-
     provides = ["tokens"]
 
     language_list = ["zh"]

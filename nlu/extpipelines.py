@@ -11,7 +11,7 @@ def reg(comp):
 
 
 reg(thulac_tokenizer.ThulacTokenizer)
-reg(thulac_nim_tokenizer.ThulacTokenizer)
+reg(thulac_nim_tokenizer.NimThulacTokenizer)
 reg(char_tokenizer.CharTokenizer)
 reg(BertExtractor)
 

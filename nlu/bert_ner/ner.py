@@ -1,181 +1,202 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
+import os
+import tensorflow as tf
 
-from typing import Any, List
-
-from rasa_nlu.config import RasaNLUModelConfig
-from rasa_nlu.extractors import EntityExtractor
-from rasa_nlu.training_data import Message
-from rasa_nlu.training_data import TrainingData
 from .dataset import create_dataset
 from .bert.tokenization import FullTokenizer
 from .bert import modeling
 from .bert import optimization
-import tensorflow as tf
-import os
+
+# for type hint
+from tensorflow.contrib import tpu
+from rasa_nlu.training_data import Message, TrainingData
+from typing import Any, List, Optional, Text, Dict
+from rasa_nlu.components import Component
+from rasa_nlu.model import Metadata
+from rasa_nlu.config import RasaNLUModelConfig
+from rasa_nlu.extractors import EntityExtractor
 
 
-class BertExtractor(EntityExtractor):
-    # ===== rasa configs ======
-    name = "ner_bert"
-    provides = ["entities"]
-
-    # ===== bert configs ======
-    BERT_MODEL_FILE_NAME = "bert_model.pkl"
-    input_length = 128
-    max_seq_length = 128
+class Config:
+    # env
     use_tpu = False
     tpu_name = ""
-    config_file = "bert_ner/checkpoint/bert_config.json"
     tpu_zone = None
-    gcp_project = None
+    num_tpu_cores = 8  # Only used if `use_tpu` is True. Total number of TPU cores to use.
     master = None  # [Optional] TensorFlow master URL.
-    output_dir = "bert_ner/output/result_dir"
+    gcp_project = None
+
+    # model
+    input_length = 128
+    max_seq_length = 128
+
+    # training
     save_checkpoints_steps = 1000  # How often to save the model checkpoint.
     iterations_per_loop = 1000  # How many steps to make in each estimator call.
-    num_tpu_cores = 8  # Only used if `use_tpu` is True. Total number of TPU cores to use.
     train_batch_size = 32
     num_train_epochs = 10
     warmup_proportion = 0.1  # Proportion of training to perform linear learning rate warmup for.
-    init_checkpoint = "bert_ner/checkpoint/bert_model.ckpt"
     learning_rate = 5e-5
     eval_batch_size = 8
     predict_batch_size = 8
 
-    def train(self, training_data, config, **kwargs):
-        # type: (TrainingData, RasaNLUModelConfig, **Any) -> None
-        self.vocab = FullTokenizer('./bert_ner/checkpoint/vocab.txt')  # todo
-        self.dataset = create_dataset(training_data.training_examples)
-        train_file = "train.tf_record"  # todo
-        self._prepare_features(train_file)
-        bert_config = modeling.BertConfig.from_json_file(self.config_file)
+    # io
+    bert_config = "bert_ner/checkpoint/bert_config.json"
+    init_checkpoint = "bert_ner/checkpoint/bert_model.ckpt"
+    vocab_file = "bert_ner/checkpoint/vocab.txt"
+    tmp_model_dir = "bert_ner/output/result_dir"
 
-        if self.max_seq_length > bert_config.max_position_embeddings:
+    def __init__(self, config_dict):
+        self.__dict__ = config_dict
+
+
+class BertExtractor(EntityExtractor):
+    estimator: tpu.TPUEstimator
+    provides = ["entities"]
+    MODEL_DIR = "bert_ner"
+
+    def __init__(self, component_config=None):
+        self.defaults = {k: v for k, v in vars(Config).items() if not k.startswith('__')}
+        super().__init__(component_config)
+        self.vocab = FullTokenizer(self.config.vocab_file)
+
+    @classmethod
+    def create(cls,
+               component_config: Dict[Text, Any],
+               config: RasaNLUModelConfig) -> Component:
+
+        self = super(BertExtractor, cls).create(component_config, config)  # type: BertExtractor
+        self.prepare_config(config)
+        return self
+
+    def prepare_config(self, config):
+        base_dir = config.get('base_dir')
+        if base_dir:
+            for k in ['bert_config',
+                      'init_checkpoint',
+                      'vocab_file',
+                      'tmp_model_dir']:
+                self.component_config[k] = os.path.join(base_dir, self.component_config[k])
+
+    @classmethod
+    def load(cls,
+             meta: Dict[Text, Any],
+             model_dir: Optional[Text] = None,
+             model_metadata: Optional[Metadata] = None,
+             cached_component: Optional[Component] = None,
+             **kwargs: Any
+             ) -> Component:
+        return super(BertExtractor, cls).load(meta,
+                                              model_dir,
+                                              model_metadata,
+                                              cached_component,
+                                              **kwargs)
+
+    def train(self,
+              training_data: TrainingData,
+              cfg: RasaNLUModelConfig,
+              **kwargs: Any) -> None:
+
+        dataset = create_dataset(training_data.training_examples)
+        all_features = self._prepare_features(dataset)
+        bert_config = modeling.BertConfig.from_json_file(self.config.bert_config)
+
+        if self.config.max_seq_length > bert_config.max_position_embeddings:
             raise ValueError(
                 "Cannot use sequence length %d because the BERT model "
                 "was only trained up to sequence length %d" %
-                (self.max_seq_length, bert_config.max_position_embeddings)
+                (self.config.max_seq_length, bert_config.max_position_embeddings)
             )
 
         tpu_cluster_resolver = None
-        if self.use_tpu and self.tpu_name:
+        if self.config.use_tpu and self.config.tpu_name:
             tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
-                self.tpu_name, zone=self.tpu_zone, project=self.gcp_project)
+                self.config.tpu_name, zone=self.config.tpu_zone, project=self.config.gcp_project)
 
         is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
 
         run_config = tf.contrib.tpu.RunConfig(
             cluster=tpu_cluster_resolver,
-            master=self.master,
-            model_dir=self.output_dir,
-            save_checkpoints_steps=self.save_checkpoints_steps,
+            master=self.config.master,
+            model_dir=self.config.tmp_model_dir,
+            save_checkpoints_steps=self.config.save_checkpoints_steps,
             tpu_config=tf.contrib.tpu.TPUConfig(
-                iterations_per_loop=self.iterations_per_loop,
-                num_shards=self.num_tpu_cores,
+                iterations_per_loop=self.config.iterations_per_loop,
+                num_shards=self.config.num_tpu_cores,
                 per_host_input_for_training=is_per_host))
 
-        train_examples = None
-        num_train_steps = None
-        num_warmup_steps = None
-
-        if True:  # FLAGS.do_train:
-            train_examples = self.dataset.examples
-            num_train_steps = int(
-                len(train_examples) / self.train_batch_size * self.num_train_epochs)
-            num_warmup_steps = int(num_train_steps * self.warmup_proportion)
+        dataset = create_dataset(training_data.training_examples)
+        train_examples = dataset.examples
+        num_train_steps = int(
+            len(train_examples) / self.config.train_batch_size * self.config.num_train_epochs)
+        num_warmup_steps = int(num_train_steps * self.config.warmup_proportion)
 
         model_fn = self._model_fn_builder(
             bert_config=bert_config,
-            num_labels=len(self.dataset.labels) + 1,
-            init_checkpoint=self.init_checkpoint,
-            learning_rate=self.learning_rate,
+            num_labels=len(dataset.labels) + 1,
+            init_checkpoint=self.config.init_checkpoint,
+            learning_rate=self.config.learning_rate,
             num_train_steps=num_train_steps,
             num_warmup_steps=num_warmup_steps,
-            use_tpu=self.use_tpu,
-            use_one_hot_embeddings=self.use_tpu)
+            use_tpu=self.config.use_tpu,
+            use_one_hot_embeddings=self.config.use_tpu)
 
-        estimator = tf.contrib.tpu.TPUEstimator(
-            use_tpu=self.use_tpu,
+        self.estimator = tf.contrib.tpu.TPUEstimator(
+            use_tpu=self.config.use_tpu,
             model_fn=model_fn,
             config=run_config,
-            train_batch_size=self.train_batch_size,
-            eval_batch_size=self.eval_batch_size,
-            predict_batch_size=self.predict_batch_size)
+            train_batch_size=self.config.train_batch_size,
+            eval_batch_size=self.config.eval_batch_size,
+            predict_batch_size=self.config.predict_batch_size)
 
-        self.ent_tagger = estimator
-
-        if True:  # FLAGS.do_train:
-            tf.logging.info("***** Running training *****")
-            tf.logging.info("  Num examples = %d", len(train_examples))
-            tf.logging.info("  Batch size = %d", self.train_batch_size)
-            tf.logging.info("  Num steps = %d", num_train_steps)
-            train_input_fn = self._file_based_input_fn_builder(
-                input_file=train_file,
-                seq_length=self.max_seq_length,
-                is_training=True,
-                drop_remainder=True)
-            self.ent_tagger.train(input_fn=train_input_fn, max_steps=num_train_steps)
+        tf.logging.info("***** Running training *****")
+        tf.logging.info("  Num examples = %d", len(train_examples))
+        tf.logging.info("  Batch size = %d", self.config.train_batch_size)
+        tf.logging.info("  Num steps = %d", num_train_steps)
+        train_input_fn = self._input_fn_builder(all_features, is_training=True, drop_remainder=True)
+        # self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
     def _pad(self, lst, v):
-        n = self.input_length - len(lst)
+        n = self.config.input_length - len(lst)
         if n > 0:
             return lst + [v] * n
         else:
             return lst
 
     def _create_int_feature(self, values):
-        return tf.train.Feature(int64_list=tf.train.Int64List(value=self._pad(list(values), 0)))
+        # return tf.train.Feature(int64_list=tf.train.Int64List(value=self._pad(list(values), 0)))
+        return self._pad(list(values), 0)
 
-    def _prepare_features(self, filename):
-        with tf.python_io.TFRecordWriter(filename) as writer:
-            for example in self.dataset.examples:
-                inputs = [ex.char for ex in example]
-                labels = [ex.label for ex in example]
-                input_ids = self.vocab.convert_tokens_to_ids(inputs)
-                input_mask = [1 for _ in inputs]
-                label_ids = self.dataset.label2id(labels)
-                seg_ids = [0 for _ in inputs]
+    def _prepare_features(self, dataset):
+        all_features = []
+        for example in dataset.examples:
+            inputs = [ex.char for ex in example]
+            labels = [ex.label for ex in example]
+            input_ids = self.vocab.convert_tokens_to_ids(inputs)
+            input_mask = [1 for _ in inputs]
+            label_ids = dataset.label2id(labels)
+            seg_ids = [0 for _ in inputs]
 
-                features = {"input_ids": self._create_int_feature(input_ids),
-                            "input_mask": self._create_int_feature(input_mask),
-                            "segment_ids": self._create_int_feature(seg_ids),
-                            "label_ids": self._create_int_feature(label_ids)}
-                record = tf.train.Example(features=tf.train.Features(feature=features))
-                writer.write(record.SerializeToString())
+            features = {"input_ids": self._create_int_feature(input_ids),
+                        "input_mask": self._create_int_feature(input_mask),
+                        "segment_ids": self._create_int_feature(seg_ids),
+                        "label_ids": self._create_int_feature(label_ids)}
+            all_features.append(features)
+        return all_features
 
-    def _file_based_input_fn_builder(self, input_file, seq_length, is_training, drop_remainder):
-        name_to_features = {
-            "input_ids": tf.FixedLenFeature([seq_length], tf.int64),
-            "input_mask": tf.FixedLenFeature([seq_length], tf.int64),
-            "segment_ids": tf.FixedLenFeature([seq_length], tf.int64),
-            "label_ids": tf.FixedLenFeature([seq_length], tf.int64),
-            # "label_ids":tf.VarLenFeature(tf.int64),
-            # "label_mask": tf.FixedLenFeature([seq_length], tf.int64),
-        }
-
-        def _decode_record(record, name_to_features):
-            example = tf.parse_single_example(record, name_to_features)
-            for name in list(example.keys()):
-                t = example[name]
-                if t.dtype == tf.int64:
-                    t = tf.to_int32(t)
-                example[name] = t
-            return example
-
+    def _input_fn_builder(self, all_features, is_training, drop_remainder):
         def input_fn(params):
-            batch_size = params["batch_size"]
-            d = tf.data.TFRecordDataset(input_file)
+            # batch_size = params["batch_size"]
+            features = {
+                'input_ids': tf.constant([x['input_ids'] for x in all_features]),
+                'input_mask': tf.constant([x['input_mask'] for x in all_features]),
+                'segment_ids': tf.constant([x['segment_ids'] for x in all_features]),
+                'label_ids': tf.constant([x['label_ids'] for x in all_features]),
+            }
+            ds = tf.data.Dataset.from_tensor_slices(features)
+
             if is_training:
-                d = d.repeat()
-                d = d.shuffle(buffer_size=100)
-            d = d.apply(tf.contrib.data.map_and_batch(
-                lambda record: _decode_record(record, name_to_features),
-                batch_size=batch_size,
-                drop_remainder=drop_remainder
-            ))
-            return d
+                ds = ds.repeat()
+            return ds.batch(self.config.train_batch_size, drop_remainder)
 
         return input_fn
 
@@ -207,7 +228,7 @@ class BertExtractor(EntityExtractor):
             output_layer = tf.reshape(output_layer, [-1, hidden_size])
             logits = tf.matmul(output_layer, output_weight, transpose_b=True)
             logits = tf.nn.bias_add(logits, output_bias)
-            logits = tf.reshape(logits, [-1, self.max_seq_length, num_labels])
+            logits = tf.reshape(logits, [-1, self.config.max_seq_length, num_labels])
             log_probs = tf.nn.log_softmax(logits, axis=-1)
             one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
             per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
@@ -217,8 +238,8 @@ class BertExtractor(EntityExtractor):
             return loss, per_example_loss, logits, predict, [output_weight, output_bias]
 
     def _model_fn_builder(self, bert_config, num_labels, init_checkpoint, learning_rate,
-                         num_train_steps, num_warmup_steps, use_tpu,
-                         use_one_hot_embeddings):
+                          num_train_steps, num_warmup_steps, use_tpu,
+                          use_one_hot_embeddings):
         def _model_fn(features, labels, mode, params):
             tf.logging.info("*** Features ***")
             for name in sorted(features.keys()):
@@ -238,7 +259,6 @@ class BertExtractor(EntityExtractor):
             if init_checkpoint:
                 (assignment_map, initialized_variable_names) = modeling.get_assignment_map_from_checkpoint(tvars,
                                                                                                            init_checkpoint)
-                tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
                 if use_tpu:
                     def tpu_scaffold():
                         tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
@@ -272,9 +292,7 @@ class BertExtractor(EntityExtractor):
 
         return _model_fn
 
-    def process(self, message, **kwargs):
-        # type: (Message, **Any) -> None
-
+    def process(self, message: Message, **kwargs: Any) -> None:
         # <class 'dict'>:
         # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
         # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
@@ -282,63 +300,36 @@ class BertExtractor(EntityExtractor):
         message.set("entities", message.get("entities", []) + extracted,
                     add_to_output=True)
 
-    def persist(self, model_dir):
-        # type: (Text) -> Optional[Dict[Text, Any]]
+    def persist(self,
+                file_name: Text,
+                model_dir: Text) -> Optional[Dict[Text, Any]]:
         """Persist this model into the passed directory.
 
         Returns the metadata necessary to load the model again."""
 
-        from sklearn.externals import joblib
+        return {"bert_ner_dir": self.MODEL_DIR}
 
-        if self.ent_tagger:
-            model_file_name = os.path.join(model_dir, self.BERT_MODEL_FILE_NAME)
-
-            joblib.dump(self.ent_tagger, model_file_name)
-
-        return {"classifier_file": self.BERT_MODEL_FILE_NAME}
-
-    def load(cls,
-             model_dir=None,  # type: Optional[Text]
-             model_metadata=None,  # type: Optional[Metadata]
-             cached_component=None,  # type: Optional[Component]
-             **kwargs  # type: **Any
-             ):
-        # type: (...) -> CRFEntityExtractor
-        from sklearn.externals import joblib
-
-        meta = model_metadata.for_component(cls.name)
-        file_name = meta.get("classifier_file", cls.BERT_MODEL_FILE_NAME)
-        model_file = os.path.join(model_dir, file_name)
-
-        if os.path.exists(model_file):
-            ent_tagger = joblib.load(model_file)
-            return cls(meta, ent_tagger)
-        else:
-            return cls(meta)
-
-    def _extract_entities(self, message):
-        # type: (Message) -> List[Dict[Text, Any]]
+    def _extract_entities(self, message: Message) -> List[Dict[Text, Any]]:
         """Take a sentence and return entities in json format"""
 
-        self.vocab = FullTokenizer('./bert_ner/checkpoint/vocab.txt')  # todo
-        self.dataset = create_dataset(message.text)
-        predict_file = "predict.tf_record"  # todo
-        self._prepare_features(predict_file)
-        if self.ent_tagger is not None:
-            if self.use_tpu:
+        dataset = create_dataset(message.text)
+        all_features = self._prepare_features(dataset)
+        if self.estimator is not None:
+            if self.config.use_tpu:
                 # Warning: According to tpu_estimator.py Prediction on TPU is an
                 # experimental feature and hence not supported here
                 raise ValueError("Prediction in TPU not supported")
-            predict_drop_remainder = True if self.use_tpu else False
+            predict_drop_remainder = True if self.config.use_tpu else False
 
+            predict_input_fn = self._input_fn_builder(all_features, is_training=False,
+                                                      drop_remainder=predict_drop_remainder)
 
-            predict_input_fn = self._file_based_input_fn_builder(
-                input_file=predict_file,
-                seq_length=self.max_seq_length,
-                is_training=False,
-                drop_remainder=predict_drop_remainder)
-
-            result = self.ent_tagger.predict(input_fn=predict_input_fn)
+            result = self.estimator.predict(input_fn=predict_input_fn)
             return result
         else:
             return []
+
+    # =========== utils ============
+    @property
+    def config(self):
+        return Config(self.component_config)
