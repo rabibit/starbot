@@ -12,7 +12,9 @@ EMAIL = 'wy721@qq.com'
 AUTHOR = 'Kevin Wang'
 VERSION = '0.1.0'
 
-REQUIRED = ["rasa", "tensorflow"]
+REQUIRED = ["rasa",
+            "tensorflow",
+            "bert-tensorflow"]
 
 EXTRAS = {}
 

@@ -2,9 +2,9 @@ import os
 import tensorflow as tf
 
 from .dataset import create_dataset
-from .bert.tokenization import FullTokenizer
-from .bert import modeling
-from .bert import optimization
+from bert.tokenization import FullTokenizer
+from bert import modeling
+from starbot.nlu.bert_ner.model import model_fn_builder
 
 # for type hint
 from tensorflow.contrib import tpu
@@ -130,7 +130,7 @@ class BertExtractor(EntityExtractor):
             len(train_examples) / self.config.train_batch_size * self.config.num_train_epochs)
         num_warmup_steps = int(num_train_steps * self.config.warmup_proportion)
 
-        model_fn = self._model_fn_builder(
+        model_fn = model_fn_builder(
             bert_config=bert_config,
             num_labels=len(dataset.labels) + 1,
             init_checkpoint=self.config.init_checkpoint,
@@ -138,7 +138,9 @@ class BertExtractor(EntityExtractor):
             num_train_steps=num_train_steps,
             num_warmup_steps=num_warmup_steps,
             use_tpu=self.config.use_tpu,
-            use_one_hot_embeddings=self.config.use_tpu)
+            use_one_hot_embeddings=self.config.use_tpu,
+            max_seq_length=self.config.max_seq_length
+        )
 
         self.estimator = tf.contrib.tpu.TPUEstimator(
             use_tpu=self.config.use_tpu,
@@ -199,98 +201,6 @@ class BertExtractor(EntityExtractor):
             return ds.batch(self.config.train_batch_size, drop_remainder)
 
         return input_fn
-
-    def _create_model(self, bert_config, is_training, input_ids, input_mask,
-                      segment_ids, labels, num_labels, use_one_hot_embeddings):
-        model = modeling.BertModel(
-            config=bert_config,
-            is_training=is_training,
-            input_ids=input_ids,
-            input_mask=input_mask,
-            token_type_ids=segment_ids,
-            use_one_hot_embeddings=use_one_hot_embeddings
-        )
-
-        output_layer = model.get_sequence_output()
-
-        hidden_size = output_layer.shape[-1].value
-
-        output_weight = tf.get_variable(
-            "output_weights", [num_labels, hidden_size],
-            initializer=tf.truncated_normal_initializer(stddev=0.02)
-        )
-        output_bias = tf.get_variable(
-            "output_bias", [num_labels], initializer=tf.zeros_initializer()
-        )
-        with tf.variable_scope("loss"):
-            if is_training:
-                output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
-            output_layer = tf.reshape(output_layer, [-1, hidden_size])
-            logits = tf.matmul(output_layer, output_weight, transpose_b=True)
-            logits = tf.nn.bias_add(logits, output_bias)
-            logits = tf.reshape(logits, [-1, self.config.max_seq_length, num_labels])
-            log_probs = tf.nn.log_softmax(logits, axis=-1)
-            one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
-            per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
-            loss = tf.reduce_sum(per_example_loss)
-            probabilities = tf.nn.softmax(logits, axis=-1)
-            predict = tf.argmax(probabilities, axis=-1)
-            return loss, per_example_loss, logits, predict, [output_weight, output_bias]
-
-    def _model_fn_builder(self, bert_config, num_labels, init_checkpoint, learning_rate,
-                          num_train_steps, num_warmup_steps, use_tpu,
-                          use_one_hot_embeddings):
-        def _model_fn(features, labels, mode, params):
-            tf.logging.info("*** Features ***")
-            for name in sorted(features.keys()):
-                tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
-            input_ids = features["input_ids"]
-            input_mask = features["input_mask"]
-            segment_ids = features["segment_ids"]
-            label_ids = features["label_ids"]
-            # label_mask = features["label_mask"]
-            is_training = (mode == tf.estimator.ModeKeys.TRAIN)
-
-            (total_loss, per_example_loss, logits, predicts, tune_vars) = self._create_model(
-                bert_config, is_training, input_ids, input_mask, segment_ids, label_ids,
-                num_labels, use_one_hot_embeddings)
-            tvars = tf.trainable_variables()
-            scaffold_fn = None
-            if init_checkpoint:
-                (assignment_map, initialized_variable_names) = modeling.get_assignment_map_from_checkpoint(tvars,
-                                                                                                           init_checkpoint)
-                if use_tpu:
-                    def tpu_scaffold():
-                        tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
-                        return tf.train.Scaffold()
-
-                    scaffold_fn = tpu_scaffold
-                else:
-                    tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
-                tf.logging.info("**** Trainable Variables ****")
-
-                for var in tvars:
-                    init_string = ""
-                    if var.name in initialized_variable_names:
-                        init_string = ", *INIT_FROM_CKPT*"
-                    tf.logging.info("  name = %s, shape = %s%s", var.name, var.shape,
-                                    init_string)
-
-            if mode == tf.estimator.ModeKeys.TRAIN:
-                train_op = optimization.create_optimizer(
-                    total_loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
-                output_spec = tf.contrib.tpu.TPUEstimatorSpec(
-                    mode=mode,
-                    loss=total_loss,
-                    train_op=train_op,
-                    scaffold_fn=scaffold_fn)
-            else:
-                output_spec = tf.contrib.tpu.TPUEstimatorSpec(
-                    mode=mode, predictions=predicts, scaffold_fn=scaffold_fn
-                )
-            return output_spec
-
-        return _model_fn
 
     def process(self, message: Message, **kwargs: Any) -> None:
         # <class 'dict'>:

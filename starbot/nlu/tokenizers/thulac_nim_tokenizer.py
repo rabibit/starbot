@@ -12,7 +12,7 @@ from rasa_nlu.training_data import Message
 from rasa_nlu.training_data import TrainingData
 
 
-class NimThulacTokenizer(Tokenizer, Component):
+class ThulacNimTokenizer(Tokenizer, Component):
     provides = ["tokens"]
     language_list = ["zh"]
 
