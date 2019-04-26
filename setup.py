@@ -7,9 +7,9 @@ from setuptools import setup
 
 NAME = 'starbot'
 DESCRIPTION = 'A robot for IVR'
-URL = 'https://github.com/kvinlwang/foolbot'
-EMAIL = 'wy721@qq.com'
-AUTHOR = 'Kevin Wang'
+URL = 'http://git.starnet.info/ai/starbot'
+EMAIL = 'wangying.tx@star-net.cn'
+AUTHOR = 'Wang Ying'
 VERSION = '0.1.0'
 
 REQUIRED = ["rasa",
