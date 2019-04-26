@@ -121,9 +121,9 @@ class BertExtractor(EntityExtractor):
             self.labels_map = {i: v for i, v in enumerate(labels)}
             self.labels_map[len(labels)] = 'U'
         self.vocab = FullTokenizer(self.config.vocab_file)
-        self.estimator = self.create_estimator(meta['num_labels'], 0, 0)
+        self.estimator = self._create_estimator(meta['num_labels'], 0, 0)
 
-    def create_estimator(self, num_labels, num_train_steps, num_warmup_steps):
+    def _create_estimator(self, num_labels, num_train_steps, num_warmup_steps):
         bert_config = modeling.BertConfig.from_json_file(self.config.bert_config)
         if self.config.max_seq_length > bert_config.max_position_embeddings:
             raise ValueError(
@@ -188,7 +188,7 @@ class BertExtractor(EntityExtractor):
         tf.logging.info("  Batch size = %d", self.config.train_batch_size)
         tf.logging.info("  Num steps = %d", num_train_steps)
         train_input_fn = self._input_fn_builder(all_features, is_training=True, drop_remainder=True)
-        self.estimator = self.create_estimator(self.num_labels,
+        self.estimator = self._create_estimator(self.num_labels,
                                                num_train_steps=num_train_steps,
                                                num_warmup_steps=num_warmup_steps)
         self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)

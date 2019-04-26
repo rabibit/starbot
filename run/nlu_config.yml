@@ -4,7 +4,7 @@ fixed_model_name: "nlu"
 path: "models"
 pipeline:
 #- name: "JiebaTokenizer"
-- name: "starbot.ThulacTokenizer"
+#- name: "starbot.ThulacTokenizer"
 - name: "starbot.BertExtractor"
   # env
   use_tpu: false
