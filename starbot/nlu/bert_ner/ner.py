@@ -107,14 +107,10 @@ class BertExtractor(EntityExtractor):
             return slf
 
     def _prepare_for_prediction(self, model_dir, meta):
-        base_dir = os.path.join(model_dir, meta['bert_ner_dir'])
-        if base_dir:
-            for k in ['bert_config',
-                      'init_checkpoint',
-                      'vocab_file',
-                      ]:
-                self.component_config[k] = os.path.join(base_dir, self.component_config[k])
-
+        base_dir = Path(model_dir)/meta['bert_ner_dir']
+        self.config.bert_config = base_dir/self.CONFIG_NAME
+        self.config.init_checkpoint = base_dir/self.MODEL_NAME
+        self.config.vocab_file = base_dir/self.VOCAB_NAME
         labels_path = Path(base_dir) / 'labels.json'
         with labels_path.open() as labels_file:
             labels = json.load(labels_file)
@@ -189,8 +185,8 @@ class BertExtractor(EntityExtractor):
         tf.logging.info("  Num steps = %d", num_train_steps)
         train_input_fn = self._input_fn_builder(all_features, is_training=True, drop_remainder=True)
         self.estimator = self._create_estimator(self.num_labels,
-                                               num_train_steps=num_train_steps,
-                                               num_warmup_steps=num_warmup_steps)
+                                                num_train_steps=num_train_steps,
+                                                num_warmup_steps=num_warmup_steps)
         self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
     def _pad(self, lst, v):
