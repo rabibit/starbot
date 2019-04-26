@@ -1,19 +1,25 @@
 import os
 import tensorflow as tf
+import logging
+import json
 
-from .dataset import create_dataset
+from starbot.nlu.bert_ner.dataset import create_dataset, mark_message_with_labels
 from bert.tokenization import FullTokenizer
 from bert import modeling
 from starbot.nlu.bert_ner.model import model_fn_builder
+from pathlib import Path
+import shutil
 
 # for type hint
 from tensorflow.contrib import tpu
 from rasa_nlu.training_data import Message, TrainingData
 from typing import Any, List, Optional, Text, Dict
-from rasa_nlu.components import Component
+from rasa_nlu.components import Component, UnsupportedLanguageError
 from rasa_nlu.model import Metadata
 from rasa_nlu.config import RasaNLUModelConfig
 from rasa_nlu.extractors import EntityExtractor
+
+logger = logging.getLogger(__name__)
 
 
 class Config:
@@ -40,35 +46,41 @@ class Config:
     predict_batch_size = 8
 
     # io
-    bert_config = "bert_ner/checkpoint/bert_config.json"
-    init_checkpoint = "bert_ner/checkpoint/bert_model.ckpt"
-    vocab_file = "bert_ner/checkpoint/vocab.txt"
-    tmp_model_dir = "bert_ner/output/result_dir"
+    bert_config = "checkpoint/bert_config.json"
+    init_checkpoint = "checkpoint/bert_model.ckpt"
+    vocab_file = "checkpoint/vocab.txt"
+    tmp_model_dir = "output/result_dir"
 
     def __init__(self, config_dict):
         self.__dict__ = config_dict
 
 
 class BertExtractor(EntityExtractor):
+    labels_map: Dict[int, str]
+    labels: [str]
+    num_labels: int
+    vocab: FullTokenizer
     estimator: tpu.TPUEstimator
     provides = ["entities"]
     MODEL_DIR = "bert_ner"
+    MODEL_NAME = "model.ckpt"
+    CONFIG_NAME = "config.json"
+    VOCAB_NAME = "vocab.txt"
 
-    def __init__(self, component_config=None):
+    def __init__(self, component_config: Dict[Text, Any]):
         self.defaults = {k: v for k, v in vars(Config).items() if not k.startswith('__')}
         super().__init__(component_config)
-        self.vocab = FullTokenizer(self.config.vocab_file)
 
     @classmethod
     def create(cls,
                component_config: Dict[Text, Any],
                config: RasaNLUModelConfig) -> Component:
 
-        self = super(BertExtractor, cls).create(component_config, config)  # type: BertExtractor
-        self.prepare_config(config)
-        return self
+        slf = super(BertExtractor, cls).create(component_config, config)
+        slf._prepare_for_training(config)
+        return slf
 
-    def prepare_config(self, config):
+    def _prepare_for_training(self, config):
         base_dir = config.get('base_dir')
         if base_dir:
             for k in ['bert_config',
@@ -76,6 +88,7 @@ class BertExtractor(EntityExtractor):
                       'vocab_file',
                       'tmp_model_dir']:
                 self.component_config[k] = os.path.join(base_dir, self.component_config[k])
+        self.vocab = FullTokenizer(self.config.vocab_file)
 
     @classmethod
     def load(cls,
@@ -85,21 +98,33 @@ class BertExtractor(EntityExtractor):
              cached_component: Optional[Component] = None,
              **kwargs: Any
              ) -> Component:
-        return super(BertExtractor, cls).load(meta,
-                                              model_dir,
-                                              model_metadata,
-                                              cached_component,
-                                              **kwargs)
 
-    def train(self,
-              training_data: TrainingData,
-              cfg: RasaNLUModelConfig,
-              **kwargs: Any) -> None:
+        if cached_component:
+            return cached_component
+        else:
+            slf = cls(meta)
+            slf._prepare_for_prediction(model_dir, meta)
+            return slf
 
-        dataset = create_dataset(training_data.training_examples)
-        all_features = self._prepare_features(dataset)
+    def _prepare_for_prediction(self, model_dir, meta):
+        base_dir = os.path.join(model_dir, meta['bert_ner_dir'])
+        if base_dir:
+            for k in ['bert_config',
+                      'init_checkpoint',
+                      'vocab_file',
+                      ]:
+                self.component_config[k] = os.path.join(base_dir, self.component_config[k])
+
+        labels_path = Path(base_dir) / 'labels.json'
+        with labels_path.open() as labels_file:
+            labels = json.load(labels_file)
+            self.labels_map = {i: v for i, v in enumerate(labels)}
+            self.labels_map[len(labels)] = 'U'
+        self.vocab = FullTokenizer(self.config.vocab_file)
+        self.estimator = self.create_estimator(meta['num_labels'], 0, 0)
+
+    def create_estimator(self, num_labels, num_train_steps, num_warmup_steps):
         bert_config = modeling.BertConfig.from_json_file(self.config.bert_config)
-
         if self.config.max_seq_length > bert_config.max_position_embeddings:
             raise ValueError(
                 "Cannot use sequence length %d because the BERT model "
@@ -124,15 +149,9 @@ class BertExtractor(EntityExtractor):
                 num_shards=self.config.num_tpu_cores,
                 per_host_input_for_training=is_per_host))
 
-        dataset = create_dataset(training_data.training_examples)
-        train_examples = dataset.examples
-        num_train_steps = int(
-            len(train_examples) / self.config.train_batch_size * self.config.num_train_epochs)
-        num_warmup_steps = int(num_train_steps * self.config.warmup_proportion)
-
         model_fn = model_fn_builder(
             bert_config=bert_config,
-            num_labels=len(dataset.labels) + 1,
+            num_labels=num_labels,
             init_checkpoint=self.config.init_checkpoint,
             learning_rate=self.config.learning_rate,
             num_train_steps=num_train_steps,
@@ -142,7 +161,7 @@ class BertExtractor(EntityExtractor):
             max_seq_length=self.config.max_seq_length
         )
 
-        self.estimator = tf.contrib.tpu.TPUEstimator(
+        return tf.contrib.tpu.TPUEstimator(
             use_tpu=self.config.use_tpu,
             model_fn=model_fn,
             config=run_config,
@@ -150,12 +169,29 @@ class BertExtractor(EntityExtractor):
             eval_batch_size=self.config.eval_batch_size,
             predict_batch_size=self.config.predict_batch_size)
 
+    def train(self,
+              training_data: TrainingData,
+              cfg: RasaNLUModelConfig,
+              **kwargs: Any) -> None:
+
+        dataset = create_dataset(training_data.training_examples)
+        self.labels = dataset.labels
+        self.num_labels = len(dataset.labels) + 1
+        all_features = self._prepare_features(dataset)
+        train_examples = dataset.examples
+        num_train_steps = int(
+            len(train_examples) / self.config.train_batch_size * self.config.num_train_epochs)
+        num_warmup_steps = int(num_train_steps * self.config.warmup_proportion)
+
         tf.logging.info("***** Running training *****")
         tf.logging.info("  Num examples = %d", len(train_examples))
         tf.logging.info("  Batch size = %d", self.config.train_batch_size)
         tf.logging.info("  Num steps = %d", num_train_steps)
         train_input_fn = self._input_fn_builder(all_features, is_training=True, drop_remainder=True)
-        # self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+        self.estimator = self.create_estimator(self.num_labels,
+                                               num_train_steps=num_train_steps,
+                                               num_warmup_steps=num_warmup_steps)
+        self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
@@ -168,21 +204,36 @@ class BertExtractor(EntityExtractor):
         # return tf.train.Feature(int64_list=tf.train.Int64List(value=self._pad(list(values), 0)))
         return self._pad(list(values), 0)
 
+    def _create_single_feature_from_message(self, message):
+        inputs = list(message.text)
+        input_ids = self.vocab.convert_tokens_to_ids(inputs)
+        input_mask = [1 for _ in inputs]
+        seg_ids = [0 for _ in inputs]
+
+        features = {"input_ids": self._create_int_feature(input_ids),
+                    "input_mask": self._create_int_feature(input_mask),
+                    "segment_ids": self._create_int_feature(seg_ids),
+                    }
+        return features
+
+    def _create_single_feature(self, example, dataset):
+        inputs = [ex.char for ex in example]
+        labels = [ex.label for ex in example]
+        input_ids = self.vocab.convert_tokens_to_ids(inputs)
+        input_mask = [1 for _ in inputs]
+        label_ids = dataset.label2id(labels)
+        seg_ids = [0 for _ in inputs]
+
+        features = {"input_ids": self._create_int_feature(input_ids),
+                    "input_mask": self._create_int_feature(input_mask),
+                    "segment_ids": self._create_int_feature(seg_ids),
+                    "label_ids": self._create_int_feature(label_ids)}
+        return features
+
     def _prepare_features(self, dataset):
         all_features = []
         for example in dataset.examples:
-            inputs = [ex.char for ex in example]
-            labels = [ex.label for ex in example]
-            input_ids = self.vocab.convert_tokens_to_ids(inputs)
-            input_mask = [1 for _ in inputs]
-            label_ids = dataset.label2id(labels)
-            seg_ids = [0 for _ in inputs]
-
-            features = {"input_ids": self._create_int_feature(input_ids),
-                        "input_mask": self._create_int_feature(input_mask),
-                        "segment_ids": self._create_int_feature(seg_ids),
-                        "label_ids": self._create_int_feature(label_ids)}
-            all_features.append(features)
+            all_features.append(self._create_single_feature(example, dataset))
         return all_features
 
     def _input_fn_builder(self, all_features, is_training, drop_remainder):
@@ -191,9 +242,12 @@ class BertExtractor(EntityExtractor):
             features = {
                 'input_ids': tf.constant([x['input_ids'] for x in all_features]),
                 'input_mask': tf.constant([x['input_mask'] for x in all_features]),
-                'segment_ids': tf.constant([x['segment_ids'] for x in all_features]),
-                'label_ids': tf.constant([x['label_ids'] for x in all_features]),
             }
+            if is_training:
+                features.update({
+                    'segment_ids': tf.constant([x['segment_ids'] for x in all_features]),
+                    'label_ids': tf.constant([x['label_ids'] for x in all_features]),
+                })
             ds = tf.data.Dataset.from_tensor_slices(features)
 
             if is_training:
@@ -203,9 +257,6 @@ class BertExtractor(EntityExtractor):
         return input_fn
 
     def process(self, message: Message, **kwargs: Any) -> None:
-        # <class 'dict'>:
-        # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
-        # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
         extracted = self.add_extractor_name(self._extract_entities(message))
         message.set("entities", message.get("entities", []) + extracted,
                     add_to_output=True)
@@ -216,26 +267,50 @@ class BertExtractor(EntityExtractor):
         """Persist this model into the passed directory.
 
         Returns the metadata necessary to load the model again."""
+        # 将bert最新checkpoint拷贝到rasa模型输出目录
+        outdir = Path(model_dir) / self.MODEL_DIR
+        outdir.mkdir(parents=True, exist_ok=True)
+        bert_tmp = Path(self.config.tmp_model_dir)
+        prefix = (bert_tmp / 'checkpoint').read_text().split(':')[-1].strip()[1:-1]
 
-        return {"bert_ner_dir": self.MODEL_DIR}
+        def save(src, dst):
+            logger.info('Saving {}'.format(dst))
+            shutil.copy(src, dst)
+
+        for suffix in ['.index', '.meta', '.data-00000-of-00001']:
+            dst = outdir / (self.MODEL_NAME + suffix)
+            save(bert_tmp / (prefix + suffix), outdir / dst)
+        save(self.config.bert_config, outdir / self.CONFIG_NAME)
+        save(self.config.vocab_file, outdir / self.VOCAB_NAME)
+
+        labels = outdir / 'labels.json'
+
+        with labels.open('w') as labels_file:
+            labels_file.write(json.dumps(self.labels))
+
+        return {
+            "bert_ner_dir": self.MODEL_DIR,
+            "num_labels": self.num_labels,
+        }
 
     def _extract_entities(self, message: Message) -> List[Dict[Text, Any]]:
         """Take a sentence and return entities in json format"""
+        # <class 'dict'>:
+        # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
+        # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
 
-        dataset = create_dataset(message.text)
-        all_features = self._prepare_features(dataset)
         if self.estimator is not None:
             if self.config.use_tpu:
                 # Warning: According to tpu_estimator.py Prediction on TPU is an
                 # experimental feature and hence not supported here
                 raise ValueError("Prediction in TPU not supported")
             predict_drop_remainder = True if self.config.use_tpu else False
-
-            predict_input_fn = self._input_fn_builder(all_features, is_training=False,
-                                                      drop_remainder=predict_drop_remainder)
-
-            result = self.estimator.predict(input_fn=predict_input_fn)
-            return result
+            input_fn = self._input_fn_builder([self._create_single_feature_from_message(message)],
+                                              is_training=False,
+                                              drop_remainder=predict_drop_remainder)
+            result = list(self.estimator.predict(input_fn=input_fn))
+            labels = [self.labels_map[lid] for lid in result[0]]
+            return mark_message_with_labels(message.text, labels)
         else:
             return []
 

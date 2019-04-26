@@ -2,13 +2,14 @@
 import sys
 from rasa_nlu.model import Interpreter
 import json
+
+
 interpreter = Interpreter.load("./models/current/nlu")
 
 
 def interpret_all(messages):
     for message in messages:
         result = interpreter.parse(message)
-        del result['intent_ranking']
         print("================= {} ====================".format(message))
         print(json.dumps(result, ensure_ascii=False, indent=2))
 

@@ -23,6 +23,7 @@ class Dataset:
         self.examples = examples
         self.labels = labels
         self.label_map = {l: i for i, l in enumerate(labels)}
+        self.label_reversed = {i: l for i, l in enumerate(labels)}
 
     def label2id(self, labels):
         assert not isinstance(labels, str)
@@ -59,3 +60,25 @@ def create_dataset(examples):
     labels = list(labels)
     return Dataset(dataset, labels)
 
+
+def mark_message_with_labels(message_text, labels):
+    entities = []
+    name = None
+    start = 0
+
+    for i, label in enumerate(labels):
+        if label == '[SEP]':
+            break
+        if label[0] != 'O' and name:
+            entities.append({
+                'start': start,
+                'end': i,
+                'entity': name,
+                'value': message_text[start:i]
+            })
+            name = None
+
+        if label[0] == 'B':
+            name = label.split('-', maxsplit=1)
+            start = i
+    return entities

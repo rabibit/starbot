@@ -42,13 +42,13 @@ class BertNerModel:
             logits = tf.matmul(output_layer, self.output_weight, transpose_b=True)
             logits = tf.nn.bias_add(logits, self.output_bias)
             logits = tf.reshape(logits, [-1, max_seq_length, num_labels])
-            log_probs = tf.nn.log_softmax(logits, axis=-1)
-            one_hot_labels = tf.one_hot(label_ids, depth=num_labels, dtype=tf.float32)
-            self.per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
-            self.loss = tf.reduce_sum(self.per_example_loss)
             self.logits = logits
-            probabilities = tf.nn.softmax(logits, axis=-1)
-            self.predictions = tf.argmax(probabilities, axis=-1)
+            if is_training:
+                log_probs = tf.nn.log_softmax(logits, axis=-1)
+                one_hot_labels = tf.one_hot(label_ids, depth=num_labels, dtype=tf.float32)
+                self.per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
+                self.loss = tf.reduce_sum(self.per_example_loss)
+            self.predictions = tf.argmax(tf.nn.softmax(logits, axis=-1), axis=-1)
 
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
@@ -61,8 +61,8 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
             tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
         input_ids = features["input_ids"]
         input_mask = features["input_mask"]
-        segment_ids = features["segment_ids"]
-        label_ids = features["label_ids"]
+        segment_ids = features.get("segment_ids", None)
+        label_ids = features.get("label_ids", [])
         # label_mask = features["label_mask"]
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 

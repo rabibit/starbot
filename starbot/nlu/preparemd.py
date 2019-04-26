@@ -49,8 +49,8 @@ class MDReader(MarkdownReader):
 
 
 class MDWriter(MarkdownWriter):
-    def __init__(self, multi=1):
-        self.multi = multi
+    def __init__(self, repeat=1):
+        self.repeat = repeat
 
     def _generate_training_examples_md(self, training_data):
         """generates markdown training examples."""
@@ -73,7 +73,7 @@ class MDWriter(MarkdownWriter):
         for md in items[:]:
             for q in message.questions:
                 items.append(q + md)
-        items *= self.multi
+        items *= self.repeat
         return '\n- '.join(items)
 
     def _generate_extra_msg_md(self, msgobj):
@@ -114,14 +114,14 @@ class MDWriter(MarkdownWriter):
         return '[{}]({})'.format(entity_text, entity_type)
 
 
-def converts(infilename, multi=1):
+def converts(infilename, repeat=1):
     reader = MDReader()
     data = reader.read(infilename)
-    return MDWriter(multi=multi).dumps(data)
+    return MDWriter(repeat=repeat).dumps(data)
 
 
-def convert(infilename, outfilename, multi=1):
-    open(outfilename, 'w').write(converts(infilename, multi))
+def convert(infilename, outfilename, repeat=1):
+    open(outfilename, 'w').write(converts(infilename, repeat))
 
 
 if __name__ == '__main__':
