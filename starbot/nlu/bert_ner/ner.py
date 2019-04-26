@@ -108,10 +108,10 @@ class BertExtractor(EntityExtractor):
 
     def _prepare_for_prediction(self, model_dir, meta):
         base_dir = Path(model_dir)/meta['bert_ner_dir']
-        self.config.bert_config = base_dir/self.CONFIG_NAME
-        self.config.init_checkpoint = base_dir/self.MODEL_NAME
-        self.config.vocab_file = base_dir/self.VOCAB_NAME
-        labels_path = Path(base_dir) / 'labels.json'
+        self.config.bert_config = str(base_dir/self.CONFIG_NAME)
+        self.config.init_checkpoint = str(base_dir/self.MODEL_NAME)
+        self.config.vocab_file = str(base_dir/self.VOCAB_NAME)
+        labels_path = Path(base_dir)/'labels.json'
         with labels_path.open() as labels_file:
             labels = json.load(labels_file)
             self.labels_map = {i: v for i, v in enumerate(labels)}
