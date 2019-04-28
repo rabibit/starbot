@@ -69,7 +69,7 @@ def mark_message_with_labels(message_text, labels):
     for i, label in enumerate(labels):
         if label == '[SEP]':
             break
-        if label[0] != 'O' and name:
+        if label[0] != 'I' and name:
             entities.append({
                 'start': start,
                 'end': i,
