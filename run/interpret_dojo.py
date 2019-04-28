@@ -19,9 +19,8 @@ if len(sys.argv) == 2:
     sys.exit(0)
 else:
     COMMONMSG = [
-            'hello',
-            "哈罗",
-            "你好",
-            "好吧",
+            '我想订一个房间',
+            '我想订一间大床房',
+            '我叫杰哥',
             ]
     interpret_all(COMMONMSG)
