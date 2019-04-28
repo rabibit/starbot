@@ -26,7 +26,7 @@ pipeline:
   warmup_proportion: 0.1  # Proportion of training to perform linear learning rate warmup for.
   learning_rate: 5e-5
   eval_batch_size: 8
-  predict_batch_size: 8
+  predict_batch_size: 1
 
   # io
   bert_config: "checkpoint/bert_config.json"
