@@ -19,7 +19,7 @@ if len(sys.argv) == 2:
     sys.exit(0)
 else:
     COMMONMSG = [
-            '我想订一个房间',
+            '我想订一个小房间',
             '我想订一间大床房',
             '我叫杰哥',
             ]
