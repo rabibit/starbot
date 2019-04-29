@@ -1,26 +1,25 @@
 import os
-from queue import Queue
-
-import tensorflow as tf
-import logging
 import json
-import threading
-
-from starbot.nlu.bert_ner.dataset import create_dataset, mark_message_with_labels
-from bert.tokenization import FullTokenizer
-from bert import modeling
-from starbot.nlu.bert_ner.model import model_fn_builder
-from pathlib import Path
 import shutil
+import logging
+import threading
+import tensorflow as tf
+from queue import Queue
+from pathlib import Path
+
+from bert import modeling
+from bert.tokenization import FullTokenizer
+from rasa_nlu.extractors import EntityExtractor
+from starbot.nlu.bert_ner.model import model_fn_builder
+from starbot.nlu.bert_ner.dataset import create_dataset, mark_message_with_labels
 
 # for type hint
-from tensorflow.contrib import tpu
-from rasa_nlu.training_data import Message, TrainingData
 from typing import Any, List, Optional, Text, Dict
-from rasa_nlu.components import Component
+from tensorflow.contrib import tpu
 from rasa_nlu.model import Metadata
+from rasa_nlu.components import Component
 from rasa_nlu.config import RasaNLUModelConfig
-from rasa_nlu.extractors import EntityExtractor
+from rasa_nlu.training_data import Message, TrainingData
 
 logger = logging.getLogger(__name__)
 
