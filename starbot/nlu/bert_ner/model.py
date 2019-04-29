@@ -100,12 +100,14 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
                                 init_string)
 
         if mode == tf.estimator.ModeKeys.TRAIN:
+            logging_hook = tf.train.LoggingTensorHook({"loss": model.loss}, every_n_iter=10)
             train_op = optimization.create_optimizer(
                 model.loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
                 loss=model.loss,
                 train_op=train_op,
+                training_hooks=[logging_hook],
                 scaffold_fn=scaffold_fn)
         else:
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
