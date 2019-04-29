@@ -2,22 +2,30 @@
 import sys
 from rasa_nlu.model import Interpreter
 import json
+import time
 
 
 interpreter = Interpreter.load("./models/current/nlu")
 
 
-def interpret_all(messages):
+def interpret_messages(messages):
+    all_result = []
     for message in messages:
-        import time
         t0 = time.time()
-        result = interpreter.parse(message)
-        print("================= {} time:{} ====================".format(message, time.time() - t0))
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        text = message
+        if isinstance(message, dict):
+            text = message['text']
+        result = interpreter.parse(text)
+        all_result.append({
+            'time': time.time() - t0,
+            'ground_truth': message,
+            'prediction': result,
+        })
+    print(json.dumps(all_result, ensure_ascii=False, indent=2))
 
 
 if len(sys.argv) == 2:
-    interpret_all([sys.argv[1]])
+    interpret_messages([sys.argv[1]])
     sys.exit(0)
 else:
     COMMONMSG = [
@@ -25,4 +33,5 @@ else:
             '我想订一间大床房',
             '我叫杰哥',
             ]
-    interpret_all(COMMONMSG)
+    #COMMONMSG = json.load(open('test.json'))
+    interpret_messages(COMMONMSG)
