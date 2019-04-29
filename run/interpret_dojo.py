@@ -9,8 +9,10 @@ interpreter = Interpreter.load("./models/current/nlu")
 
 def interpret_all(messages):
     for message in messages:
+        import time
+        t0 = time.time()
         result = interpreter.parse(message)
-        print("================= {} ====================".format(message))
+        print("================= {} time:{} ====================".format(message, time.time() - t0))
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

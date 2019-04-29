@@ -1,7 +1,10 @@
 import os
+from queue import Queue
+
 import tensorflow as tf
 import logging
 import json
+import threading
 
 from starbot.nlu.bert_ner.dataset import create_dataset, mark_message_with_labels
 from bert.tokenization import FullTokenizer
@@ -43,7 +46,7 @@ class Config:
     warmup_proportion = 0.1  # Proportion of training to perform linear learning rate warmup for.
     learning_rate = 5e-5
     eval_batch_size = 8
-    predict_batch_size = 8
+    predict_batch_size = 1
 
     # io
     bert_config = "checkpoint/bert_config.json"
@@ -55,7 +58,71 @@ class Config:
         self.__dict__ = config_dict
 
 
+class PredictServer(threading.Thread):
+    estimator: tpu.TPUEstimator
+    rq: Queue
+    STOP = 0
+
+    def __init__(self, estimator: tpu.TPUEstimator):
+        super().__init__()
+        self.rq = Queue()
+        self.sessions = {}  # TODO: 添加GC机制
+        self.estimator = estimator
+        self.setDaemon(True)
+        self._sn = 0
+
+    def next_sn(self):
+        self._sn += 1
+        return str(self._sn)
+
+    def predict(self, msg):
+        sn = self.next_sn()
+        msg['sn'] = sn
+        response = Queue()
+        self.sessions[sn] = response
+        self.rq.put(msg)
+        return response.get()
+
+    def stop(self):
+        self.rq.put(self.STOP)
+
+    def _predict_input_fn_builder(self):
+        def gen():
+            while True:
+                sample = self.rq.get()
+                if sample is self.STOP:
+                    break
+                yield sample
+
+        def input_fn(params):
+            return tf.data.Dataset.from_generator(gen,
+                                                  output_types={
+                                                      'input_ids': tf.int32,
+                                                      'input_mask': tf.int32,
+                                                      'sn': tf.string
+                                                  },
+                                                  output_shapes={
+                                                      'input_ids': (None, None),
+                                                      'input_mask': (None, None),
+                                                      'sn': (),
+                                                  })
+        return input_fn
+
+    def run(self):
+        input_fn = self._predict_input_fn_builder()
+        for pred in self.estimator.predict(input_fn=input_fn, yield_single_examples=False):
+            sn = pred['sn']
+            if isinstance(sn, bytes):
+                sn = sn.decode()
+            q = self.sessions.pop(sn, None)
+            if q:
+                q.put(pred['prediction'])
+            else:
+                logger.error('sn missing: {}'.format(sn))
+
+
 class BertExtractor(EntityExtractor):
+    predictor: PredictServer
     labels_map: Dict[int, str]
     labels: [str]
     num_labels: int
@@ -118,6 +185,9 @@ class BertExtractor(EntityExtractor):
             self.labels_map[len(labels)] = 'U'
         self.vocab = FullTokenizer(self.config.vocab_file)
         self.estimator = self._create_estimator(meta['num_labels'], 0, 0)
+        self.predictor = PredictServer(self.estimator)
+        self.predictor.start()
+        # TODO: predictor线程销毁时机?
 
     def _create_estimator(self, num_labels, num_train_steps, num_warmup_steps):
         bert_config = modeling.BertConfig.from_json_file(self.config.bert_config)
@@ -204,12 +274,9 @@ class BertExtractor(EntityExtractor):
         inputs = list(message.text)
         input_ids = self.vocab.convert_tokens_to_ids(inputs)
         input_mask = [1 for _ in inputs]
-        seg_ids = [0 for _ in inputs]
 
-        features = {"input_ids": self._create_int_feature(input_ids),
-                    "input_mask": self._create_int_feature(input_mask),
-                    "segment_ids": self._create_int_feature(seg_ids),
-                    }
+        features = {"input_ids": ([self._create_int_feature(input_ids)]),
+                    "input_mask": ([self._create_int_feature(input_mask)])}
         return features
 
     def _create_single_feature(self, example, dataset):
@@ -294,21 +361,9 @@ class BertExtractor(EntityExtractor):
         # <class 'dict'>:
         # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
         # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
-
-        if self.estimator is not None:
-            if self.config.use_tpu:
-                # Warning: According to tpu_estimator.py Prediction on TPU is an
-                # experimental feature and hence not supported here
-                raise ValueError("Prediction in TPU not supported")
-            predict_drop_remainder = True if self.config.use_tpu else False
-            input_fn = self._input_fn_builder([self._create_single_feature_from_message(message)],
-                                              is_training=False,
-                                              drop_remainder=predict_drop_remainder)
-            result = list(self.estimator.predict(input_fn=input_fn))
-            labels = [self.labels_map[lid] for lid in result[0]]
-            return mark_message_with_labels(message.text, labels)
-        else:
-            return []
+        result = self.predictor.predict(self._create_single_feature_from_message(message))
+        labels = [self.labels_map[lid] for lid in result[0]]
+        return mark_message_with_labels(message.text, labels)
 
     # =========== utils ============
     @property
