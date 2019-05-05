@@ -1,10 +1,10 @@
+#!/usr/bin/env python
+
 import logging
 import os
 import sys
 
 sys.path.append(os.path.abspath('nlu'))
-
-import extpipelines
 
 from rasa_core.broker import PikaProducer
 from rasa_core.interpreter import NaturalLanguageInterpreter
@@ -89,13 +89,10 @@ if __name__ == '__main__':
 
     logger.info("Rasa process starting")
 
-    core = at_root('business/models')
-    nlu = at_root('nlu/models/current/nlu')
-    endpoints = at_root('business/endpoints.yml')
+    core = at_root('../starbot/policy/models')
+    nlu = at_root('models/current/nlu')
+    endpoints = at_root('../starbot/policy/endpoints.yml')
     credentials = at_root('credentials.yml')
-
-    # TODO: remove this ugly fixes
-    os.chdir('nlu')
 
     port = 5002
     connector = None
