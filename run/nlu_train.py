@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import os
+import sys
 import shutil
 import logging
 from pathlib import Path
@@ -15,8 +16,10 @@ BERT_MODEL_DIRNAME = "chinese_L-12_H-768_A-12"
 MITIE_MODEL_URL = "https://cloud.kvin.wang:8443/s/XEeQkZeqYb7fDYT/download"
 MITIE_MODEL_FILE = "total_word_feature_extractor.dat"
 
-#CONFIG = "nlu_config.yml"
-CONFIG = "rasa_nlu_config.yml"
+if len(sys.argv) == 2 and sys.argv[1] == 'bert':
+    CONFIG = "nlu_config.yml"
+else:
+    CONFIG = "rasa_nlu_config.yml"
 
 logger = logging.getLogger(__name__)
 base = Path(__file__).parent

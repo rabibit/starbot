@@ -18,10 +18,16 @@ def interpret_messages(messages):
         result = interpreter.parse(text)
         all_result.append({
             'time': time.time() - t0,
-            'ground_truth': message,
+            'message': message,
             'prediction': result,
         })
-    print(json.dumps(all_result, ensure_ascii=False, indent=2))
+    for example in all_result:
+        p = example['prediction']
+        print("=="*10)
+        print(p['text'])
+        for entiry in p['entities']:
+            print("{}: {}".format(entiry['entity'], entity['value']))
+    #print(json.dumps(all_result, ensure_ascii=False, indent=2))
 
 
 if len(sys.argv) == 2:
@@ -32,6 +38,7 @@ else:
             '我想订一个小房间',
             '我想订一间大床房',
             '我叫杰哥',
+            '明天晚上入住',
             ]
     #COMMONMSG = json.load(open('test.json'))
     interpret_messages(COMMONMSG)
