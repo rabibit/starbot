@@ -93,7 +93,7 @@ templates:
     - text: "不客气!"
 
   utter_ask_room_type:
-    - text: "请问您需要哪种房间？我们有标准间和大床房"
+    - text: "我们有标准间和大床房, 请问您需要哪种房间？"
 
   utter_ask_guest_name:
     - text: "好的，请问怎么称呼您？"

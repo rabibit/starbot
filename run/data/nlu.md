@@ -106,6 +106,9 @@
 @guest_name: 张三|李四|王麻子|杨康|穆念慈|郭啸天|李萍|杨铁心|包惜弱|完颜洪烈|柯镇恶|朱聪|韩宝驹|南希仁|张阿生|全金发|韩小莹
 @guest_phone_number: 123456|0281234343|02312334345
 
+## intent:info
+? 我们有标准间和大床房, 请问您需要哪种房间？
+- [房间](room_type)
 
 ## intent:info
 ? 好的，请问怎么称呼您？
@@ -171,7 +174,7 @@
 - 不是[今天](wrong_time)，是[明天](checkin_time)
 - 不是[张三](wrong_name)，是[李四](guest_name)
 - 名字不对，应该是[大锤](guest_name)
-- 时间错了，是[后天下午](guest_name)
+- 时间错了，是[后天下午](checkin_time)
 - 不是[今天](wrong_time)是[明天](checkin_time)
 - 不是[张三](wrong_name)是[李四](guest_name)
 - 不是叫[张三](wrong_name)，我叫[李四](guest_name)
