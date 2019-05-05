@@ -39,6 +39,11 @@ else:
             '帮我订一间大床房',
             '我叫杰哥',
             '明天晚上入住',
+            '我今晚入住',
+            '帮我订一间今晚的大床房',
+            '帮我订一间大床房今晚入住',
+            '帮我订一间大床房明晚入住',
+            '帮我订一间标间明晚入住',
             ]
     #COMMONMSG = json.load(open('test.json'))
     interpret_messages(COMMONMSG)
