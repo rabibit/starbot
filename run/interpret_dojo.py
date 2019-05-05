@@ -26,7 +26,7 @@ def interpret_messages(messages):
         print("=="*10)
         print(p['text'])
         for entity in p['entities']:
-            print("{}: {}".format(entity['entity'], entity['value']))
+            print("  {:12}: {}".format(entity['entity'], entity['value']))
     #print(json.dumps(all_result, ensure_ascii=False, indent=2))
 
 
