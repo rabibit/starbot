@@ -69,7 +69,17 @@ def mark_message_with_labels(message_text, labels):
     for i, label in enumerate(labels):
         if label == '[SEP]':
             break
-        if label[0] != 'I' and name:
+        entity_end = False
+        if name and i >= len(message_text):
+            entity_end = True
+        elif label[0] != 'I' and name:
+            entity_end = True
+        elif label[0] == 'I':
+            name_ = label.split('-', maxsplit=1)[-1]
+            if name and name != name_:
+                entity_end = True
+
+        if entity_end:
             entities.append({
                 'start': start,
                 'end': i,
@@ -78,7 +88,9 @@ def mark_message_with_labels(message_text, labels):
             })
             name = None
 
-        elif label[0] == 'B' or label[0] == 'I' and not name:
+        if label[0] in 'BI':
             name = label.split('-', maxsplit=1)[-1]
             start = i
+        if i >= len(message_text):
+            break
     return entities
