@@ -371,6 +371,8 @@ class BertExtractor(EntityExtractor):
         # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
         result = self.predictor.predict(self._create_single_feature_from_message(message))
         labels = [self.labels_map[lid] for lid in result[0]]
+        logger.info("{}".format(message.text))
+        logger.info("{}".format(labels))
         return mark_message_with_labels(message.text, labels)
 
     # =========== utils ============
