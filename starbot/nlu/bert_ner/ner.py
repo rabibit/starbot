@@ -183,12 +183,12 @@ class BertExtractor(EntityExtractor):
             self.labels_map = {i: v for i, v in enumerate(labels)}
             self.labels_map[len(labels)] = 'U'
         self.vocab = load_vocab(self.config.vocab_file)
-        self.estimator = self._create_estimator(meta['num_labels'], 0, 0)
+        self.estimator = self._create_estimator(meta['num_labels'], 0, 0, is_training=False)
         self.predictor = PredictServer(self.estimator)
         self.predictor.start()
         # TODO: predictor线程销毁时机?
 
-    def _create_estimator(self, num_labels, num_train_steps, num_warmup_steps):
+    def _create_estimator(self, num_labels, num_train_steps, num_warmup_steps, is_training):
         bert_config = modeling.BertConfig.from_json_file(self.config.bert_config)
         if self.config.max_seq_length > bert_config.max_position_embeddings:
             raise ValueError(
@@ -207,7 +207,7 @@ class BertExtractor(EntityExtractor):
         run_config = tf.contrib.tpu.RunConfig(
             cluster=tpu_cluster_resolver,
             master=self.config.master,
-            model_dir=self.config.tmp_model_dir,
+            model_dir=self.config.tmp_model_dir if is_training else None,
             save_checkpoints_steps=self.config.save_checkpoints_steps,
             tpu_config=tf.contrib.tpu.TPUConfig(
                 iterations_per_loop=self.config.iterations_per_loop,
@@ -255,7 +255,9 @@ class BertExtractor(EntityExtractor):
         train_input_fn = self._input_fn_builder(all_features, is_training=True, drop_remainder=True)
         self.estimator = self._create_estimator(self.num_labels,
                                                 num_train_steps=num_train_steps,
-                                                num_warmup_steps=num_warmup_steps)
+                                                num_warmup_steps=num_warmup_steps,
+                                                is_training=True
+                                                )
         self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
     def _pad(self, lst, v):
