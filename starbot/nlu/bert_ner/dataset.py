@@ -57,7 +57,7 @@ def create_dataset(examples):
         sent.insert(0, Example('[CLS]', '[CLS]'))
         sent.append(Example('[SEP]', '[SEP]'))
         dataset.append(sent)
-    labels = list(labels)
+    labels = sorted(labels)
     return Dataset(dataset, labels)
 
 
