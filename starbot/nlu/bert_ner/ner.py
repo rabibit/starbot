@@ -8,7 +8,7 @@ from queue import Queue
 from pathlib import Path
 
 from bert import modeling
-from bert.tokenization import FullTokenizer
+from bert.tokenization import load_vocab
 from rasa_nlu.extractors import EntityExtractor
 from starbot.nlu.bert_ner.model import model_fn_builder
 from starbot.nlu.bert_ner.dataset import create_dataset, mark_message_with_labels
@@ -125,7 +125,7 @@ class BertExtractor(EntityExtractor):
     labels_map: Dict[int, str]
     labels: [str]
     num_labels: int
-    vocab: FullTokenizer
+    vocab: Dict[str, int]
     estimator: tpu.TPUEstimator
     provides = ["entities"]
     MODEL_DIR = "bert_ner"
@@ -154,7 +154,7 @@ class BertExtractor(EntityExtractor):
                       'vocab_file',
                       'tmp_model_dir']:
                 self.component_config[k] = os.path.join(base_dir, self.component_config[k])
-        self.vocab = FullTokenizer(self.config.vocab_file)
+        self.vocab = load_vocab(self.config.vocab_file)
 
     @classmethod
     def load(cls,
@@ -182,7 +182,7 @@ class BertExtractor(EntityExtractor):
             labels = json.load(labels_file)
             self.labels_map = {i: v for i, v in enumerate(labels)}
             self.labels_map[len(labels)] = 'U'
-        self.vocab = FullTokenizer(self.config.vocab_file)
+        self.vocab = load_vocab(self.config.vocab_file)
         self.estimator = self._create_estimator(meta['num_labels'], 0, 0)
         self.predictor = PredictServer(self.estimator)
         self.predictor.start()
@@ -269,9 +269,16 @@ class BertExtractor(EntityExtractor):
         # return tf.train.Feature(int64_list=tf.train.Int64List(value=self._pad(list(values), 0)))
         return self._pad(list(values), 0)
 
+    def convert_tokens_to_ids(self, tokens):
+        unk = self.vocab['[UNK]']
+        result = []
+        for token in tokens:
+            result.append(self.vocab.get(token, unk))
+        return result
+
     def _create_single_feature_from_message(self, message):
         inputs = list(message.text)
-        input_ids = self.vocab.convert_tokens_to_ids(inputs)
+        input_ids = self.convert_tokens_to_ids(inputs)
         input_mask = [1 for _ in inputs]
 
         features = {"input_ids": [self._create_int_feature(input_ids)],
@@ -281,7 +288,7 @@ class BertExtractor(EntityExtractor):
     def _create_single_feature(self, example, dataset):
         inputs = [ex.char for ex in example]
         labels = [ex.label for ex in example]
-        input_ids = self.vocab.convert_tokens_to_ids(inputs)
+        input_ids = self.convert_tokens_to_ids(inputs)
         input_mask = [1 for _ in inputs]
         label_ids = dataset.label2id(labels)
         seg_ids = [0 for _ in inputs]
