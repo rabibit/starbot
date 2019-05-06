@@ -88,7 +88,7 @@ def mark_message_with_labels(message_text, labels):
             })
             name = None
 
-        if label[0] in 'BI':
+        if label[0] in 'B' or label[0] in 'I' and not name:
             name = label.split('-', maxsplit=1)[-1]
             start = i
         if i >= len(message_text):
