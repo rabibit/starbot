@@ -78,7 +78,7 @@ def mark_message_with_labels(message_text, labels):
             })
             name = None
 
-        if label[0] == 'B':
+        elif label[0] == 'B' or label[0] == 'I' and not name:
             name = label.split('-', maxsplit=1)[-1]
             start = i
     return entities
