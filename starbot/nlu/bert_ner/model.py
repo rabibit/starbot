@@ -1,3 +1,5 @@
+from typing import NamedTuple
+
 import tensorflow as tf
 from bert import modeling
 from bert import optimization
@@ -35,20 +37,81 @@ class BertNerModel:
         self.output_bias = tf.get_variable(
             "output_bias", [num_labels], initializer=tf.zeros_initializer()
         )
-        with tf.variable_scope("loss"):
+        with tf.variable_scope("ner"):
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
-            output_layer = tf.reshape(output_layer, [-1, hidden_size])
-            logits = tf.matmul(output_layer, self.output_weight, transpose_b=True)
-            logits = tf.nn.bias_add(logits, self.output_bias)
-            logits = tf.reshape(logits, [-1, max_seq_length, num_labels])
-            self.logits = logits
+            config = NerModelConfig(
+                num_layers=2,
+                rnn_size=1024,
+                class_size=num_labels,
+                sentence_length=max_seq_length
+            )
             if is_training:
-                log_probs = tf.nn.log_softmax(logits, axis=-1)
                 one_hot_labels = tf.one_hot(label_ids, depth=num_labels, dtype=tf.float32)
-                self.per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
-                self.loss = tf.reduce_sum(self.per_example_loss)
-            self.predictions = tf.argmax(tf.nn.softmax(logits, axis=-1), axis=-1)
+                self.ner_model = NerModel(output_layer, one_hot_labels, config)
+                self.loss = self.ner_model.loss
+            else:
+                self.ner_model = NerModel(output_layer, None, config)
+            self.predictions = self.ner_model.prediction
+
+
+class NerModelConfig(NamedTuple):
+    rnn_size: int
+    num_layers: int
+    class_size: int
+    sentence_length: int
+
+
+class NerModel:
+    """A BiLSTM net concat to the bert model to do NER.
+    """
+
+    def __init__(self, input_layer, labels, args):
+        self.args = args
+        self.output_data = labels
+
+        words_used_in_sent = tf.sign(
+            tf.reduce_max(
+                tf.abs(input_layer),
+                reduction_indices=2
+            )
+        )
+
+        self.length = tf.cast(
+            tf.reduce_sum(words_used_in_sent, reduction_indices=1),
+            tf.int32
+        )
+
+        if tf.test.gpu_device_name():  # TODO: and not use_tpu
+            LSTM = tf.keras.layers.CuDNNLSTM
+        else:
+            LSTM = tf.keras.layers.LSTM
+
+        birnn = tf.keras.layers.Bidirectional(
+            LSTM(self.args.rnn_size, return_sequences=True)
+        )
+        output = birnn(input_layer)
+
+        weight, bias = self.weight_and_bias(2 * args.rnn_size, args.class_size)
+        output = tf.reshape(output, [-1, 2 * args.rnn_size])
+        prediction = tf.nn.softmax(tf.matmul(output, weight) + bias)
+        self.prediction = tf.reshape(prediction, [-1, args.sentence_length, args.class_size])
+        self.loss = self.cost()
+
+    def cost(self):
+        cross_entropy = self.output_data * tf.log(self.prediction)
+        cross_entropy = -tf.reduce_sum(cross_entropy, reduction_indices=2)
+        mask = tf.sign(tf.reduce_max(tf.abs(self.output_data), reduction_indices=2))
+        cross_entropy *= mask
+        cross_entropy = tf.reduce_sum(cross_entropy, reduction_indices=1)
+        cross_entropy /= tf.cast(self.length, tf.float32)
+        return tf.reduce_mean(cross_entropy)
+
+    @staticmethod
+    def weight_and_bias(in_size, out_size):
+        weight = tf.truncated_normal([in_size, out_size], stddev=0.01)
+        bias = tf.constant(0.1, shape=[out_size])
+        return tf.Variable(weight), tf.Variable(bias)
 
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
