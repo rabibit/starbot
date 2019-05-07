@@ -68,7 +68,6 @@ class NerModel:
 
     def __init__(self, input_layer, labels, args):
         self.args = args
-        self.output_data = labels
 
         words_used_in_sent = tf.sign(
             tf.reduce_max(
@@ -96,12 +95,13 @@ class NerModel:
         output = tf.reshape(output, [-1, 2 * args.rnn_size])
         prediction = tf.nn.softmax(tf.matmul(output, weight) + bias)
         self.prediction = tf.reshape(prediction, [-1, args.sentence_length, args.class_size])
-        self.loss = self.cost()
+        if labels:
+            self.loss = self.cost(self.prediction, labels)
 
-    def cost(self):
-        cross_entropy = self.output_data * tf.log(self.prediction)
+    def cost(self, prediction, labels):
+        cross_entropy = labels * tf.log(prediction)
         cross_entropy = -tf.reduce_sum(cross_entropy, reduction_indices=2)
-        mask = tf.sign(tf.reduce_max(tf.abs(self.output_data), reduction_indices=2))
+        mask = tf.sign(tf.reduce_max(tf.abs(labels), reduction_indices=2))
         cross_entropy *= mask
         cross_entropy = tf.reduce_sum(cross_entropy, reduction_indices=1)
         cross_entropy /= tf.cast(self.length, tf.float32)
