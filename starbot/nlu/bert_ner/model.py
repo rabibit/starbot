@@ -43,7 +43,7 @@ class BertNerModel:
                 self.loss = self.ner_model.loss
             else:
                 self.ner_model = NerModel(output_layer, None, config)
-            self.predictions = self.ner_model.prediction
+            self.predictions = tf.argmax(self.ner_model.prediction, axis=-1)
 
 
 class NerModelConfig(NamedTuple):
