@@ -28,15 +28,6 @@ class BertNerModel:
 
         output_layer = model.get_sequence_output()
 
-        hidden_size = output_layer.shape[-1].value
-
-        self.output_weight = tf.get_variable(
-            "output_weights", [num_labels, hidden_size],
-            initializer=tf.truncated_normal_initializer(stddev=0.02)
-        )
-        self.output_bias = tf.get_variable(
-            "output_bias", [num_labels], initializer=tf.zeros_initializer()
-        )
         with tf.variable_scope("ner"):
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
