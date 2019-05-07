@@ -43,10 +43,7 @@ class BertNerModel:
                 self.loss = self.ner_model.loss
             else:
                 self.ner_model = NerModel(output_layer, None, config)
-            self.predictions = {
-                'argmax': tf.argmax(self.ner_model.prediction, axis=-1),
-                'softmax': self.ner_model.prediction
-            }
+            self.prediction = tf.argmax(self.ner_model.prediction, axis=-1)
 
 
 class NerModelConfig(NamedTuple):
@@ -170,7 +167,8 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
                 predictions={
-                    "prediction": model.predictions,
+                    "prediction": model.prediction,
+                    "softmax": model.ner_model.prediction,
                     "sn": features["sn"]
                 },
                 scaffold_fn=scaffold_fn
