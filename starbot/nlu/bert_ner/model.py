@@ -86,7 +86,7 @@ class NerModel:
         output = tf.reshape(output, [-1, 2 * args.rnn_size])
         prediction = tf.nn.softmax(tf.matmul(output, weight) + bias)
         self.prediction = tf.reshape(prediction, [-1, args.sentence_length, args.class_size])
-        if labels:
+        if labels is not None:
             self.loss = self.cost(self.prediction, labels)
 
     def cost(self, prediction, labels):
