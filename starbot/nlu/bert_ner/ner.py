@@ -115,7 +115,7 @@ class PredictServer(threading.Thread):
                 sn = sn.decode()
             q = self.sessions.pop(sn, None)
             if q:
-                q.put(pred['prediction'])
+                q.put(pred)
             else:
                 logger.error('sn missing: {}'.format(sn))
 
@@ -370,10 +370,12 @@ class BertExtractor(EntityExtractor):
         # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
         # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
         result = self.predictor.predict(self._create_single_feature_from_message(message))
-        labels = [self.labels_map[lid] for lid in result['argmax'][0]]
+        pred = result['prediction']
+        softmax = result['softmax']
+        labels = [self.labels_map[lid] for lid in pred[0]]
         logger.info("{}".format(message.text))
         logger.info("{}".format(labels))
-        logger.info("{}".format(result['softmax'][0]))
+        logger.info("{}".format(softmax[0]))
         return mark_message_with_labels(message.text, labels)
 
     # =========== utils ============
