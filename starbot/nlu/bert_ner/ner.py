@@ -279,7 +279,7 @@ class BertExtractor(EntityExtractor):
         return result
 
     def _create_single_feature_from_message(self, message):
-        inputs = list(message.text)
+        inputs = ['[CLS]'] + list(message.text) + ['[SEP]']
         input_ids = self.convert_tokens_to_ids(self._pad(inputs, '[PAD]'))
         input_mask = self._pad([1 for _ in inputs], 0)
 
@@ -376,7 +376,7 @@ class BertExtractor(EntityExtractor):
         logger.info("{}".format(message.text))
         logger.info("{}".format(labels))
         logger.info("{}".format(softmax[0]))
-        return mark_message_with_labels(message.text, labels)
+        return mark_message_with_labels(message.text, labels[1:])
 
     # =========== utils ============
     @property
