@@ -280,25 +280,25 @@ class BertExtractor(EntityExtractor):
 
     def _create_single_feature_from_message(self, message):
         inputs = list(message.text)
-        input_ids = self.convert_tokens_to_ids(inputs)
-        input_mask = [1 for _ in inputs]
+        input_ids = self.convert_tokens_to_ids(self._pad(inputs, '[PAD]'))
+        input_mask = self._pad([1 for _ in inputs], 0)
 
-        features = {"input_ids": [self._create_int_feature(input_ids)],
-                    "input_mask": [self._create_int_feature(input_mask)]}
+        features = {"input_ids": [input_ids],
+                    "input_mask": [input_mask]}
         return features
 
     def _create_single_feature(self, example, dataset):
         inputs = [ex.char for ex in example]
-        labels = [ex.label for ex in example]
-        input_ids = self.convert_tokens_to_ids(inputs)
-        input_mask = [1 for _ in inputs]
+        input_mask = self._pad([1 for _ in inputs], 0)
+        input_ids = self.convert_tokens_to_ids(self._pad(inputs, '[PAD]'))
+        labels = self._pad([ex.label for ex in example], '[PAD]')
         label_ids = dataset.label2id(labels)
-        seg_ids = [0 for _ in inputs]
+        seg_ids = [0 for _ in input_ids]
 
-        features = {"input_ids": self._create_int_feature(input_ids),
-                    "input_mask": self._create_int_feature(input_mask),
-                    "segment_ids": self._create_int_feature(seg_ids),
-                    "label_ids": self._create_int_feature(label_ids)}
+        features = {"input_ids": input_ids,
+                    "input_mask": input_mask,
+                    "segment_ids": seg_ids,
+                    "label_ids": label_ids}
         return features
 
     def _prepare_features(self, dataset):
