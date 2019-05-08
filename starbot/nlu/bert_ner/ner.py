@@ -53,6 +53,9 @@ class Config:
     vocab_file = "checkpoint/vocab.txt"
     tmp_model_dir = "output/result_dir"
 
+    # other
+    dry_run = 0
+
     def __init__(self, config_dict):
         self.__dict__ = config_dict
 
@@ -258,7 +261,8 @@ class BertExtractor(EntityExtractor):
                                                 num_warmup_steps=num_warmup_steps,
                                                 is_training=True
                                                 )
-        self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+        if not self.config.dry_run:
+            self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
