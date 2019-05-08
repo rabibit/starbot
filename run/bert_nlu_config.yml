@@ -2,40 +2,33 @@ language: "zh"
 project: "ivr_nlu"
 fixed_model_name: "nlu"
 path: "models"
+
 pipeline:
-#- name: "JiebaTokenizer"
-#- name: "starbot.ThulacTokenizer"
-- name: "starbot.BertExtractor"
-  # env
-  use_tpu: false
-  tpu_name: ""
-  tpu_zone: null
-  num_tpu_cores: 8  # Only used if `use_tpu` is True. Total number of TPU cores to use.
-  master: null  # [Optional] TensorFlow master URL.
-  gcp_project: null
+  - name: "starbot.BertExtractor"
+    # env
+    use_tpu: false
+    tpu_name: ""
+    tpu_zone: null
+    num_tpu_cores: 8  # Only used if `use_tpu` is True. Total number of TPU cores to use.
+    master: null  # [Optional] TensorFlow master URL.
+    gcp_project: null
 
-  # model
-  input_length: 128
-  max_seq_length: 128
+    # model
+    input_length: 128
+    max_seq_length: 128
 
-  # training
-  save_checkpoints_steps: 1000  # How often to save the model checkpoint.
-  iterations_per_loop: 1000  # How many steps to make in each estimator call.
-  train_batch_size: 32
-  num_train_epochs: 10
-  warmup_proportion: 0.1  # Proportion of training to perform linear learning rate warmup for.
-  learning_rate: 5e-5
-  eval_batch_size: 8
-  predict_batch_size: 1
+    # training
+    save_checkpoints_steps: 1000  # How often to save the model checkpoint.
+    iterations_per_loop: 1000  # How many steps to make in each estimator call.
+    train_batch_size: 32
+    num_train_epochs: 10
+    warmup_proportion: 0.1  # Proportion of training to perform linear learning rate warmup for.
+    learning_rate: 5e-5
+    eval_batch_size: 8
+    predict_batch_size: 1
 
-  # io
-  bert_config: "checkpoint/bert_config.json"
-  init_checkpoint: "checkpoint/bert_model.ckpt"
-  vocab_file: "checkpoint/vocab.txt"
-  tmp_model_dir: "output/result_dir"
-#- name: "tokenizer_jieba"
-#- name: "bert_embedding"
-#- name: "intent_featurizer_count_vectors"
-#- name: "intent_classifier_tensorflow_embedding"
-#  intent_tokenization_flag: true
-#  intent_split_symbol: "+"
+    # io
+    bert_config: "checkpoint/bert_config.json"
+    init_checkpoint: "checkpoint/bert_model.ckpt"
+    vocab_file: "checkpoint/vocab.txt"
+    tmp_model_dir: "output/result_dir"
