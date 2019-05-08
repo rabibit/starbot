@@ -20,10 +20,11 @@ if len(sys.argv) != 2:
     print("Usage ./nlu_train.py bert|mitie")
     sys.exit()
 
+# TODO: better way
 if sys.argv[1] == 'bert':
-    CONFIG = "nlu_config.yml"
+    CONFIG = "bert_nlu_config.yml"
 elif sys.argv[1] == 'mitie':
-    CONFIG = "rasa_nlu_config.yml"
+    CONFIG = "mitie_nlu_config.yml"
 else:
     print("Usage ./nlu_train.py bert|mitie")
     sys.exit()
@@ -54,11 +55,15 @@ def download_mitie_model_if_need():
 
 def main():
     mdfile = base / 'data' / 'nlu.md'
-    nlu_config = base / CONFIG
-    if CONFIG == 'nlu_config.yml':
+    # TODO: 换个地方
+    if CONFIG == 'bert_nlu_config.yml':
         download_bert_model_if_need()
-    elif CONFIG == 'rasa_nlu_config.yml':
+    elif CONFIG == 'mitie_nlu_config.yml':
         download_mitie_model_if_need()
+
+    nlu_config = base / 'tmp_nlu_config.yml'
+    if not nlu_config.exists():
+        shutil.copy(base/CONFIG, nlu_config)
 
     train(mdfile, nlu_config, base_dir=base, path=base / 'models')
 
