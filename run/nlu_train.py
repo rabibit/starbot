@@ -28,7 +28,7 @@ def download_bert_model_if_need():
             download(BERT_MODEL_URL, tmpfilename)
             logger.info('Download {} finished'.format(tmpfilename))
             os.system('unzip -d "{}" "{}"'.format(base, tmpfilename))
-            shutil.move(base / BERT_MODEL_DIRNAME, base / "checkpoint")
+            shutil.move(base/BERT_MODEL_DIRNAME, base/"checkpoint")
 
 
 def download_mitie_model_if_need():
@@ -38,7 +38,7 @@ def download_mitie_model_if_need():
             logger.info('Downloading {}'.format(MITIE_MODEL_URL))
             download(MITIE_MODEL_URL, tmpfilename)
             logger.info('Download {} finished'.format(tmpfilename))
-            shutil.move(tmpfilename, base / MITIE_MODEL_FILE)
+            shutil.move(tmpfilename, base/MITIE_MODEL_FILE)
 
 def main():
     if len(sys.argv) != 2:
@@ -54,18 +54,18 @@ def main():
         print("Usage ./nlu_train.py bert|mitie")
         sys.exit()
 
-    mdfile = base / 'data' / 'nlu.md'
+    mdfile = base/'data'/'nlu.md'
     # TODO: 换个地方
     if CONFIG == 'bert_nlu_config.yml':
         download_bert_model_if_need()
     elif CONFIG == 'mitie_nlu_config.yml':
         download_mitie_model_if_need()
 
-    nlu_config = base / 'tmp_nlu_config.yml'
+    nlu_config = base/'tmp_nlu_config.yml'
     if not nlu_config.exists():
-        shutil.copy(base/CONFIG, nlu_config)
+        shutil.copy(base/'configs'/CONFIG, nlu_config)
 
-    train(mdfile, nlu_config, base_dir=base, path=base / 'models')
+    train(mdfile, nlu_config, base_dir=base, path=base/'models')
 
 
 if __name__ == '__main__':
