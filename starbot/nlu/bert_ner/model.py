@@ -12,8 +12,10 @@ class BertNerModel:
                  input_ids,
                  input_mask,
                  segment_ids,
-                 num_labels,
-                 label_ids,
+                 num_ner_labels,
+                 ner_label_ids,
+                 num_intent_labels,
+                 intent_label_ids,
                  max_seq_length,
                  use_one_hot_embeddings
                  ):
@@ -26,24 +28,29 @@ class BertNerModel:
             use_one_hot_embeddings=use_one_hot_embeddings,
         )
 
-        output_layer = model.get_sequence_output()
-
         with tf.variable_scope("ner"):
-            if is_training:
-                output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
             config = NerModelConfig(
                 num_layers=2,
                 rnn_size=1024,
-                class_size=num_labels,
+                class_size=num_ner_labels,
                 sentence_length=max_seq_length
             )
+            output_layer = model.get_sequence_output()
             if is_training:
-                one_hot_labels = tf.one_hot(label_ids, depth=num_labels, dtype=tf.float32)
-                self.ner_model = NerModel(output_layer, one_hot_labels, config)
-                self.loss = self.ner_model.loss
-            else:
-                self.ner_model = NerModel(output_layer, None, config)
-            self.prediction = tf.argmax(self.ner_model.prediction, axis=-1)
+                output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
+            self.ner_model = NerModel(output_layer, ner_label_ids, num_ner_labels, config)
+            self.ner_prediction = tf.argmax(self.ner_model.prediction, axis=-1)
+
+        with tf.variable_scope("intent"):
+            output_layer = model.get_pooled_output()
+            if is_training:
+                output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
+            self.intent_model = IntentClassificationModel(output_layer, intent_label_ids, num_intent_labels)
+            self.intent_prediction = tf.argmax(self.intent_model.prediction, axis=-1)
+
+    @property
+    def loss(self):
+        return self.intent_model.loss
 
 
 class NerModelConfig(NamedTuple):
@@ -57,7 +64,7 @@ class NerModel:
     """A BiLSTM net concat to the bert model to do NER.
     """
 
-    def __init__(self, input_layer, labels, args):
+    def __init__(self, input_layer, labels, num_labels, args):
         self.args = args
 
         words_used_in_sent = tf.sign(
@@ -87,7 +94,8 @@ class NerModel:
         prediction = tf.nn.softmax(tf.matmul(output, weight) + bias)
         self.prediction = tf.reshape(prediction, [-1, args.sentence_length, args.class_size])
         if labels is not None:
-            self.loss = self.cost(self.prediction, labels)
+            one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
+            self.loss = self.cost(self.prediction, one_hot_labels)
 
     def cost(self, prediction, labels):
         cross_entropy = labels * tf.log(prediction)
@@ -105,7 +113,35 @@ class NerModel:
         return tf.Variable(weight), tf.Variable(bias)
 
 
-def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
+class IntentClassificationModel:
+    """A BiLSTM net concat to the bert model to do NER.
+    """
+    def __init__(self, input_layer, labels, num_labels):
+        hidden_size = input_layer.shape[-1].value
+
+        weights = tf.get_variable(
+            "weights", [num_labels, hidden_size],
+            initializer=tf.truncated_normal_initializer(stddev=0.02))
+
+        bias = tf.get_variable(
+            "bias", [num_labels], initializer=tf.zeros_initializer())
+
+        with tf.variable_scope("loss"):
+            logits = tf.matmul(input_layer, weights, transpose_b=True)
+            logits = tf.nn.bias_add(logits, bias)
+            probabilities = tf.nn.softmax(logits, axis=-1)
+            log_probs = tf.nn.log_softmax(logits, axis=-1)
+
+            if labels is not None:
+                one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
+                print('one_hot_labels.shape:', one_hot_labels.shape)
+                print('log_probs.shape:', log_probs.shape)
+                per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
+                self.loss = tf.reduce_mean(per_example_loss)
+            self.prediction = probabilities
+
+
+def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkpoint, learning_rate,
                      num_train_steps, num_warmup_steps, use_tpu,
                      use_one_hot_embeddings, max_seq_length):
 
@@ -116,7 +152,8 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         input_ids = features["input_ids"]
         input_mask = features["input_mask"]
         segment_ids = features.get("segment_ids", None)
-        label_ids = features.get("label_ids", [])
+        ner_label_ids = features.get("ner_label_ids", [])
+        intent_label_ids = features.get("intent_label_ids", 0)
         # label_mask = features["label_mask"]
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
@@ -126,8 +163,10 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
             input_ids=input_ids,
             input_mask=input_mask,
             segment_ids=segment_ids,
-            label_ids=label_ids,
-            num_labels=num_labels,
+            ner_label_ids=ner_label_ids,
+            num_ner_labels=num_ner_labels,
+            intent_label_ids=intent_label_ids,
+            num_intent_labels=num_intent_labels,
             max_seq_length=max_seq_length,
             use_one_hot_embeddings=use_one_hot_embeddings
         )

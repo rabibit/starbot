@@ -11,7 +11,7 @@ from bert import modeling
 from bert.tokenization import load_vocab
 from rasa_nlu.extractors import EntityExtractor
 from starbot.nlu.bert_ner.model import model_fn_builder
-from starbot.nlu.bert_ner.dataset import create_dataset, mark_message_with_labels
+from starbot.nlu.bert_ner.dataset import create_dataset, mark_message_with_labels, LabelMap
 
 # for type hint
 from typing import Any, List, Optional, Text, Dict
@@ -20,6 +20,7 @@ from rasa_nlu.model import Metadata
 from rasa_nlu.components import Component
 from rasa_nlu.config import RasaNLUModelConfig
 from rasa_nlu.training_data import Message, TrainingData
+from starbot.nlu.bert_ner.dataset import Dataset, Sentence
 
 logger = logging.getLogger(__name__)
 
@@ -124,13 +125,14 @@ class PredictServer(threading.Thread):
 
 
 class BertExtractor(EntityExtractor):
+    provides = ["entities"]
+    ner_labels: LabelMap
+    intent_labels: LabelMap
     predictor: PredictServer
-    labels_map: Dict[int, str]
-    labels: [str]
-    num_labels: int
+    num_ner_labels: int
+    num_intent_labels: int
     vocab: Dict[str, int]
     estimator: tpu.TPUEstimator
-    provides = ["entities"]
     MODEL_DIR = "bert_ner"
     MODEL_NAME = "model.ckpt"
     CONFIG_NAME = "config.json"
@@ -145,7 +147,7 @@ class BertExtractor(EntityExtractor):
                component_config: Dict[Text, Any],
                config: RasaNLUModelConfig) -> Component:
 
-        slf = super(BertExtractor, cls).create(component_config, config)
+        slf: BertExtractor = super(BertExtractor, cls).create(component_config, config)
         slf._prepare_for_training(config)
         return slf
 
@@ -180,18 +182,16 @@ class BertExtractor(EntityExtractor):
         self.config.bert_config = str(base_dir/self.CONFIG_NAME)
         self.config.init_checkpoint = str(base_dir/self.MODEL_NAME)
         self.config.vocab_file = str(base_dir/self.VOCAB_NAME)
-        labels_path = Path(base_dir)/'labels.json'
-        with labels_path.open() as labels_file:
-            labels = json.load(labels_file)
-            self.labels_map = {i: v for i, v in enumerate(labels)}
-            self.labels_map[len(labels)] = 'U'
+        self.ner_labels = LabelMap.load(Path(base_dir)/'ner_labels.json')
+        self.intent_labels = LabelMap.load(Path(base_dir)/'intent_labels.json')
         self.vocab = load_vocab(self.config.vocab_file)
-        self.estimator = self._create_estimator(meta['num_labels'], 0, 0, is_training=False)
+        self.estimator = self._create_estimator(meta['num_ner_labels'],
+                                                meta['num_intent_labels'], 0, 0, is_training=False)
         self.predictor = PredictServer(self.estimator)
         self.predictor.start()
         # TODO: predictor线程销毁时机?
 
-    def _create_estimator(self, num_labels, num_train_steps, num_warmup_steps, is_training):
+    def _create_estimator(self, num_ner_labels, num_intent_labels, num_train_steps, num_warmup_steps, is_training):
         bert_config = modeling.BertConfig.from_json_file(self.config.bert_config)
         if self.config.max_seq_length > bert_config.max_position_embeddings:
             raise ValueError(
@@ -219,7 +219,8 @@ class BertExtractor(EntityExtractor):
 
         model_fn = model_fn_builder(
             bert_config=bert_config,
-            num_labels=num_labels,
+            num_ner_labels=num_ner_labels,
+            num_intent_labels=num_intent_labels,
             init_checkpoint=self.config.init_checkpoint,
             learning_rate=self.config.learning_rate,
             num_train_steps=num_train_steps,
@@ -243,8 +244,10 @@ class BertExtractor(EntityExtractor):
               **kwargs: Any) -> None:
 
         dataset = create_dataset(training_data.training_examples)
-        self.labels = dataset.labels
-        self.num_labels = len(dataset.labels) + 1
+        self.ner_labels = dataset.ner_labels
+        self.num_ner_labels = len(dataset.ner_labels) + 1
+        self.intent_labels = dataset.intent_labels
+        self.num_intent_labels = len(dataset.intent_labels)  # FIXME +1?
         all_features = self._prepare_features(dataset)
         train_examples = dataset.examples
         num_train_steps = int(
@@ -256,11 +259,11 @@ class BertExtractor(EntityExtractor):
         tf.logging.info("  Batch size = %d", self.config.train_batch_size)
         tf.logging.info("  Num steps = %d", num_train_steps)
         train_input_fn = self._input_fn_builder(all_features, is_training=True, drop_remainder=True)
-        self.estimator = self._create_estimator(self.num_labels,
+        self.estimator = self._create_estimator(num_ner_labels=self.num_ner_labels,
+                                                num_intent_labels=self.num_intent_labels,
                                                 num_train_steps=num_train_steps,
                                                 num_warmup_steps=num_warmup_steps,
-                                                is_training=True
-                                                )
+                                                is_training=True)
         if not self.config.dry_run:
             self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
@@ -282,7 +285,7 @@ class BertExtractor(EntityExtractor):
             result.append(self.vocab.get(token, unk))
         return result
 
-    def _create_single_feature_from_message(self, message):
+    def _create_single_feature_from_message(self, message: Message):
         inputs = ['[CLS]'] + list(message.text) + ['[SEP]']
         input_ids = self.convert_tokens_to_ids(self._pad(inputs, '[PAD]'))
         input_mask = self._pad([1 for _ in inputs], 0)
@@ -291,21 +294,25 @@ class BertExtractor(EntityExtractor):
                     "input_mask": [input_mask]}
         return features
 
-    def _create_single_feature(self, example, dataset):
-        inputs = [ex.char for ex in example]
+    def _create_single_feature(self, example: Sentence, dataset: Dataset):
+        inputs = example.chars
         input_mask = self._pad([1 for _ in inputs], 0)
         input_ids = self.convert_tokens_to_ids(self._pad(inputs, '[PAD]'))
-        labels = self._pad([ex.label for ex in example], '[PAD]')
-        label_ids = dataset.label2id(labels)
+        ner_labels = self._pad(example.labels, '[PAD]')
+        ner_label_ids = dataset.ner_label2id(ner_labels)
+        intent_label = example.intent
+        intent_label_id, = dataset.intent_label2id([intent_label])
         seg_ids = [0 for _ in input_ids]
 
         features = {"input_ids": input_ids,
                     "input_mask": input_mask,
                     "segment_ids": seg_ids,
-                    "label_ids": label_ids}
+                    "ner_label_ids": ner_label_ids,
+                    "intent_label_id": intent_label_id,
+                    }
         return features
 
-    def _prepare_features(self, dataset):
+    def _prepare_features(self, dataset: Dataset):
         all_features = []
         for example in dataset.examples:
             all_features.append(self._create_single_feature(example, dataset))
@@ -321,7 +328,8 @@ class BertExtractor(EntityExtractor):
             if is_training:
                 features.update({
                     'segment_ids': tf.constant([x['segment_ids'] for x in all_features]),
-                    'label_ids': tf.constant([x['label_ids'] for x in all_features]),
+                    'ner_label_ids': tf.constant([x['ner_label_ids'] for x in all_features]),
+                    'intent_label_ids': tf.constant([x['intent_label_id'] for x in all_features]),
                 })
             ds = tf.data.Dataset.from_tensor_slices(features)
 
@@ -353,19 +361,19 @@ class BertExtractor(EntityExtractor):
             shutil.copy(src, dst)
 
         for suffix in ['.index', '.meta', '.data-00000-of-00001']:
+            # output/result_dir/ch
             dst = outdir / (self.MODEL_NAME + suffix)
             save(bert_tmp / (prefix + suffix), outdir / dst)
         save(self.config.bert_config, outdir / self.CONFIG_NAME)
         save(self.config.vocab_file, outdir / self.VOCAB_NAME)
 
-        labels = outdir / 'labels.json'
-
-        with labels.open('w') as labels_file:
-            labels_file.write(json.dumps(self.labels))
+        self.ner_labels.save(outdir / 'ner_labels.json')
+        self.intent_labels.save(outdir / 'intent_labels.json')
 
         return {
             "bert_ner_dir": self.MODEL_DIR,
-            "num_labels": self.num_labels,
+            "num_ner_labels": self.num_ner_labels,
+            "num_intent_labels": self.num_intent_labels,
         }
 
     def _extract_entities(self, message: Message) -> List[Dict[Text, Any]]:
@@ -375,8 +383,7 @@ class BertExtractor(EntityExtractor):
         # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
         result = self.predictor.predict(self._create_single_feature_from_message(message))
         pred = result['prediction']
-        softmax = result['softmax']
-        labels = [self.labels_map[lid] for lid in pred[0]]
+        labels = self.ner_labels.decode(pred[0])
         logger.info("{}".format(message.text))
         logger.info("{}".format(labels))
         return mark_message_with_labels(message.text, labels[1:])

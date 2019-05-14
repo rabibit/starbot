@@ -1,63 +1,98 @@
+import json
 import typing
 
-if typing.TYPE_CHECKING:
-    from typing import List
-    from rasa_nlu.training_data.message import Message
+from typing import List, Dict, Iterable
+from rasa_nlu.training_data.message import Message
 
 
 class Example:
-    def __init__(self, char, label):
-        self.char = char
-        self.label = label
+    def __init__(self, chars, labels):
+        self.chars = chars
+        self.labels = labels
 
-    def __repr__(self):
-        return '<{}:{}>'.format(self.char, self.label)
+
+class LabelMap:
+    labels: List
+    map: Dict[str, int]
+    reverse_map: Dict[int, str]
+
+    def __init__(self, labels):
+        self.labels = labels
+        self.map = {l: i for i, l in enumerate(self.labels)}
+        self.reversed = {i: l for i, l in enumerate(self.labels)}
+
+    def __len__(self):
+        return len(self.labels)
+
+    def encode(self, labels: Iterable[str]):
+        return [self.map.get(label) for label in labels]
+
+    def decode(self, label_ids: Iterable[int]):
+        return [self.reverse_map.get(label) for label in label_ids]
+
+    def save(self, filename):
+        json.dump(self.labels, open(filename, 'wb'))
+
+    @classmethod
+    def load(cls, filename) -> 'LabelMap':
+        labels = json.load(open(filename))
+        return cls(labels)
+
+
+class Sentence(typing.NamedTuple):
+    chars: List[str]
+    labels: List[str]
+    intent: str
 
 
 class Dataset:
-    def __init__(self, examples, labels):
-        """
-        :type examples: List[List[Example]]
-        :type labels: List[str]
-        """
-        self.examples = examples
-        self.labels = ['[PAD]'] + sorted(labels)
-        self.label_map = {l: i for i, l in enumerate(self.labels)}
-        self.label_reversed = {i: l for i, l in enumerate(self.labels)}
+    examples: List[Sentence]
+    ner_labels: LabelMap
+    intent_labels: LabelMap
 
-    def label2id(self, labels):
+    def __init__(self,
+                 examples: Iterable[Sentence],
+                 ner_labels: Iterable[str],
+                 intent_labels: Iterable[str]):
+        self.examples = list(examples)
+        self.ner_labels = LabelMap(['[PAD]'] + sorted(ner_labels))
+        self.intent_labels = LabelMap(intent_labels)
+
+    def ner_label2id(self, labels):
         assert not isinstance(labels, str)
-        return [self.label_map.get(label) for label in labels]
+        return self.ner_labels.encode(labels)
+
+    def intent_label2id(self, labels):
+        assert not isinstance(labels, str)
+        return self.intent_labels.encode(labels)
 
 
-def create_dataset(examples):
-    """
-
-    :type examples: List[Message]
-    :rtype: Dataset
-    """
-
-    dataset = []
-    labels = {'O', '[CLS]', '[SEP]'}
+def create_dataset(examples: Iterable[Message]) -> Dataset:
+    sentences = []
+    global_labels = {'O', '[CLS]', '[SEP]'}
+    global_intents = set()
 
     for msg in examples:
-        entities = msg.data.get('entities')
-        if not entities:
-            continue
-        sent = [Example(c, 'O') for c in msg.text]
+        entities = msg.data.get('entities') or []
+        intent = msg.data.get('intent')
+        global_intents.add(intent)
+        chars = list(msg.text)
+        labels = ['O' for _ in chars]
         for entity in entities:
             s = entity['start']
             e = entity['end']
             name = entity['entity']
-            sent[s].label = "B-" + name
+            labels[s] = "B-" + name
             for i in range(s+1, e):
-                sent[i].label = "I-" + name
-            labels.add("B-" + name)
-            labels.add("I-" + name)
-        sent.insert(0, Example('[CLS]', '[CLS]'))
-        sent.append(Example('[SEP]', '[SEP]'))
-        dataset.append(sent)
-    return Dataset(dataset, labels)
+                labels[i] = "I-" + name
+            global_labels.add("B-" + name)
+            global_labels.add("I-" + name)
+        chars = ['[CLS]'] + chars + ['[SEP]']
+        labels = ['[CLS]'] + labels + ['[CLS]']
+        sentences.append(Sentence(chars=chars, labels=labels, intent=intent))
+        print('Remove me: sentence count={}'.format(len(sentences)))
+        sentences = sentences[:100]
+    return Dataset(sentences, global_labels, global_intents)
 
 
 def mark_message_with_labels(message_text, labels):
