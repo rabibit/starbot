@@ -3,6 +3,8 @@ import re
 import collections
 import tensorflow as tf
 from bert import modeling
+import inspect
+import hashlib
 
 
 def get_assignment_map_from_checkpoint(tvars, init_checkpoint):
@@ -30,5 +32,11 @@ def get_assignment_map_from_checkpoint(tvars, init_checkpoint):
 
     return assignment_map, initialized_variable_names
 
+
+origin_src = inspect.getsource(modeling.get_assignment_map_from_checkpoint)
+md5 = hashlib.md5(origin_src.encode('utf8')).hexdigest()
+if md5 not in {'efc6123fd597332ae8d01841bba6cf9f'}:
+    raise Exception("source of bert.modeling.get_assignment_map_from_checkpoint changed, cannot patch it."
+                    " md5:{}".format(md5))
 
 modeling.get_assignment_map_from_checkpoint = get_assignment_map_from_checkpoint

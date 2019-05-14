@@ -17,9 +17,9 @@ class LabelMap:
     reverse_map: Dict[int, str]
 
     def __init__(self, labels):
-        self.labels = labels
+        self.labels = sorted(labels)
         self.map = {l: i for i, l in enumerate(self.labels)}
-        self.reversed = {i: l for i, l in enumerate(self.labels)}
+        self.reverse_map = {i: l for i, l in enumerate(self.labels)}
 
     def __len__(self):
         return len(self.labels)
@@ -31,7 +31,7 @@ class LabelMap:
         return [self.reverse_map.get(label) for label in label_ids]
 
     def save(self, filename):
-        json.dump(self.labels, open(filename, 'wb'))
+        json.dump(self.labels, open(filename, 'w'))
 
     @classmethod
     def load(cls, filename) -> 'LabelMap':

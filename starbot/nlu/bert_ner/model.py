@@ -151,9 +151,9 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
             tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
         input_ids = features["input_ids"]
         input_mask = features["input_mask"]
-        segment_ids = features.get("segment_ids", None)
-        ner_label_ids = features.get("ner_label_ids", [])
-        intent_label_ids = features.get("intent_label_ids", 0)
+        segment_ids = features.get("segment_ids")
+        ner_label_ids = features.get("ner_label_ids")
+        intent_label_ids = features.get("intent_label_ids")
         # label_mask = features["label_mask"]
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
@@ -206,7 +206,7 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
                 predictions={
-                    "prediction": model.prediction,
+                    "prediction": model.intent_prediction,
                     "softmax": model.ner_model.prediction,
                     "sn": features["sn"]
                 },
