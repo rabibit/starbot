@@ -56,7 +56,7 @@ class Dataset:
                  intent_labels: Iterable[str]):
         self.examples = list(examples)
         self.ner_labels = LabelMap(['[PAD]'] + sorted(ner_labels))
-        self.intent_labels = LabelMap(intent_labels)
+        self.intent_labels = LabelMap(['[PAD]'] + sorted(intent_labels))
 
     def ner_label2id(self, labels):
         assert not isinstance(labels, str)
