@@ -1,5 +1,4 @@
 import os
-import json
 import shutil
 import logging
 import threading
@@ -387,6 +386,7 @@ class BertExtractor(EntityExtractor):
         print("message.text={}".format(message.text))
         print("labels={}".format(labels))
         print("pred={}".format(pred[0]))
+        print("softmax={}".format(result['softmax']))
         return mark_message_with_labels(message.text, labels[1:])
 
     # =========== utils ============

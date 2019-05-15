@@ -207,7 +207,7 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                 mode=mode,
                 predictions={
                     "prediction": model.intent_prediction,
-                    "softmax": model.ner_model.prediction,
+                    "softmax": model.intent_prediction.prediction,
                     "sn": features["sn"]
                 },
                 scaffold_fn=scaffold_fn
