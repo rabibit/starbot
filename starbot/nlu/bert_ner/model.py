@@ -193,7 +193,11 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                                 init_string)
 
         if mode == tf.estimator.ModeKeys.TRAIN:
-            logging_hook = tf.train.LoggingTensorHook({"loss": model.loss}, every_n_iter=10)
+            class LoggingHook(tf.train.LoggingTensorHook):
+                def after_run(self, run_context, run_values):
+                    super(LoggingHook, self).after_run(run_context, run_values)
+                    print("self._iter_count={}".format(self._iter_count))
+            logging_hook = LoggingHook({"loss": model.loss}, every_n_iter=10)
             train_op = optimization.create_optimizer(
                 model.loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
