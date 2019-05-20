@@ -55,6 +55,7 @@ class Config:
 
     # other
     dry_run = 0
+    allow_interrupt = 1
 
     def __init__(self, config_dict):
         self.__dict__ = config_dict
@@ -264,7 +265,11 @@ class BertExtractor(EntityExtractor):
                                                 num_warmup_steps=num_warmup_steps,
                                                 is_training=True)
         if not self.config.dry_run:
-            self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+            try:
+                self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
+            except:
+                if not self.config.allow_interrupt:
+                    raise
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
@@ -333,7 +338,7 @@ class BertExtractor(EntityExtractor):
             ds = tf.data.Dataset.from_tensor_slices(features)
 
             if is_training:
-                ds = ds.repeat()
+                ds = ds.shuffle(1000, reshuffle_each_iteration=True).repeat()
             return ds.batch(self.config.train_batch_size, drop_remainder)
 
         return input_fn
@@ -385,8 +390,9 @@ class BertExtractor(EntityExtractor):
         labels = self.intent_labels.decode(pred.tolist())
         print("message.text={}".format(message.text))
         print("labels={}".format(labels))
-        print("pred={}".format(pred[0]))
-        print("softmax={}".format(result['softmax']))
+        for l, p in zip(self.intent_labels.labels, result['softmax'][0]):
+            bar = '#' * int(30*p)
+            print("{:<15}:{:.3f} {}".format(l, p, bar))
         return mark_message_with_labels(message.text, labels[1:])
 
     # =========== utils ============
