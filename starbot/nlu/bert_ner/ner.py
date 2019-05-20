@@ -273,7 +273,7 @@ class BertExtractor(EntityExtractor):
                     raise
         alltest = []
         for example in train_examples:
-            msg = ''.join(example.chars)
+            msg = ''.join(example.chars[1:-1])
             label = example.intent
             alltest.append([msg, label])
         import json
@@ -405,7 +405,7 @@ class BertExtractor(EntityExtractor):
 
         import json
         for msg, label in json.load(open("alltest.json", 'r')):
-            self.test_predict(message_text, label)
+            self.test_predict(msg, label)
 
         return mark_message_with_labels(message_text, labels[1:])
 
