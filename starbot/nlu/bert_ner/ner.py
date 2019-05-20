@@ -271,10 +271,13 @@ class BertExtractor(EntityExtractor):
             except:
                 if not self.config.allow_interrupt:
                     raise
+        alltest = []
         for example in train_examples:
             msg = ''.join(example.chars)
             label = example.intent
-            self.test_predict(msg, label)
+            alltest.append([msg, label])
+        import json
+        json.dump(alltest, open('alltest.json', 'w'))
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
@@ -399,6 +402,11 @@ class BertExtractor(EntityExtractor):
         for l, p in zip(self.intent_labels.labels, result['softmax'][0]):
             bar = '#' * int(30*p)
             print("{:<15}:{:.3f} {}".format(l, p, bar))
+
+        import json
+        for msg, label in json.load(open("alltest.json", 'r')):
+            self.test_predict(message_text, label)
+
         return mark_message_with_labels(message_text, labels[1:])
 
     def test_predict(self, message_text, label):
