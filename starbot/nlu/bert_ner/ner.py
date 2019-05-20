@@ -5,6 +5,7 @@ import threading
 import tensorflow as tf
 from queue import Queue
 from pathlib import Path
+import numpy as np
 
 from bert import modeling
 from bert.tokenization import load_vocab
@@ -270,6 +271,10 @@ class BertExtractor(EntityExtractor):
             except:
                 if not self.config.allow_interrupt:
                     raise
+        for example in train_examples:
+            msg = ''.join(example.chars)
+            label = example.intent
+            self.test_predict(msg, label)
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
@@ -289,8 +294,8 @@ class BertExtractor(EntityExtractor):
             result.append(self.vocab.get(token, unk))
         return result
 
-    def _create_single_feature_from_message(self, message: Message):
-        inputs = ['[CLS]'] + list(message.text) + ['[SEP]']
+    def _create_single_feature_from_message(self, message_text: str):
+        inputs = ['[CLS]'] + list(message_text) + ['[SEP]']
         input_ids = self.convert_tokens_to_ids(self._pad(inputs, '[PAD]'))
         input_mask = self._pad([1 for _ in inputs], 0)
 
@@ -344,7 +349,7 @@ class BertExtractor(EntityExtractor):
         return input_fn
 
     def process(self, message: Message, **kwargs: Any) -> None:
-        extracted = self.add_extractor_name(self._extract_entities(message))
+        extracted = self.add_extractor_name(self._extract_entities(message.text))
         message.set("entities", message.get("entities", []) + extracted,
                     add_to_output=True)
 
@@ -380,22 +385,61 @@ class BertExtractor(EntityExtractor):
             "num_intent_labels": self.num_intent_labels,
         }
 
-    def _extract_entities(self, message: Message) -> List[Dict[Text, Any]]:
+    def _extract_entities(self, message_text: str) -> List[Dict[Text, Any]]:
         """Take a sentence and return entities in json format"""
         # <class 'dict'>:
         # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
         # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
-        result = self.predictor.predict(self._create_single_feature_from_message(message))
+        result = self.predictor.predict(self._create_single_feature_from_message(message_text))
         pred = result['prediction']
         labels = self.intent_labels.decode(pred.tolist())
-        print("message.text={}".format(message.text))
+        print("message.text={}".format(message_text))
+        print("softmax={}".format(result['softmax']))
         print("labels={}".format(labels))
         for l, p in zip(self.intent_labels.labels, result['softmax'][0]):
             bar = '#' * int(30*p)
             print("{:<15}:{:.3f} {}".format(l, p, bar))
-        return mark_message_with_labels(message.text, labels[1:])
+        return mark_message_with_labels(message_text, labels[1:])
+
+    def test_predict(self, message_text, label):
+        result = self.predictor.predict(self._create_single_feature_from_message(message_text))
+        labels = self.intent_labels.encode([label])
+        softmax = result['softmax'][0]
+        one_hot = to_one_hot(np.array(labels), one_hot_size=len(self.intent_labels))
+        product = one_hot * softmax
+        sum = np.sum(product)
+        print('[{:.3f} {:<30}] {}'.format(sum, "#" * int(30*float(sum)), message_text))
 
     # =========== utils ============
     @property
     def config(self):
         return Config(self.component_config)
+
+
+def to_one_hot(vector, one_hot_size):
+    """
+    Use to convert a column vector to a 'one-hot' matrix
+
+    Example:
+        vector: [[2], [0], [1]]
+        one_hot_size: 3
+        returns:
+            [[ 0.,  0.,  1.],
+             [ 1.,  0.,  0.],
+             [ 0.,  1.,  0.]]
+
+    Parameters:
+        vector (np.array): of size (n, 1) to be converted
+        one_hot_size (int) optional: size of 'one-hot' row vector
+
+    Returns:
+        np.array size (vector.size, one_hot_size): converted to a 'one-hot' matrix
+    """
+    import numpy as np
+    squeezed_vector = np.squeeze(vector, axis=-1)
+
+    one_hot = np.zeros((squeezed_vector.size, one_hot_size))
+
+    one_hot[np.arange(squeezed_vector.size), squeezed_vector] = 1
+
+    return one_hot
