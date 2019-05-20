@@ -416,7 +416,9 @@ class BertExtractor(EntityExtractor):
         one_hot = to_one_hot(np.array(labels), one_hot_size=len(self.intent_labels))
         product = one_hot * softmax
         sum = np.sum(product)
-        print('[{:.3f} {:<30}] {}'.format(sum, "#" * int(30*float(sum)), message_text))
+        pred = result['prediction']
+        pred_label = self.intent_labels.decode(pred.tolist())[0]
+        print('[{:.3f} {:<30} {:<20}] {}'.format(sum, "#" * int(30*float(sum)), pred_label, message_text))
 
     # =========== utils ============
     @property
