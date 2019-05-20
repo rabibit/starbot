@@ -48,11 +48,17 @@ class StarMessageProcessor(MessageProcessor):
         def is_question(message):
             return '?' in message.text or '？' in message.text
 
+        message.origin_text = message.text
         if tracker:
             q = tracker.latest_bot_utterance
             if isinstance(q, BotUttered) and q.text and is_question(q):
                 message.text = q.text + message.text
         return message
+
+    def _parse_message(self, message):
+        parsed_data = super(StarMessageProcessor, self)._parse_message(message)
+        parsed_data['text'] = message.origin_text
+        return parsed_data
 
 
 class StarAgent(Agent):
