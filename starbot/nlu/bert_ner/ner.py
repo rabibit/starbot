@@ -418,7 +418,8 @@ class BertExtractor(EntityExtractor):
         sum = np.sum(product)
         pred = result['prediction']
         pred_label = self.intent_labels.decode(pred.tolist())[0]
-        print('[{:.3f} {:<30} {:<15}/{:<15}] {}'.format(sum, "#" * int(30*float(sum)), pred_label, label, message_text))
+        if sum < 0.9:
+            print('[{:.3f} {:<30} {:<15}/{:<15}] {}'.format(sum, "#" * int(30*float(sum)), pred_label, label, message_text))
 
     # =========== utils ============
     @property

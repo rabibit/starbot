@@ -50,7 +50,7 @@ class BertNerModel:
 
     @property
     def loss(self):
-        return self.intent_model.loss
+        return self.intent_model.loss + self.ner_model.loss
 
 
 class NerModelConfig(NamedTuple):
