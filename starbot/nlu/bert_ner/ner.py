@@ -352,9 +352,11 @@ class BertExtractor(EntityExtractor):
         return input_fn
 
     def process(self, message: Message, **kwargs: Any) -> None:
-        extracted = self.add_extractor_name(self._extract_entities(message.text))
+        ir, ner = self._ir_and_ner(message.text)
+        extracted = self.add_extractor_name(ner)
         message.set("entities", message.get("entities", []) + extracted,
                     add_to_output=True)
+        message.set("intent", {'intent': ir}, add_to_output=True)
 
     def persist(self,
                 file_name: Text,
@@ -388,26 +390,28 @@ class BertExtractor(EntityExtractor):
             "num_intent_labels": self.num_intent_labels,
         }
 
-    def _extract_entities(self, message_text: str) -> List[Dict[Text, Any]]:
+    def _ir_and_ner(self, message_text: str) -> (str, List[Dict[Text, Any]]):
         """Take a sentence and return entities in json format"""
         # <class 'dict'>:
         # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
         # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
         result = self.predictor.predict(self._create_single_feature_from_message(message_text))
-        pred = result['prediction']
-        labels = self.intent_labels.decode(pred.tolist())
+        ner = result['ner']
+        ir = result['intent']
+        intent_labels = self.intent_labels.decode(ir.tolist())
+        ner_labels = self.ner_labels.decode(ner.tolist())
         print("message.text={}".format(message_text))
-        print("softmax={}".format(result['softmax']))
-        print("labels={}".format(labels))
+        print("intent_labels={}".format(intent_labels))
         for l, p in zip(self.intent_labels.labels, result['softmax'][0]):
             bar = '#' * int(30*p)
             print("{:<15}:{:.3f} {}".format(l, p, bar))
 
-        import json
-        for msg, label in json.load(open("alltest.json", 'r')):
-            self.test_predict(msg, label)
+        #import json
+        #for msg, label in json.load(open("alltest.json", 'r')):
+        #    self.test_predict(msg, label)
 
-        return mark_message_with_labels(message_text, labels[1:])
+        entities = mark_message_with_labels(message_text, ner_labels[1:])
+        return intent_labels[0], entities
 
     def test_predict(self, message_text, label):
         result = self.predictor.predict(self._create_single_feature_from_message(message_text))
@@ -416,8 +420,8 @@ class BertExtractor(EntityExtractor):
         one_hot = to_one_hot(np.array(labels), one_hot_size=len(self.intent_labels))
         product = one_hot * softmax
         sum = np.sum(product)
-        pred = result['prediction']
-        pred_label = self.intent_labels.decode(pred.tolist())[0]
+        ir = result['intent']
+        pred_label = self.intent_labels.decode(ir.tolist())[0]
         print('[{:.3f} {:<30} {:<15}/{:<15}] {}'.format(sum, "#" * int(30*float(sum)), pred_label, label, message_text))
 
     # =========== utils ============

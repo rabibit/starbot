@@ -211,7 +211,8 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
                 mode=mode,
                 predictions={
-                    "prediction": model.intent_prediction,
+                    "ner": model.ner_prediction,
+                    "intent": model.intent_prediction,
                     "softmax": model.intent_model.prediction,
                     "sn": features["sn"]
                 },

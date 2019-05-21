@@ -24,10 +24,10 @@ class LabelMap:
     def __len__(self):
         return len(self.labels)
 
-    def encode(self, labels: Iterable[str]):
+    def encode(self, labels: Iterable[str]) -> List[int]:
         return [self.map.get(label) for label in labels]
 
-    def decode(self, label_ids: Iterable[int]):
+    def decode(self, label_ids: Iterable[int]) -> List[str]:
         return [self.reverse_map.get(label) for label in label_ids]
 
     def save(self, filename):
