@@ -356,7 +356,7 @@ class BertExtractor(EntityExtractor):
         extracted = self.add_extractor_name(ner)
         message.set("entities", message.get("entities", []) + extracted,
                     add_to_output=True)
-        message.set("intent", {'intent': ir}, add_to_output=True)
+        message.set("intent", ir, add_to_output=True)
 
     def persist(self,
                 file_name: Text,
@@ -396,22 +396,21 @@ class BertExtractor(EntityExtractor):
         # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
         # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
         result = self.predictor.predict(self._create_single_feature_from_message(message_text))
-        ner = result['ner']
+        ner = result['ner'][0]
         ir = result['intent']
-        intent_labels = self.intent_labels.decode(ir.tolist())
+        ir_label = self.intent_labels.decode(ir.tolist())[0]
         ner_labels = self.ner_labels.decode(ner.tolist())
         print("message.text={}".format(message_text))
-        print("intent_labels={}".format(intent_labels))
         for l, p in zip(self.intent_labels.labels, result['softmax'][0]):
             bar = '#' * int(30*p)
             print("{:<15}:{:.3f} {}".format(l, p, bar))
 
-        #import json
-        #for msg, label in json.load(open("alltest.json", 'r')):
-        #    self.test_predict(msg, label)
-
         entities = mark_message_with_labels(message_text, ner_labels[1:])
-        return intent_labels[0], entities
+        ir = {
+            'name': ir_label,
+            'confidence': result['softmax'][0][ir[0]].item()
+        }
+        return ir, entities
 
     def test_predict(self, message_text, label):
         result = self.predictor.predict(self._create_single_feature_from_message(message_text))

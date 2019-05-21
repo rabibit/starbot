@@ -90,8 +90,6 @@ def create_dataset(examples: Iterable[Message]) -> Dataset:
         chars = ['[CLS]'] + chars + ['[SEP]']
         labels = ['[CLS]'] + labels + ['[CLS]']
         sentences.append(Sentence(chars=chars, labels=labels, intent=intent))
-        print('Remove me: sentence count={}'.format(len(sentences)))
-        sentences = sentences[:100]
     return Dataset(sentences, global_labels, global_intents)
 
 

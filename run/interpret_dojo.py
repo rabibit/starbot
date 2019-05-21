@@ -25,6 +25,7 @@ def interpret_messages(messages):
         p = example['prediction']
         print("=="*10)
         print(p['text'])
+        print('intent:', p['intent'])
         for entity in p['entities']:
             print("  {:12}: {}".format(entity['entity'], entity['value']))
     #print(json.dumps(all_result, ensure_ascii=False, indent=2))
@@ -45,8 +46,11 @@ else:
             '帮我订一间大床房明晚入住',
             '帮我订一间标间明晚入住',
             '一个大床房今晚的',
+            '一个二十五号的标间',
             '大床房一个今晚的',
             '我叫狄仁杰订一间大床房今晚的电话是12345678',
+            '我想了解一下价格',
+            '感觉不错的样子',
             ]
     #COMMONMSG = json.load(open('test.json'))
     interpret_messages(COMMONMSG)

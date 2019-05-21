@@ -98,7 +98,7 @@ if __name__ == '__main__':
     core = at_root('../starbot/policy/models')
     nlu = at_root('models/current/nlu')
     endpoints = at_root('../starbot/policy/endpoints.yml')
-    credentials = at_root('credentials.yml')
+    credentials = at_root('configs/credentials.yml')
 
     port = 5002
     connector = None
