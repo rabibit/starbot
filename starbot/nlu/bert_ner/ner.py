@@ -397,7 +397,7 @@ class BertExtractor(EntityExtractor):
         # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
         result = self.predictor.predict(self._create_single_feature_from_message(message_text))
         ner = result['ner'][0]
-        ir = result['intent']
+        ir = result['ir']
         ir_label = self.intent_labels.decode(ir.tolist())[0]
         ner_labels = self.ner_labels.decode(ner.tolist())
         print("message.text={}".format(message_text))

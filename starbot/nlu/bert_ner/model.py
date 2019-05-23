@@ -91,7 +91,9 @@ class NerModel:
 
         weight, bias = self.weight_and_bias(2 * args.rnn_size, args.class_size)
         output = tf.reshape(output, [-1, 2 * args.rnn_size])
-        prediction = tf.nn.softmax(tf.matmul(output, weight) + bias)
+        output = tf.matmul(output, weight) + bias
+        output = tf.layers.batch_normalization(output)
+        prediction = tf.nn.softmax(output)
         self.prediction = tf.reshape(prediction, [-1, args.sentence_length, args.class_size])
         if labels is not None:
             one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
@@ -129,6 +131,7 @@ class IntentClassificationModel:
         with tf.variable_scope("loss"):
             logits = tf.matmul(input_layer, weights, transpose_b=True)
             logits = tf.nn.bias_add(logits, bias)
+            logits = tf.layers.batch_normalization(logits)
             probabilities = tf.nn.softmax(logits, axis=-1)
             log_probs = tf.nn.log_softmax(logits, axis=-1)
 
@@ -212,8 +215,8 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                 mode=mode,
                 predictions={
                     "ner": model.ner_prediction,
-                    "intent": model.intent_prediction,
-                    "softmax": model.intent_model.prediction,
+                    "ir": model.intent_prediction,
+                    "ir_prob": model.intent_model.prediction,
                     "sn": features["sn"]
                 },
                 scaffold_fn=scaffold_fn
