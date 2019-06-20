@@ -14,7 +14,7 @@ VERSION = '0.1.0'
 
 REQUIRED = ["rasa==0.1.1",
             "tensorflow==1.12",
-            "bert-tensorflow==1.0.1"]
+            "bert-tensorflow==1.0.1", 'websockets']
 
 EXTRAS = {}
 
