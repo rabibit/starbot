@@ -49,8 +49,13 @@ else:
             '一个二十五号的标间',
             '大床房一个今晚的',
             '我叫狄仁杰订一间大床房今晚的电话是12345678',
+            '我叫如来订一间大床房',
             '我想了解一下价格',
             '感觉不错的样子',
+            '对的',
+            '好的',
+            'yes',
+            '谢谢',
             ]
     #COMMONMSG = json.load(open('test.json'))
     interpret_messages(COMMONMSG)

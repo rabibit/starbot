@@ -207,6 +207,10 @@ class BertExtractor(EntityExtractor):
                 self.config.tpu_name, zone=self.config.tpu_zone, project=self.config.gcp_project)
 
         is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
+        from tensorflow.core.protobuf import rewriter_config_pb2
+        session_config = tf.ConfigProto()
+        off = rewriter_config_pb2.RewriterConfig.OFF
+        session_config.graph_options.rewrite_options.arithmetic_optimization = off
 
         run_config = tf.contrib.tpu.RunConfig(
             cluster=tpu_cluster_resolver,
@@ -216,7 +220,9 @@ class BertExtractor(EntityExtractor):
             tpu_config=tf.contrib.tpu.TPUConfig(
                 iterations_per_loop=self.config.iterations_per_loop,
                 num_shards=self.config.num_tpu_cores,
-                per_host_input_for_training=is_per_host))
+                per_host_input_for_training=is_per_host),
+            session_config=session_config
+        )
 
         model_fn = model_fn_builder(
             bert_config=bert_config,
@@ -397,18 +403,25 @@ class BertExtractor(EntityExtractor):
         # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
         result = self.predictor.predict(self._create_single_feature_from_message(message_text))
         ner = result['ner'][0]
+        #ner = ner[:len(message_text)+2]
+        #crf_params = result['crf_params']
+        #from tensorflow.contrib import crf
+        #viterbi_seq, viterbi_score = crf.viterbi_decode(ner, crf_params)
         ir = result['ir']
         ir_label = self.intent_labels.decode(ir.tolist())[0]
-        ner_labels = self.ner_labels.decode(ner.tolist())
+        #ner_labels = self.ner_labels.decode(viterbi_seq)
+        ner_labels = self.ner_labels.decode(ner)
+        print(ner)
+        print(ner_labels)
         print("message.text={}".format(message_text))
-        for l, p in zip(self.intent_labels.labels, result['softmax'][0]):
+        for l, p in zip(self.intent_labels.labels, result['ir_prob'][0]):
             bar = '#' * int(30*p)
             print("{:<15}:{:.3f} {}".format(l, p, bar))
 
         entities = mark_message_with_labels(message_text, ner_labels[1:])
         ir = {
             'name': ir_label,
-            'confidence': result['softmax'][0][ir[0]].item()
+            'confidence': result['ir_prob'][0][ir[0]].item()
         }
         return ir, entities
 

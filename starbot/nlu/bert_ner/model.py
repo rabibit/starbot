@@ -3,6 +3,7 @@ from typing import NamedTuple
 import tensorflow as tf
 from bert import modeling
 from bert import optimization
+from tensorflow.python.ops import variable_scope as vs
 
 
 class BertNerModel:
@@ -31,27 +32,34 @@ class BertNerModel:
         with tf.variable_scope("ner"):
             config = NerModelConfig(
                 num_layers=2,
-                rnn_size=1024,
+                rnn_size=512,
                 class_size=num_ner_labels,
                 sentence_length=max_seq_length
             )
             output_layer = model.get_sequence_output()
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
-            self.ner_model = NerModel(output_layer, ner_label_ids, num_ner_labels, config)
-            self.ner_prediction = tf.argmax(self.ner_model.prediction, axis=-1)
+            self.ner_model = NerCRFModel(output_layer, ner_label_ids, input_mask, config)
+            self.ner_prediction = self.ner_model.output
+            #self.crf_params = self.ner_model.trans_params
 
         with tf.variable_scope("intent"):
-            output_layer = model.get_pooled_output()
+            config = NerModelConfig(
+                num_layers=2,
+                rnn_size=512,
+                class_size=num_ner_labels,
+                sentence_length=max_seq_length
+            )
+            #output_layer = model.get_pooled_output()
+            output_layer = model.get_sequence_output()
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
-            self.intent_model = IntentClassificationModel(output_layer, intent_label_ids, num_intent_labels)
-            self.intent_prediction = tf.argmax(self.intent_model.prediction, axis=-1)
+            self.intent_model = IntentClassificationModel(output_layer, intent_label_ids, num_intent_labels, config)
+            self.intent_prediction = tf.argmax(self.intent_model.prediction, axis=1)
 
     @property
     def loss(self):
         return self.intent_model.loss + self.ner_model.loss
-
 
 class NerModelConfig(NamedTuple):
     rnn_size: int
@@ -115,33 +123,112 @@ class NerModel:
         return tf.Variable(weight), tf.Variable(bias)
 
 
+class NerCRFModel:
+    """A CRF concat to the bert model to do NER.
+    """
+
+    def __init__(self, input_layer, labels, mask, args):
+        self.args = args
+
+        if tf.test.gpu_device_name():  # TODO: and not use_tpu
+            LSTM = tf.keras.layers.CuDNNLSTM
+        else:
+            LSTM = tf.keras.layers.LSTM
+
+        birnn = tf.keras.layers.Bidirectional(
+            LSTM(self.args.rnn_size, return_sequences=True)
+        )
+        output = birnn(input_layer)
+
+        weight, bias = self.weight_and_bias(2 * args.rnn_size, args.rnn_size)
+        output = tf.reshape(output, [-1, 2 * args.rnn_size])
+        output = tf.matmul(output, weight) + bias
+        output = tf.layers.batch_normalization(output)
+        output = tf.nn.leaky_relu(output,alpha=0.2)
+
+        weight, bias = self.weight_and_bias(args.rnn_size, args.class_size)
+        output = tf.reshape(output, [-1, args.rnn_size])
+        output = tf.matmul(output, weight) + bias
+        output = tf.layers.batch_normalization(output)
+#        output = tf.nn.leaky_relu(output,alpha=0.2)
+#        output = tf.tanh(output)
+
+#        weight, bias = self.weight_and_bias(input_layer.shape[-1].value, args.class_size)
+#        output = tf.reshape(input_layer, [-1, input_layer.shape[-1].value])
+#        output = tf.matmul(output, weight) + bias
+#        output = tf.layers.batch_normalization(output)
+#        output = tf.nn.leaky_relu(output,alpha=0.2)
+        output = tf.reshape(output, [-1, args.sentence_length, args.class_size])
+        if labels is not None:
+            self.loss, output = self.cost(output, labels, mask)
+        else:
+            sentence_lengths = tf.reduce_sum(mask, 1)
+            #trans_params = tf.cast(vs.get_variable("transitions", [args.class_size, args.class_size]), tf.float32)
+            trans_params = vs.get_variable("transitions", [args.class_size, args.class_size])
+            output, _ = tf.contrib.crf.crf_decode(output, trans_params, sentence_lengths)
+        self.output = output
+
+    def cost(self, output, labels, mask):
+        sentence_lengths = tf.reduce_sum(mask, 1)
+        #sequence_lengths = [128] * 32
+        #sequence_lengths_t = tf.constant(sequence_lengths)
+        log_likelihood, trans_params = tf.contrib.crf.crf_log_likelihood(output, labels, sentence_lengths)
+        #self.trans_params = trans_params
+        output, _ = tf.contrib.crf.crf_decode(output, trans_params, sentence_lengths)
+        return tf.reduce_mean(-log_likelihood), output
+
+    def weight_and_bias(self, in_size, out_size):
+        weight = tf.truncated_normal([in_size, out_size], stddev=0.01)
+        bias = tf.constant(0.1, shape=[out_size])
+        return tf.Variable(weight), tf.Variable(bias)
+
+
 class IntentClassificationModel:
     """A BiLSTM net concat to the bert model to do NER.
     """
-    def __init__(self, input_layer, labels, num_labels):
-        hidden_size = input_layer.shape[-1].value
+    def __init__(self, input_layer, labels, num_labels, args):
+        self.args = args
 
-        weights = tf.get_variable(
-            "weights", [num_labels, hidden_size],
-            initializer=tf.truncated_normal_initializer(stddev=0.02))
+        if tf.test.gpu_device_name():  # TODO: and not use_tpu
+            LSTM = tf.keras.layers.CuDNNLSTM
+        else:
+            LSTM = tf.keras.layers.LSTM
 
-        bias = tf.get_variable(
-            "bias", [num_labels], initializer=tf.zeros_initializer())
+        birnn = tf.keras.layers.Bidirectional(
+            LSTM(self.args.rnn_size, return_sequences=False)
+        )
+        output = birnn(input_layer)
+
+        weight, bias = self.weight_and_bias(2 * args.rnn_size, args.rnn_size)
+        output = tf.reshape(output, [-1, 2 * args.rnn_size])
+        output = tf.matmul(output, weight) + bias
+        output = tf.layers.batch_normalization(output)
+        output = tf.nn.leaky_relu(output,alpha=0.2)
+
+        weight, bias = self.weight_and_bias(args.rnn_size, num_labels)
+        output = tf.reshape(output, [-1, args.rnn_size])
+        output = tf.matmul(output, weight) + bias
+        output = tf.layers.batch_normalization(output)
+        #output = tf.nn.leaky_relu(output,alpha=0.2)
+
 
         with tf.variable_scope("loss"):
-            logits = tf.matmul(input_layer, weights, transpose_b=True)
-            logits = tf.nn.bias_add(logits, bias)
-            logits = tf.layers.batch_normalization(logits)
-            probabilities = tf.nn.softmax(logits, axis=-1)
-            log_probs = tf.nn.log_softmax(logits, axis=-1)
+            probabilities = tf.nn.softmax(output, axis=1)
+            log_probs = tf.nn.log_softmax(output, axis=1)
 
             if labels is not None:
                 one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
                 print('one_hot_labels.shape:', one_hot_labels.shape)
                 print('log_probs.shape:', log_probs.shape)
-                per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
+                per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=1)
                 self.loss = tf.reduce_mean(per_example_loss)
             self.prediction = probabilities
+
+
+    def weight_and_bias(self, in_size, out_size):
+        weight = tf.truncated_normal([in_size, out_size], stddev=0.01)
+        bias = tf.constant(0.1, shape=[out_size])
+        return tf.Variable(weight), tf.Variable(bias)
 
 
 def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkpoint, learning_rate,
@@ -215,6 +302,7 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                 mode=mode,
                 predictions={
                     "ner": model.ner_prediction,
+                    #"crf_params": model.crf_params,
                     "ir": model.intent_prediction,
                     "ir_prob": model.intent_model.prediction,
                     "sn": features["sn"]
