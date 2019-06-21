@@ -204,16 +204,16 @@ class IntentClassificationModel:
         )
         output = birnn(hiddens)
 
+        print('output shape is: ', output.shape)
         weight, bias = self.weight_and_bias(2 * args.rnn_size, 2 * args.rnn_size)
         output = tf.reshape(output, [-1, 2 * args.rnn_size])
         output = tf.matmul(output, weight) + bias
         output = tf.layers.batch_normalization(output)
         output = tf.nn.leaky_relu(output,alpha=0.2)
-        output = tf.reshape(output, [output.shape[0], 1, 2 * args.rnn_size])
+        output = tf.reshape(output, [-1, 1, 2 * args.rnn_size])
         product = tf.multiply(hiddens, output)
         product = tf.reduce_sum(product, axis=2, keep_dims=True)
         score = tf.nn.softmax(product, axis=1)
-        score = tf.broadcast_to(score, (output.shape[0], args.sentence_length, 2 * args.rnn_size))
         output = tf.multiply(hiddens, score)
         output = tf.reduce_sum(output, axis=1)
 
