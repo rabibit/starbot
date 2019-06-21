@@ -195,9 +195,14 @@ class IntentClassificationModel:
             LSTM = tf.keras.layers.LSTM
 
         birnn = tf.keras.layers.Bidirectional(
-            LSTM(self.args.rnn_size, return_sequences=False)
+            LSTM(self.args.rnn_size, return_sequences=True)
         )
         output = birnn(input_layer)
+
+        birnn = tf.keras.layers.Bidirectional(
+            LSTM(self.args.rnn_size, return_sequences=False)
+        )
+        output = birnn(output)
 
         weight, bias = self.weight_and_bias(2 * args.rnn_size, args.rnn_size)
         output = tf.reshape(output, [-1, 2 * args.rnn_size])
