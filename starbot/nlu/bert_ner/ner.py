@@ -41,7 +41,7 @@ class Config:
     # training
     save_checkpoints_steps = 1000  # How often to save the model checkpoint.
     iterations_per_loop = 1000  # How many steps to make in each estimator call.
-    train_batch_size = 32
+    train_batch_size = 16
     num_train_epochs = 10
     warmup_proportion = 0.1  # Proportion of training to perform linear learning rate warmup for.
     learning_rate = 5e-5

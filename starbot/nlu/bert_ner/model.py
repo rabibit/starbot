@@ -59,7 +59,7 @@ class BertNerModel:
 
     @property
     def loss(self):
-        return self.intent_model.loss + self.ner_model.loss
+        return 10 * self.intent_model.loss + self.ner_model.loss
 
 class NerModelConfig(NamedTuple):
     rnn_size: int
@@ -205,11 +205,11 @@ class IntentClassificationModel:
         output = birnn(hiddens)
 
         print('output shape is: ', output.shape)
-        weight, bias = self.weight_and_bias(2 * args.rnn_size, 2 * args.rnn_size)
-        output = tf.reshape(output, [-1, 2 * args.rnn_size])
-        output = tf.matmul(output, weight) + bias
-        output = tf.layers.batch_normalization(output)
-        output = tf.nn.leaky_relu(output,alpha=0.2)
+        #weight, bias = self.weight_and_bias(2 * args.rnn_size, 2 * args.rnn_size)
+        #output = tf.reshape(output, [-1, 2 * args.rnn_size])
+        #output = tf.matmul(output, weight) + bias
+        #output = tf.layers.batch_normalization(output)
+        #output = tf.nn.leaky_relu(output,alpha=0.2)
         output = tf.reshape(output, [-1, 1, 2 * args.rnn_size])
         product = tf.multiply(hiddens, output)
         product = tf.reduce_sum(product, axis=2, keep_dims=True)
@@ -217,8 +217,13 @@ class IntentClassificationModel:
         output = tf.multiply(hiddens, score)
         output = tf.reduce_sum(output, axis=1)
 
-        weight, bias = self.weight_and_bias(2 * args.rnn_size, num_labels)
+        weight, bias = self.weight_and_bias(2 * args.rnn_size, args.rnn_size)
         output = tf.reshape(output, [-1, 2 * args.rnn_size])
+        output = tf.matmul(output, weight) + bias
+        output = tf.layers.batch_normalization(output)
+        output = tf.nn.leaky_relu(output,alpha=0.2)
+        weight, bias = self.weight_and_bias(args.rnn_size, num_labels)
+        output = tf.reshape(output, [-1, args.rnn_size])
         output = tf.matmul(output, weight) + bias
         output = tf.layers.batch_normalization(output)
         #output = tf.nn.leaky_relu(output,alpha=0.2)

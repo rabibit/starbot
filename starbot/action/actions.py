@@ -51,12 +51,6 @@ class RoomForm(FormAction):
                           domain  # type: Dict[Text, Any]
                           ):
         events = super(RoomForm, self).request_next_slot(dispatcher, tracker, domain)
-        dispatcher.utter_message("debug info:, 姓名:[{}] 电话：[{}] 预订一间[{}], [{}]入住".format(
-            tracker.get_slot("guest_name"),
-            tracker.get_slot("guest_phone_number"),
-            tracker.get_slot("room_type"),
-            tracker.get_slot("checkin_time"),
-        ))
         if events is not None and len(events) > 0:
             evt = events[0]
             if evt['event'] == 'slot' and evt['name'] == 'requested_slot' and evt['value'] == 'confirmed':
