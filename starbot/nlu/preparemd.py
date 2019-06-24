@@ -113,6 +113,51 @@ class MDWriter(MarkdownWriter):
         entity_type = entity['entity']
         return '[{}]({})'.format(entity_text, entity_type)
 
+    @staticmethod
+    def _generate_section_header_md(section_type, title,
+                                    prepend_newline=True):
+        """generates markdown section header."""
+        prefix = "\n" if prepend_newline else ""
+        return prefix + "## {}:{}\n".format(section_type, title)
+
+    @staticmethod
+    def _generate_item_md(text):
+        """generates markdown for a list item."""
+        return "- {}\n".format(text)
+
+    @staticmethod
+    def _generate_fname_md(text):
+        """generates markdown for a lookup table file path."""
+        return "  {}\n".format(text)
+
+    def _generate_message_md(self, message):
+        """generates markdown for a message object."""
+        md = ''
+        text = message.get('text', "")
+        entities = sorted(message.get('entities', []),
+                          key=lambda k: k['start'])
+
+        pos = 0
+        for entity in entities:
+            md += text[pos:entity['start']]
+            md += self._generate_entity_md(text, entity)
+            pos = entity['end']
+
+        md += text[pos:]
+
+        return md
+
+    @staticmethod
+    def _generate_entity_md(text, entity):
+        """generates markdown for an entity object."""
+        entity_text = text[entity['start']:entity['end']]
+        entity_type = entity['entity']
+        if entity_text != entity['value']:
+            # add synonym suffix
+            entity_type += ":{}".format(entity['value'])
+
+        return '[{}]({})'.format(entity_text, entity_type)
+
 
 def converts(infilename, repeat=1):
     reader = MDReader()
