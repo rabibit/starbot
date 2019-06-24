@@ -36,10 +36,10 @@ class BertNerModel:
                 class_size=num_ner_labels,
                 sentence_length=max_seq_length-1
             )
-            output_layer = model.get_sequence_output()[:, 1:, :]
+            output_layer = model.get_sequence_output()
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
-            self.ner_model = NerCRFModel(output_layer, ner_label_ids[:, :-2, :], input_mask[:, :-2, :], config)
+            self.ner_model = NerCRFModel(output_layer[:, 1:, :], ner_label_ids[:, :-2, :], input_mask[:, :-2], config)
             self.ner_prediction = self.ner_model.output
             #self.crf_params = self.ner_model.trans_params
 
