@@ -34,7 +34,7 @@ class BertNerModel:
                 num_layers=2,
                 rnn_size=512,
                 class_size=num_ner_labels,
-                sentence_length=max_seq_length
+                sentence_length=max_seq_length-1
             )
             output_layer = model.get_sequence_output()[:, 1:, :]
             if is_training:
