@@ -9,17 +9,17 @@ import numpy as np
 
 from bert import modeling
 from bert.tokenization import load_vocab
-from rasa_nlu.extractors import EntityExtractor
+from rasa.nlu.extractors import EntityExtractor
 from starbot.nlu.bert_ner.model import model_fn_builder
 from starbot.nlu.bert_ner.dataset import create_dataset, mark_message_with_labels, LabelMap
 
 # for type hint
 from typing import Any, List, Optional, Text, Dict
 from tensorflow.contrib import tpu
-from rasa_nlu.model import Metadata
-from rasa_nlu.components import Component
-from rasa_nlu.config import RasaNLUModelConfig
-from rasa_nlu.training_data import Message, TrainingData
+from rasa.nlu.model import Metadata
+from rasa.nlu.components import Component
+from rasa.nlu.config import RasaNLUModelConfig
+from rasa.nlu.training_data import Message, TrainingData
 from starbot.nlu.bert_ner.dataset import Dataset, Sentence
 
 logger = logging.getLogger(__name__)

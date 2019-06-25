@@ -2,7 +2,7 @@ import json
 import typing
 
 from typing import List, Dict, Iterable
-from rasa_nlu.training_data.message import Message
+from rasa.nlu.training_data.message import Message
 
 
 class Example:

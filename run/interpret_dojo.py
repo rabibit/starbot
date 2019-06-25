@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import sys
-from rasa_nlu.model import Interpreter
+from rasa.nlu.model import Interpreter
 import json
 import time
 

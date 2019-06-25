@@ -2,8 +2,8 @@
 
 from starbot.nlu import preparemd
 
-from rasa_nlu.train import train as rasa_train
-from rasa_nlu import config, utils
+from rasa.nlu.train import train as rasa_train
+from rasa.nlu import config, utils
 from pathlib import Path
 import tempfile
 import logging

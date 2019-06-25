@@ -6,14 +6,14 @@ import sys
 
 sys.path.append(os.path.abspath('nlu'))
 
-from rasa_core.broker import PikaProducer
-from rasa_core.interpreter import NaturalLanguageInterpreter
-from rasa_core.tracker_store import TrackerStore
-from rasa_core import utils as rsutils
-from rasa_core.run import serve_application
-from rasa_core.agent import Agent
-from rasa_core.processor import MessageProcessor
-from rasa_core.events import BotUttered
+from rasa.core.broker import PikaProducer
+from rasa.core.interpreter import NaturalLanguageInterpreter
+from rasa.core.tracker_store import TrackerStore
+from rasa.core import utils as rsutils
+from rasa.core.run import serve_application
+from rasa.core.agent import Agent
+from rasa.core.processor import MessageProcessor
+from rasa.core.events import BotUttered
 
 logger = logging.getLogger()  # get the root logger
 

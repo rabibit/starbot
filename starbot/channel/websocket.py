@@ -1,7 +1,7 @@
 from typing import Callable, Dict, Any, Text
 
-from rasa_core.channels import UserMessage
-from rasa_core.channels.channel import InputChannel, OutputChannel
+from rasa.core.channels import UserMessage
+from rasa.core.channels.channel import InputChannel, OutputChannel
 from websockets import WebSocketServerProtocol
 from threading import Thread
 from flask import Blueprint

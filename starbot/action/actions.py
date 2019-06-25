@@ -1,12 +1,12 @@
 # coding: utf8
-from rasa_core_sdk import Action
-from rasa_core_sdk.events import AllSlotsReset
-from rasa_core_sdk.forms import FormAction
+from rasa.core_sdk import Action
+from rasa.core_sdk.events import AllSlotsReset
+from rasa.core_sdk.forms import FormAction
 import typing
 
 if typing.TYPE_CHECKING:
     from typing import Text
-    from rasa_core_sdk.executor import CollectingDispatcher, Tracker
+    from rasa.core_sdk.executor import CollectingDispatcher, Tracker
 
 
 class RoomForm(FormAction):
