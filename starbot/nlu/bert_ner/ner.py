@@ -377,7 +377,7 @@ class BertExtractor(EntityExtractor):
         prefix = (bert_tmp / 'checkpoint').read_text().split(':')[-1].strip()[1:-1]
 
         def save(src, dst):
-            logger.info('Saving {}'.format(dst))
+            logger.error('Saving {}'.format(dst))
             shutil.copy(src, dst)
 
         for suffix in ['.index', '.meta', '.data-00000-of-00001']:
