@@ -48,9 +48,26 @@ class MDReader(MarkdownReader):
         return super(MDReader, self)._parse_item(line)
 
 
+INTENT = "intent"
+SYNONYM = "synonym"
+REGEX = "regex"
+LOOKUP = "lookup"
+available_sections = [INTENT, SYNONYM, REGEX, LOOKUP]
+
+
 class MDWriter(MarkdownWriter):
     def __init__(self, repeat=1):
         self.repeat = repeat
+
+    def dumps(self, training_data):
+        """Transforms a TrainingData object into a markdown string."""
+        md = u''
+        md += self._generate_training_examples_md(training_data)
+        md += self._generate_synonyms_md(training_data)
+        md += self._generate_regex_features_md(training_data)
+        md += self._generate_lookup_tables_md(training_data)
+
+        return md
 
     def _generate_training_examples_md(self, training_data):
         """generates markdown training examples."""
@@ -111,6 +128,93 @@ class MDWriter(MarkdownWriter):
         """generates markdown for an entity object."""
         entity_text = text
         entity_type = entity['entity']
+        return '[{}]({})'.format(entity_text, entity_type)
+
+    def _generate_synonyms_md(self, training_data):
+        """generates markdown for entity synomyms."""
+        entity_synonyms = sorted(training_data.entity_synonyms.items(),
+                                 key=lambda x: x[1])
+        md = u''
+        for i, synonym in enumerate(entity_synonyms):
+            if i == 0 or entity_synonyms[i - 1][1] != synonym[1]:
+                md += self._generate_section_header_md(SYNONYM, synonym[1])
+
+            md += self._generate_item_md(synonym[0])
+
+        return md
+
+    def _generate_regex_features_md(self, training_data):
+        """generates markdown for regex features."""
+        md = u''
+        # regex features are already sorted
+        regex_features = training_data.regex_features
+        for i, regex_feature in enumerate(regex_features):
+            if i == 0 or regex_features[i - 1]["name"] != regex_feature["name"]:
+                md += self._generate_section_header_md(REGEX,
+                                                       regex_feature["name"])
+
+            md += self._generate_item_md(regex_feature["pattern"])
+
+        return md
+
+    def _generate_lookup_tables_md(self, training_data):
+        """generates markdown for regex features."""
+        md = u''
+        # regex features are already sorted
+        lookup_tables = training_data.lookup_tables
+        for i, lookup_table in enumerate(lookup_tables):
+            md += self._generate_section_header_md(LOOKUP, lookup_table["name"])
+            elements = lookup_table["elements"]
+            if isinstance(elements, list):
+                for e in elements:
+                    md += self._generate_item_md(e)
+            else:
+                md += self._generate_fname_md(elements)
+        return md
+
+    @staticmethod
+    def _generate_section_header_md(section_type, title,
+                                    prepend_newline=True):
+        """generates markdown section header."""
+        prefix = "\n" if prepend_newline else ""
+        return prefix + "## {}:{}\n".format(section_type, title)
+
+    @staticmethod
+    def _generate_item_md(text):
+        """generates markdown for a list item."""
+        return "- {}\n".format(text)
+
+    @staticmethod
+    def _generate_fname_md(text):
+        """generates markdown for a lookup table file path."""
+        return "  {}\n".format(text)
+
+    def _generate_message_md(self, message):
+        """generates markdown for a message object."""
+        md = ''
+        text = message.get('text', "")
+        entities = sorted(message.get('entities', []),
+                          key=lambda k: k['start'])
+
+        pos = 0
+        for entity in entities:
+            md += text[pos:entity['start']]
+            md += self._generate_entity_md(text, entity)
+            pos = entity['end']
+
+        md += text[pos:]
+
+        return md
+
+    @staticmethod
+    def _generate_entity_md(text, entity):
+        """generates markdown for an entity object."""
+        entity_text = text[entity['start']:entity['end']]
+        entity_type = entity['entity']
+        if entity_text != entity['value']:
+            # add synonym suffix
+            entity_type += ":{}".format(entity['value'])
+
         return '[{}]({})'.format(entity_text, entity_type)
 
 
