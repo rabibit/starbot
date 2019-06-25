@@ -11,7 +11,7 @@ import os
 
 
 def train(datafile: str, nlu_config: str, base_dir: str, path='models', project='current', model_name='nlu'):
-    utils.configure_colored_logging(logging.INFO)
+    #utils.configure_colored_logging(logging.INFO)
     nlu_config = config.load(nlu_config)
 
     with tempfile.TemporaryDirectory() as tmpdir:

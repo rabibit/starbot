@@ -16,6 +16,8 @@ BERT_MODEL_DIRNAME = "chinese_L-12_H-768_A-12"
 MITIE_MODEL_URL = "https://cloud.kvin.wang:8443/s/XEeQkZeqYb7fDYT/download"
 MITIE_MODEL_FILE = "total_word_feature_extractor.dat"
 
+logging.getLogger().setLevel("DEBUG")
+
 logger = logging.getLogger(__name__)
 base = Path(__file__).parent
 
