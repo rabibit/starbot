@@ -34,12 +34,13 @@ class BertNerModel:
                 num_layers=2,
                 rnn_size=512,
                 class_size=num_ner_labels,
-                sentence_length=max_seq_length
+                sentence_length=max_seq_length-1
             )
             output_layer = model.get_sequence_output()
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
-            self.ner_model = NerCRFModel(output_layer, ner_label_ids, input_mask, config)
+                ner_label_ids = ner_label_ids[:, :-1]
+            self.ner_model = NerCRFModel(output_layer[:, 1:, :], ner_label_ids, input_mask[:, :-1], config)
             self.ner_prediction = self.ner_model.output
             #self.crf_params = self.ner_model.trans_params
 
@@ -55,12 +56,13 @@ class BertNerModel:
             output_layer = model.get_all_encoder_layers()[12]
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
-            self.intent_model = IntentClassificationModel(output_layer, intent_label_ids, num_intent_labels, config)
+            self.intent_model = IntentClassificationModel2(output_layer, intent_label_ids, num_intent_labels, config)
             self.intent_prediction = tf.argmax(self.intent_model.prediction, axis=1)
 
     @property
     def loss(self):
         return 10 * self.intent_model.loss + self.ner_model.loss
+
 
 class NerModelConfig(NamedTuple):
     rnn_size: int
@@ -182,6 +184,37 @@ class NerCRFModel:
         weight = tf.truncated_normal([in_size, out_size], stddev=0.01)
         bias = tf.constant(0.1, shape=[out_size])
         return tf.Variable(weight), tf.Variable(bias)
+
+
+class IntentClassificationModel2:
+    """A BiLSTM net concat to the bert model to do NER.
+    """
+    def __init__(self, input_layer, labels, num_labels, args):
+        self.args = args
+
+        hidden_size = input_layer.shape[-1].value
+
+        output_weights = tf.get_variable(
+            "output_weights", [num_labels, hidden_size],
+            initializer=tf.truncated_normal_initializer(stddev=0.02))
+
+        output_bias = tf.get_variable(
+            "output_bias", [num_labels], initializer=tf.zeros_initializer())
+
+        with tf.variable_scope("loss"):
+            logits = tf.matmul(input_layer, output_weights, transpose_b=True)
+            logits = tf.nn.bias_add(logits, output_bias)
+            probabilities = tf.nn.softmax(logits, axis=-1)
+            log_probs = tf.nn.log_softmax(logits, axis=-1)
+
+            if labels is not None:
+                # I.e., 0.1 dropout
+                output_layer = tf.nn.dropout(input_layer, keep_prob=0.9)
+                one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
+                per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=-1)
+                self.loss = tf.reduce_mean(per_example_loss)
+
+            self.prediction = probabilities
 
 
 class IntentClassificationModel:
