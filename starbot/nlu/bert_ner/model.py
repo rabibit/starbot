@@ -51,7 +51,8 @@ class BertNerModel:
                 sentence_length=max_seq_length
             )
             #output_layer = model.get_pooled_output()
-            output_layer = model.get_sequence_output()
+            #output_layer = model.get_sequence_output()
+            output_layer = model.get_all_encoder_layers()[12]
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
             self.intent_model = IntentClassificationModel(output_layer, intent_label_ids, num_intent_labels, config)
