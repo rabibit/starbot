@@ -5,7 +5,7 @@ import json
 import time
 
 
-interpreter = Interpreter.load("./models/current/nlu")
+interpreter = Interpreter.load("./models/nlu")
 
 
 def interpret_messages(messages):
