@@ -3,15 +3,13 @@
 from starbot.nlu import preparemd
 
 from rasa.nlu.train import train as rasa_train
-from rasa.nlu import config, utils
+from rasa.nlu import config
 from pathlib import Path
 import tempfile
-import logging
 import os
 
 
 def train(datafile: str, nlu_config: str, base_dir: str, path='models', project='current', model_name='nlu'):
-    #utils.configure_colored_logging(logging.INFO)
     nlu_config = config.load(nlu_config)
 
     with tempfile.TemporaryDirectory() as tmpdir:
