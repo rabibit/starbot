@@ -44,15 +44,16 @@ class CharFreqClassifier(Component):
         if '?' in message.text:
             original_text = message.text[message.text.index('?') + 1:]
         else:
-            origina_text = message.text
+            original_text = message.text
         words_in_vocab = 0.0
         for word in original_text:
             if word in self.all_chars:
                 words_in_vocab += 1
-        if (words_in_vocab / len(message.text)) < 0.6:
+        if (words_in_vocab / len(original_text)) < 0.6:
             ir['confidence'] = 0
         if '没有问题' in message.text:
             ir['name'] = 'confirm'
+            ir['confidence'] = 1
             message.set("intent", 'confirm', add_to_output=True)
         message.set("intent", ir, add_to_output=True)
 
@@ -60,5 +61,5 @@ class CharFreqClassifier(Component):
 
     def persist(self, file_name: Text, model_dir: Text) -> Optional[Dict[Text, Any]]:
         filename = self.get_model_path(model_dir)
-        json.dump(list(self.all_chars), open(filename, 'wb'))
+        json.dump(list(self.all_chars), open(filename, 'w'))
         return None
