@@ -1,6 +1,7 @@
 
 from typing import Optional, Dict, Text, Any
-from rasa.nlu.components import Component, TrainingData, RasaNLUModelConfig, Message, Metadata
+from rasa.nlu.components import Component, TrainingData, RasaNLUModelConfig, Message
+from rasa.nlu.model import Metadata
 from pathlib import Path
 import json
 
