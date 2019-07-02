@@ -68,10 +68,8 @@ def main():
     convert(mdfile, "rasa_prj/data/nlu.md")
 
     os.system('cat {} configs/policy_config.yml > rasa_prj/config.yml'.format(tmp_nlu_config_file))
-    os.system('cd rasa_prj && mkdir tmp && TMP=tmp rasa train')
+    os.system('cd rasa_prj && mkdir -p tmp && TMP=tmp rasa train -v')
 
 
 if __name__ == '__main__':
-    import logging
-    logging.getLogger().setLevel(logging.INFO)
     main()
