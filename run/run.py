@@ -31,7 +31,7 @@ class StarMessageProcessor(MessageProcessor):
         self, message: UserMessage, tracker: DialogueStateTracker
     ):
         message = preprocess(message, tracker)
-        return super(StarMessageProcessor, self)._handle_message_with_tracker(message, tracker)
+        return await super(StarMessageProcessor, self)._handle_message_with_tracker(message, tracker)
 
     async def _parse_message(self, message):
         parsed_data = await super(StarMessageProcessor, self)._parse_message(message)
