@@ -68,7 +68,7 @@ def main():
     convert(mdfile, "rasa_prj/data/nlu.md")
 
     os.system('cat {} configs/policy_config.yml > rasa_prj/config.yml'.format(tmp_nlu_config_file))
-    os.system('cd rasa_prj && rasa train')
+    os.system('cd rasa_prj && mkdir tmp && TMP=tmp rasa train')
 
 
 if __name__ == '__main__':
