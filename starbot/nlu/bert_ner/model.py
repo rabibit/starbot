@@ -34,13 +34,12 @@ class BertNerModel:
                 num_layers=2,
                 rnn_size=512,
                 class_size=num_ner_labels,
-                sentence_length=max_seq_length-1
+                sentence_length=max_seq_length
             )
             output_layer = model.get_sequence_output()
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
-                ner_label_ids = ner_label_ids[:, :-1]
-            self.ner_model = NerCRFModel(output_layer[:, 1:, :], ner_label_ids, input_mask[:, :-1], config)
+            self.ner_model = NerCRFModel(output_layer, ner_label_ids, input_mask, config)
             self.ner_prediction = self.ner_model.output
             #self.crf_params = self.ner_model.trans_params
 
@@ -53,10 +52,10 @@ class BertNerModel:
             )
             #output_layer = model.get_pooled_output()
             #output_layer = model.get_sequence_output()
-            output_layer = model.get_all_encoder_layers()[12]
+            output_layer = model.get_all_encoder_layers()[7]
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
-            self.intent_model = IntentClassificationModel2(output_layer, intent_label_ids, num_intent_labels, config)
+            self.intent_model = IntentClassificationModel(output_layer, intent_label_ids, num_intent_labels, config)
             self.intent_prediction = tf.argmax(self.intent_model.prediction, axis=1)
 
     @property
