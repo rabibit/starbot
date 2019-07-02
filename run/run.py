@@ -23,7 +23,7 @@ def at_root(p):
 
 
 class StarMessageProcessor(MessageProcessor):
-    def log_message(self, message):
+    async def log_message(self, message):
         # type: (UserMessage) -> Optional[DialogueStateTracker]
 
         # we have a Tracker instance for each user
@@ -35,7 +35,7 @@ class StarMessageProcessor(MessageProcessor):
             message = self.message_preprocessor(message, tracker)
 
         if tracker:
-            self._handle_message_with_tracker(message, tracker)
+            await self._handle_message_with_tracker(message, tracker)
             # save tracker state to continue conversation from this state
             self._save_tracker(tracker)
         else:
@@ -55,8 +55,8 @@ class StarMessageProcessor(MessageProcessor):
                 message.text = q.text + message.text
         return message
 
-    def _parse_message(self, message):
-        parsed_data = super(StarMessageProcessor, self)._parse_message(message)
+    async def _parse_message(self, message):
+        parsed_data = await super(StarMessageProcessor, self)._parse_message(message)
         parsed_data['text'] = message.origin_text
         return parsed_data
 
@@ -95,10 +95,10 @@ if __name__ == '__main__':
 
     logger.info("Rasa process starting")
 
-    core = at_root('../starbot/policy/models')
-    nlu = at_root('models/nlu')
-    endpoints = at_root('../starbot/policy/endpoints.yml')
-    credentials = at_root('configs/credentials.yml')
+    core = at_root('rasa_prj/models')
+    nlu = at_root('rasa_prj/models')
+    endpoints = at_root('rasa_prj/endpoints.yml')
+    credentials = at_root('rasa_prj/credentials.yml')
 
     port = 5002
     connector = None
