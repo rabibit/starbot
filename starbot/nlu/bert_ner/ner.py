@@ -415,6 +415,7 @@ class BertExtractor(EntityExtractor):
         print(ner_labels)
         print("message.text={}".format(message_text))
         print("confidence={}".format(result['ir_confidence'][0].item()))
+        print("similarity={}".format(result['ir_similarity'][0].item()))
         for l, p in zip(self.intent_labels.labels, result['ir_prob'][0]):
             bar = '#' * int(30*p)
             print("{:<15}:{:.3f} {}".format(l, p, bar))
