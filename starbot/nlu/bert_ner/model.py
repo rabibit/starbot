@@ -236,15 +236,15 @@ class IntentClassificationModel:
         birnn = tf.keras.layers.Bidirectional(
             LSTM(self.args.rnn_size, return_sequences=False)
         )
-        output = birnn(hiddens)
+        hidden = birnn(hiddens)
 
-        print('output shape is: ', output.shape)
+        print('output shape is: ', hidden.shape)
         #weight, bias = self.weight_and_bias(2 * args.rnn_size, 2 * args.rnn_size)
         #output = tf.reshape(output, [-1, 2 * args.rnn_size])
         #output = tf.matmul(output, weight) + bias
         #output = tf.layers.batch_normalization(output)
         #output = tf.nn.leaky_relu(output,alpha=0.2)
-        output = tf.reshape(output, [-1, 1, 2 * args.rnn_size])
+        output = tf.reshape(hidden, [-1, 1, 2 * args.rnn_size])
         product = tf.multiply(hiddens, output)
         product = tf.reduce_sum(product, axis=2, keep_dims=True)
         score = tf.nn.softmax(product, axis=1)
@@ -256,24 +256,33 @@ class IntentClassificationModel:
         output = tf.matmul(output, weight) + bias
         output = tf.layers.batch_normalization(output)
         output = tf.nn.leaky_relu(output,alpha=0.2)
+
         weight, bias = self.weight_and_bias(args.rnn_size, num_labels)
-        output = tf.reshape(output, [-1, args.rnn_size])
-        output = tf.matmul(output, weight) + bias
-        output = tf.layers.batch_normalization(output)
+        output_p = tf.reshape(output, [-1, args.rnn_size])
+        output_p = tf.matmul(output_p, weight) + bias
+        output_p = tf.layers.batch_normalization(output_p)
         #output = tf.nn.leaky_relu(output,alpha=0.2)
 
+        weight, bias = self.weight_and_bias(args.rnn_size, 1)
+        output_c = tf.reshape(output, [-1, args.rnn_size])
+        output_c = tf.matmul(output_c, weight) + bias
+        output_c = tf.sigmoid(output_c)
 
         with tf.variable_scope("loss"):
-            probabilities = tf.nn.softmax(output, axis=1)
-            log_probs = tf.nn.log_softmax(output, axis=1)
+            probabilities = tf.nn.softmax(output_p, axis=1)
+            #log_probs = tf.nn.log_softmax(output_p, axis=1)
 
             if labels is not None:
                 one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
                 print('one_hot_labels.shape:', one_hot_labels.shape)
+                #per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=1)
+                p1 = output_c * probabilities + (1 - output_c) * one_hot_labels
+                log_probs = tf.log(p1)
                 print('log_probs.shape:', log_probs.shape)
                 per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=1)
-                self.loss = tf.reduce_mean(per_example_loss)
+                self.loss = tf.reduce_mean(per_example_loss) - 0.5 * tf.log(output_c)
             self.prediction = probabilities
+            self.confidence = output_c
 
 
     def weight_and_bias(self, in_size, out_size):
