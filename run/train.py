@@ -69,15 +69,13 @@ def main():
 
     os.system('cat {} configs/policy_config.yml > rasa_prj/config.yml'.format(tmp_nlu_config_file))
     from rasa.__main__ import main
-    import sys
     os.chdir('rasa_prj')
     os.system('mkdir -p tmp')
     os.environ['TMP'] = 'tmp'
+    os.environ['LOG_LEVEL_LIBRARIES'] = 'INFO'
     sys.argv = sys.argv[:1] + ['train']
     main()
 
 
 if __name__ == '__main__':
-    import logging
-    logging.getLogger().setLevel(logging.INFO)
     main()
