@@ -274,7 +274,7 @@ class BertExtractor(EntityExtractor):
         if not self.config.dry_run:
             try:
                 self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
-            except:
+            except KeyboardInterrupt:
                 if not self.config.allow_interrupt:
                     raise
         alltest = []
