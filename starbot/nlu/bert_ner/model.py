@@ -347,7 +347,7 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                     super(LoggingHook, self).after_run(run_context, run_values)
                     if self._should_trigger:
                         print("self._iter_count={}".format(self._iter_count))
-            logging_hook = LoggingHook({"loss": model.loss}, every_n_iter=1)
+            logging_hook = LoggingHook({"loss": model.loss, "c": model.intent_model.confidence}, every_n_iter=1)
             train_op = optimization.create_optimizer(
                 model.loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
