@@ -364,6 +364,7 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                     #"crf_params": model.crf_params,
                     "ir": model.intent_prediction,
                     "ir_prob": model.intent_model.prediction,
+                    "ir_confidence": model.intent_model.confidence,
                     "sn": features["sn"]
                 },
                 scaffold_fn=scaffold_fn

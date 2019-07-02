@@ -414,6 +414,7 @@ class BertExtractor(EntityExtractor):
         print(ner)
         print(ner_labels)
         print("message.text={}".format(message_text))
+        print("confidence={}".format(result['ir_confidence'][0].item()))
         for l, p in zip(self.intent_labels.labels, result['ir_prob'][0]):
             bar = '#' * int(30*p)
             print("{:<15}:{:.3f} {}".format(l, p, bar))
@@ -421,7 +422,7 @@ class BertExtractor(EntityExtractor):
         entities = mark_message_with_labels(message_text, ner_labels[1:])
         ir = {
             'name': ir_label,
-            'confidence': result['ir_prob'][0][ir[0]].item()
+            'confidence': result['ir_confidence'][0].item()
         }
         return ir, entities
 
