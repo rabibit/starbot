@@ -91,12 +91,12 @@ def load_agent(core_model, interpreter, endpoints,
 
 if __name__ == '__main__':
     # Running as standalone python application
-    rsutils.configure_colored_logging(logging.DEBUG)
+    #rsutils.configure_colored_logging(logging.DEBUG)
 
     logger.info("Rasa process starting")
 
     core = at_root('../starbot/policy/models')
-    nlu = at_root('models/current/nlu')
+    nlu = at_root('models/nlu')
     endpoints = at_root('../starbot/policy/endpoints.yml')
     credentials = at_root('configs/credentials.yml')
 
