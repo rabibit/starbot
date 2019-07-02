@@ -63,6 +63,11 @@ def patch_it():
 
     model.create_package_rasa = create_package_rasa
 
+    os.chdir('rasa_prj')
+    os.environ['TMP'] = 'tmp'
+    os.system('rm -rf tmp')
+    os.mkdir('tmp')
+
 
 if __name__ == '__main__':
     patch_it()
