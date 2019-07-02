@@ -5,7 +5,7 @@ import sys
 import shutil
 import logging
 from pathlib import Path
-from starbot.nlu.train import train
+from starbot.nlu.preparemd import convert
 from starbot.utils.download import download
 from tempfile import TemporaryDirectory
 
@@ -42,32 +42,33 @@ def download_mitie_model_if_need():
             logger.info('Download {} finished'.format(tmpfilename))
             shutil.move(tmpfilename, base/MITIE_MODEL_FILE)
 
+
 def main():
     if len(sys.argv) != 2:
-        print("Usage ./nlu_train.py bert|mitie")
+        print("Usage ./train.py bert|mitie")
         sys.exit()
+    config = sys.argv[1]
 
-    # TODO: better way
-    if sys.argv[1] == 'bert':
-        CONFIG = "bert_nlu_config.yml"
-    elif sys.argv[1] == 'mitie':
-        CONFIG = "mitie_nlu_config.yml"
+    if config == 'bert':
+        nlu_config_file = "bert_nlu_config.yml"
+        download_bert_model_if_need()
+    elif config == 'mitie':
+        nlu_config_file = "mitie_nlu_config.yml"
+        download_mitie_model_if_need()
     else:
-        print("Usage ./nlu_train.py bert|mitie")
+        print("Usage ./train.py bert|mitie")
         sys.exit()
 
     mdfile = base/'data'/'nlu.md'
-    # TODO: 换个地方
-    if CONFIG == 'bert_nlu_config.yml':
-        download_bert_model_if_need()
-    elif CONFIG == 'mitie_nlu_config.yml':
-        download_mitie_model_if_need()
+    tmp_nlu_config_file = base/'tmp_nlu_config.yml'
 
-    nlu_config = base/'tmp_nlu_config.yml'
-    if not nlu_config.exists():
-        shutil.copy(base/'configs'/CONFIG, nlu_config)
+    if not tmp_nlu_config_file.exists():
+        shutil.copy(base/'configs'/nlu_config_file, tmp_nlu_config_file)
 
-    train(mdfile, nlu_config, base_dir=base, path=base/'models')
+    convert(mdfile, "rasa_prj/data/nlu.md")
+
+    os.system('cat {} configs/policy_config.yml > rasa_prj/config.yml'.format(tmp_nlu_config_file))
+    os.system('cd rasa_prj && rasa train')
 
 
 if __name__ == '__main__':

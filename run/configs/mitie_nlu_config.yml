@@ -1,7 +1,4 @@
 language: "zh"
-project: "ivr_nlu"
-fixed_model_name: "nlu"
-path: "models"
 pipeline:
   - name: "starbot.ThulacTokenizer"
   - name: "nlp_mitie"

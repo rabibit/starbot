@@ -1,8 +1,4 @@
 language: "zh"
-project: "ivr_nlu"
-fixed_model_name: "nlu"
-path: "models"
-
 pipeline:
   - name: "starbot.BertExtractor"
     # env
@@ -28,7 +24,8 @@ pipeline:
     predict_batch_size: 1
 
     # io
-    bert_config: "checkpoint/bert_config.json"
-    init_checkpoint: "checkpoint/bert_model.ckpt"
-    vocab_file: "checkpoint/vocab.txt"
-    tmp_model_dir: "output/result_dir"
+    bert_config: "../checkpoint/bert_config.json"
+    init_checkpoint: "../checkpoint/bert_model.ckpt"
+    vocab_file: "../checkpoint/vocab.txt"
+    tmp_model_dir: "../output/result_dir"
+#  - name: "starbot.CharFreqClassifier"
