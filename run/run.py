@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import shutil
 import logging
 import sys
 import os
@@ -45,6 +46,22 @@ def patch_it():
 
     from rasa.core import agent
     agent.MessageProcessor = StarMessageProcessor
+
+    from rasa import model
+
+    origin_create_package_rasa = model.create_package_rasa
+
+    def create_package_rasa(training_directory, output_filename, fingerprint):
+        outdir = os.path.dirname(output_filename)
+        outdir_models = os.path.join(outdir, 'models')
+        shutil.rmtree(outdir_models, ignore_errors=True)
+        os.makedirs(outdir_models, exist_ok=True)
+
+        print('coping models to {}'.format(outdir_models))
+        shutil.copytree(training_directory, outdir_models, symlinks=True)
+        return origin_create_package_rasa(training_directory, output_filename, fingerprint)
+
+    model.create_package_rasa = create_package_rasa
 
 
 if __name__ == '__main__':
