@@ -46,6 +46,11 @@ def patch_it():
     from rasa.core import agent
     agent.MessageProcessor = StarMessageProcessor
 
+    os.chdir('rasa_prj')
+    os.environ['TMP'] = 'tmp'
+    os.system('rm -rf tmp')
+    os.mkdir('tmp')
+
 
 if __name__ == '__main__':
     patch_it()
