@@ -292,7 +292,7 @@ class IntentClassificationModel:
                 print('log_probs.shape:', log_probs.shape)
                 per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=1)
                 #self.loss = tf.reduce_mean(per_example_loss - 0.5 * tf.log(output_c))
-                self.loss = tf.reduce_mean(per_example_loss - tf.square(output_ood - ood_labels))
+                self.loss = tf.reduce_mean(per_example_loss + tf.square(output_ood - ood_labels))
             self.prediction = probabilities
             self.confidence = output_ood
 
