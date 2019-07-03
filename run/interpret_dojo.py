@@ -61,7 +61,7 @@ else:
             '中华人民共和国万岁',
             ]
     #COMMONMSG = json.load(open('test.json'))
-    model_file = get_latest_model('../rasa_prj/models/')
+    model_file = get_latest_model(os.path.abspath('rasa_prj/models/'))
     assert model_file
     os.system('rm -rf models && mkdir models && cd models && tar xf {}'.format(model_file))
     interpret_messages(COMMONMSG)
