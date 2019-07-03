@@ -264,6 +264,8 @@ class IntentClassificationModel:
 
         weight, bias = self.weight_and_bias(args.rnn_size, 1)
         output_c = tf.reshape(output, [-1, args.rnn_size])
+        if labels is not None:
+            output_c = output_c[:16, :]
         output_c = tf.matmul(output_c, weight) + bias
         output_c = tf.sigmoid(output_c)
 
