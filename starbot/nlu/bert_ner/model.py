@@ -269,11 +269,6 @@ class IntentClassificationModel:
         output_c = tf.matmul(output_c, weight) + bias
         output_c = tf.sigmoid(output_c)
 
-        weight, bias = self.weight_and_bias(args.rnn_size, args.rnn_size)
-        output_s = tf.reshape(output, [-1, args.rnn_size])
-        output_s = tf.matmul(output_s, weight) + bias
-        output_s = tf.nn.leaky_relu(output_s,alpha=0.2)
-
         with tf.variable_scope("loss"):
             probabilities = tf.nn.softmax(output_p, axis=1)
             #log_probs = tf.nn.log_softmax(output_p, axis=1)
@@ -286,11 +281,9 @@ class IntentClassificationModel:
                 log_probs = tf.log(p1)
                 print('log_probs.shape:', log_probs.shape)
                 per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=1)
-                self.loss = tf.reduce_mean(per_example_loss - 0.5 * tf.log(output_c) + tf.reduce_sum(tf.square(output_s - output), axis=1))
+                self.loss = tf.reduce_mean(per_example_loss - 0.5 * tf.log(output_c))
             self.prediction = probabilities
             self.confidence = output_c
-            self.similarity = tf.reduce_sum(tf.multiply(output, output_s), axis=1) / (tf.sqrt(tf.reduce_sum(tf.square(output_s), axis=1)) *
-                                                               tf.sqrt(tf.reduce_sum(tf.square(output), axis=1)))
 
 
     def weight_and_bias(self, in_size, out_size):
@@ -374,7 +367,6 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                     "ir": model.intent_prediction,
                     "ir_prob": model.intent_model.prediction,
                     "ir_confidence": model.intent_model.confidence,
-                    "ir_similarity": model.intent_model.similarity,
                     "sn": features["sn"]
                 },
                 scaffold_fn=scaffold_fn
