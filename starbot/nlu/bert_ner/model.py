@@ -17,6 +17,7 @@ class BertNerModel:
                  ner_label_ids,
                  num_intent_labels,
                  intent_label_ids,
+                 ood_label_ids,
                  max_seq_length,
                  use_one_hot_embeddings
                  ):
@@ -55,7 +56,7 @@ class BertNerModel:
             output_layer = model.get_all_encoder_layers()[7]
             if is_training:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
-            self.intent_model = IntentClassificationModel(output_layer, intent_label_ids, num_intent_labels, config)
+            self.intent_model = IntentClassificationModel(output_layer, intent_label_ids, num_intent_labels, ood_label_ids, config)
             self.intent_prediction = tf.argmax(self.intent_model.prediction, axis=1)
 
     @property
@@ -219,7 +220,7 @@ class IntentClassificationModel2:
 class IntentClassificationModel:
     """A BiLSTM net concat to the bert model to do NER.
     """
-    def __init__(self, input_layer, labels, num_labels, args):
+    def __init__(self, input_layer, labels, num_labels, ood_label_ids, args):
         self.args = args
 
         if tf.test.gpu_device_name():  # TODO: and not use_tpu
@@ -262,30 +263,38 @@ class IntentClassificationModel:
         output_p = tf.layers.batch_normalization(output_p)
         #output = tf.nn.leaky_relu(output,alpha=0.2)
 
+        birnn = tf.keras.layers.Bidirectional(
+            LSTM(self.args.rnn_size, return_sequences=False)
+        )
+        hidden = birnn(input_layer)
+
         weight, bias = self.weight_and_bias(2 * args.rnn_size, 1)
-        output_c = tf.reshape(hidden, [-1, 2 * args.rnn_size])
-        if labels is not None:
-            output_c = output_c[:16]
-        output_c = tf.matmul(output_c, weight) + bias
-        output_c = tf.sigmoid(output_c)
-        if labels is not None:
-            output_c = tf.concat([output_c, tf.ones((16, 1))], 0)
+        output_ood = tf.reshape(hidden, [-1, 2 * args.rnn_size])
+        #if labels is not None:
+        #    output_c = output_c[:16]
+        output_ood = tf.matmul(output_ood, weight) + bias
+        output_ood = tf.sigmoid(output_ood)
+        #if labels is not None:
+        #    output_c = tf.concat([output_c, tf.ones((16, 1))], 0)
 
         with tf.variable_scope("loss"):
             probabilities = tf.nn.softmax(output_p, axis=1)
-            #log_probs = tf.nn.log_softmax(output_p, axis=1)
+            log_probs = tf.nn.log_softmax(output_p, axis=1)
 
             if labels is not None:
                 one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
+                ood_labels = tf.convert_to_tensor(ood_label_ids)
                 print('one_hot_labels.shape:', one_hot_labels.shape)
+                print('one_hot_labels.shape:', ood_labels.shape)
                 #per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=1)
-                p1 = output_c * probabilities + (1 - output_c) * one_hot_labels
-                log_probs = tf.log(p1)
+                #p1 = output_c * probabilities + (1 - output_c) * one_hot_labels
+                #log_probs = tf.log(p1)
                 print('log_probs.shape:', log_probs.shape)
                 per_example_loss = -tf.reduce_sum(one_hot_labels * log_probs, axis=1)
-                self.loss = tf.reduce_mean(per_example_loss - 0.5 * tf.log(output_c))
+                #self.loss = tf.reduce_mean(per_example_loss - 0.5 * tf.log(output_c))
+                self.loss = tf.reduce_mean(per_example_loss - tf.square(output_ood - ood_labels))
             self.prediction = probabilities
-            self.confidence = output_c
+            self.confidence = output_ood
 
 
     def weight_and_bias(self, in_size, out_size):
@@ -307,6 +316,7 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
         segment_ids = features.get("segment_ids")
         ner_label_ids = features.get("ner_label_ids")
         intent_label_ids = features.get("intent_label_ids")
+        ood_label_ids = features.get("ood_label_ids")
         # label_mask = features["label_mask"]
         is_training = (mode == tf.estimator.ModeKeys.TRAIN)
 
@@ -319,6 +329,7 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
             ner_label_ids=ner_label_ids,
             num_ner_labels=num_ner_labels,
             intent_label_ids=intent_label_ids,
+            ood_label_ids=ood_label_ids,
             num_intent_labels=num_intent_labels,
             max_seq_length=max_seq_length,
             use_one_hot_embeddings=use_one_hot_embeddings

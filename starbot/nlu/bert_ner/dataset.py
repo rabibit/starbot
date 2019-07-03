@@ -66,6 +66,40 @@ class Dataset:
         assert not isinstance(labels, str)
         return self.intent_labels.encode(labels)
 
+    def ood_label2id(self, labels):
+        assert not isinstance(labels, str)
+        return [1 if 'other' in lable else 0 for lable in labels]
+
+
+def create_dataset(examples: Iterable[Message]) -> Dataset:
+    sentences = []
+    global_labels = {'O', '[CLS]', '[SEP]'}
+    global_intents = set()
+
+    for msg in examples:
+        entities = msg.data.get('entities') or []
+        intent = msg.data.get('intent')
+        global_intents.add(intent)
+        chars = list(msg.text)
+        labels = ['O' for _ in chars]
+        for entity in entities:
+            s = entity['start']
+            e = entity['end']
+            name = entity['entity']
+            labels[s] = "B-" + name
+            for i in range(s+1, e):
+                labels[i] = "I-" + name
+            global_labels.add("B-" + name)
+            global_labels.add("I-" + name)
+        chars = ['[CLS]'] + chars + ['[SEP]']
+        labels = ['[CLS]'] + labels + ['[SEP]']
+        sentences.append(Sentence(chars=chars, labels=labels, intent=intent))
+    return Dataset(sentences, global_labels, global_intents)
+
+
+def mark_message_with_labels(message_text, labels):
+    entities = []
+    name = None
 
 def create_dataset(examples: Iterable[Message]) -> Dataset:
     sentences = []

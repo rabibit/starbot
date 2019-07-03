@@ -319,6 +319,7 @@ class BertExtractor(EntityExtractor):
         ner_labels = self._pad(example.labels, '[PAD]')
         ner_label_ids = dataset.ner_label2id(ner_labels)
         intent_label = example.intent
+        ood_label_id = dataset.ood_label2id([intent_label])
         intent_label_id, = dataset.intent_label2id([intent_label])
         seg_ids = [0 for _ in input_ids]
 
@@ -327,6 +328,7 @@ class BertExtractor(EntityExtractor):
                     "segment_ids": seg_ids,
                     "ner_label_ids": ner_label_ids,
                     "intent_label_id": intent_label_id,
+                    "ood_label_id": ood_label_id,
                     }
         return features
 
@@ -348,6 +350,7 @@ class BertExtractor(EntityExtractor):
                     'segment_ids': tf.constant([x['segment_ids'] for x in all_features]),
                     'ner_label_ids': tf.constant([x['ner_label_ids'] for x in all_features]),
                     'intent_label_ids': tf.constant([x['intent_label_id'] for x in all_features]),
+                    'ood_label_ids': tf.constant([x['ood_label_id'] for x in all_features]),
                 })
             ds = tf.data.Dataset.from_tensor_slices(features)
 
