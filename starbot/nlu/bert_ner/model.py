@@ -267,6 +267,7 @@ class IntentClassificationModel:
         if labels is not None:
             output_c = output_c[:16, :]
         output_c = tf.matmul(output_c, weight) + bias
+        output_c = tf.reduce_mean(output_c)
         output_c = tf.sigmoid(output_c)
 
         with tf.variable_scope("loss"):
