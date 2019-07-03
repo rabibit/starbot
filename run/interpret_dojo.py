@@ -1,14 +1,14 @@
 #!/usr/bin/env python
+import os
 import sys
-from rasa.nlu.model import Interpreter
 import json
 import time
-
-
-interpreter = Interpreter.load("./models/nlu")
+from rasa.nlu.model import Interpreter
 
 
 def interpret_messages(messages):
+    interpreter = Interpreter.load("./models/nlu")
+
     all_result = []
     for message in messages:
         t0 = time.time()
@@ -57,6 +57,9 @@ else:
             '好的',
             'yes',
             '谢谢',
+            '瓯海文化互殴',
+            '中华人民共和国万岁',
             ]
     #COMMONMSG = json.load(open('test.json'))
+    os.system('rm -rf models && mkdir models && cd models && tar xf ../rasa_prj/models/*.tar.gz')
     interpret_messages(COMMONMSG)
