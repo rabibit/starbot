@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 import os
 import sys
-import json
 import time
 from rasa.nlu.model import Interpreter
+from rasa.model import get_latest_model
 
 
 def interpret_messages(messages):
@@ -61,5 +61,7 @@ else:
             '中华人民共和国万岁',
             ]
     #COMMONMSG = json.load(open('test.json'))
-    os.system('rm -rf models && mkdir models && cd models && tar xf ../rasa_prj/models/*.tar.gz')
+    model_file = get_latest_model('../rasa_prj/models/')
+    assert model_file
+    os.system('rm -rf models && mkdir models && cd models && tar xf {}'.format(model_file))
     interpret_messages(COMMONMSG)
