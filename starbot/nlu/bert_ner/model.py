@@ -265,10 +265,11 @@ class IntentClassificationModel:
         weight, bias = self.weight_and_bias(args.rnn_size, 1)
         output_c = tf.reshape(output, [-1, args.rnn_size])
         if labels is not None:
-            output_c = output_c[:16, :]
+            output_c = output_c[:16]
         output_c = tf.matmul(output_c, weight) + bias
         output_c = tf.sigmoid(output_c)
-        output_c = tf.concat([output_c, tf.ones((16, 1))], 0)
+        if labels is not None:
+            output_c = tf.concat([output_c, tf.ones((16, 1))], 0)
 
         with tf.variable_scope("loss"):
             probabilities = tf.nn.softmax(output_p, axis=1)
