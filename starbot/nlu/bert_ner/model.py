@@ -268,7 +268,7 @@ class IntentClassificationModel:
             output_c = output_c[:16, :]
         output_c = tf.matmul(output_c, weight) + bias
         output_c = tf.sigmoid(output_c)
-        output_c = tf.concat(output_c, tf.ones((16, 1)), 0)
+        output_c = tf.concat([output_c, tf.ones((16, 1))], 0)
 
         with tf.variable_scope("loss"):
             probabilities = tf.nn.softmax(output_p, axis=1)
