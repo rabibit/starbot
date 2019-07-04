@@ -38,7 +38,8 @@ class CharFreqClassifier(Component):
     ) -> None:
         for message in training_data.training_examples:
             message: Message = message
-            self.all_chars.update(set(message.text))
+            if message.data['intent'] != 'other':
+                self.all_chars.update(set(message.text))
 
     def process(self, message: Message, **kwargs: Any) -> None:
         ir = message.get("intent")
