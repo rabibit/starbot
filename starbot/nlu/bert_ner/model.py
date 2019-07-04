@@ -178,6 +178,7 @@ class NerCRFModel:
         log_likelihood, trans_params = tf.contrib.crf.crf_log_likelihood(output, labels, sentence_lengths)
         #self.trans_params = trans_params
         output, _ = tf.contrib.crf.crf_decode(output, trans_params, sentence_lengths)
+        self.ner_log_likelihood = log_likelihood
         return tf.reduce_mean(-log_likelihood), output
 
     def weight_and_bias(self, in_size, out_size):
@@ -362,7 +363,10 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                     super(LoggingHook, self).after_run(run_context, run_values)
                     if self._should_trigger:
                         print("self._iter_count={}".format(self._iter_count))
-            logging_hook = LoggingHook({"loss": model.loss, "is_ood": model.intent_model.is_ood}, every_n_iter=1)
+            logging_hook = LoggingHook({"loss": model.loss,
+                                        "is_ood": model.intent_model.is_ood,
+                                        "ner_crf": model.ner_model.ner_log_likelihood,
+                                        }, every_n_iter=1)
             train_op = optimization.create_optimizer(
                 model.loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
