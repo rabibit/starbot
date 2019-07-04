@@ -363,9 +363,12 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                     super(LoggingHook, self).after_run(run_context, run_values)
                     if self._should_trigger:
                         print("self._iter_count={}".format(self._iter_count))
-            logging_hook = LoggingHook({"loss": model.loss,
-                                        "is_ood": model.intent_model.is_ood,
-                                        "ner_crf": model.ner_model.ner_log_likelihood,
+            logging_hook = LoggingHook({
+                "loss": model.loss,
+                "ir_loss": model.intent_model.loss,
+                "ner_loss": model.ner_model.loss,
+                "is_ood": model.intent_model.is_ood,
+                "ner_crf": model.ner_model.ner_log_likelihood,
                                         }, every_n_iter=1)
             train_op = optimization.create_optimizer(
                 model.loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
