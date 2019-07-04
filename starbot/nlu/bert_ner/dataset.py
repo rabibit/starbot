@@ -66,6 +66,16 @@ class Dataset:
         assert not isinstance(labels, str)
         return self.intent_labels.encode(labels)
 
+    def intent_label2onehot(self, label):
+        cnt = len(self.intent_labels.labels)
+        if label == "other":
+            return [1.0 / cnt] * cnt
+        else:
+            label_id = self.intent_labels.encode([label])[0]
+            onehot = [0.0] * cnt
+            onehot[label_id] = 1.0
+            return onehot
+
     def ood_label2id(self, labels):
         assert not isinstance(labels, str)
         return [1.0 if 'other' in lable else 0.0 for lable in labels]

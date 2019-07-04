@@ -282,7 +282,7 @@ class IntentClassificationModel:
             log_probs = tf.nn.log_softmax(output_p, axis=1)
 
             if labels is not None:
-                one_hot_labels = tf.one_hot(labels, depth=num_labels, dtype=tf.float32)
+                one_hot_labels = labels
                 ood_labels = tf.convert_to_tensor(ood_label_ids)
                 print('one_hot_labels.shape:', one_hot_labels.shape)
                 print('one_hot_labels.shape:', ood_labels.shape)
