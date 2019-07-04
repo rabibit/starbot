@@ -294,7 +294,7 @@ class IntentClassificationModel:
                 #self.loss = tf.reduce_mean(per_example_loss - 0.5 * tf.log(output_c))
                 self.loss = tf.reduce_mean(per_example_loss + tf.square(output_ood - ood_labels))
             self.prediction = probabilities
-            self.confidence = output_ood
+            self.is_ood = output_ood
 
 
     def weight_and_bias(self, in_size, out_size):
@@ -362,7 +362,7 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                     super(LoggingHook, self).after_run(run_context, run_values)
                     if self._should_trigger:
                         print("self._iter_count={}".format(self._iter_count))
-            logging_hook = LoggingHook({"loss": model.loss, "c": model.intent_model.confidence}, every_n_iter=1)
+            logging_hook = LoggingHook({"loss": model.loss, "is_ood": model.intent_model.is_ood}, every_n_iter=1)
             train_op = optimization.create_optimizer(
                 model.loss, learning_rate, num_train_steps, num_warmup_steps, use_tpu)
             output_spec = tf.contrib.tpu.TPUEstimatorSpec(
@@ -379,7 +379,7 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                     #"crf_params": model.crf_params,
                     "ir": model.intent_prediction,
                     "ir_prob": model.intent_model.prediction,
-                    "ir_confidence": model.intent_model.confidence,
+                    "ir_is_ood": model.intent_model.is_ood,
                     "sn": features["sn"]
                 },
                 scaffold_fn=scaffold_fn
