@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Any, Text
+from typing import Callable, Dict, Any, Text, Awaitable
 
 from rasa.core.channels import UserMessage
 from rasa.core.channels.channel import InputChannel, OutputChannel
@@ -67,14 +67,14 @@ class WebSocketInput(InputChannel):
                                       sender_id=sid,
                                       input_channel=self.name())
 
-                self.on_new_message(message)
+                await self.on_new_message(message)
                 for message in output_channel.messages:
                     await ws.send(message)
             else:
                 # binary data received
                 pass
 
-    def blueprint(self, on_new_message: Callable[[UserMessage], None]) -> SocketBlueprint:
+    def blueprint(self, on_new_message: Callable[[UserMessage], Awaitable[None]]) -> SocketBlueprint:
         self.on_new_message = on_new_message
         self.server.start()
         return SocketBlueprint(self.name())
