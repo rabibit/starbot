@@ -47,7 +47,7 @@ class WebSocketInputServer(Thread):
 
 class WebSocketInput(InputChannel):
     port: int
-    on_new_message: Callable[[UserMessage], None]
+    on_new_message: Callable[[UserMessage], Awaitable[None]]
 
     def __init__(self, port: int):
         self.port = port
