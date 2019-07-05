@@ -47,11 +47,13 @@ class CharFreqClassifier(Component):
             original_text = message.text[message.text.index('?') + 1:]
         else:
             original_text = message.text
-        words_in_vocab = 0.0
-        for word in original_text:
-            if word in self.all_chars:
-                words_in_vocab += 1
-        if (words_in_vocab / len(original_text)) < 0.6:
+
+        in_vocab_words = [word
+                            for word in original_text
+                                if word in self.all_chars]
+        print('rate: %s' % (len(in_vocab_words) / len(original_text)))
+        print('words: %s' % in_vocab_words)
+        if (len(in_vocab_words) / len(original_text)) < 0.6:
             ir['confidence'] = 0
         if '没有问题' in message.text:
             ir['name'] = 'confirm'
