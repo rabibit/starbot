@@ -320,7 +320,7 @@ class BertExtractor(EntityExtractor):
         ner_label_ids = dataset.ner_label2id(ner_labels)
         intent_label = example.intent
         ood_label_id = dataset.ood_label2id([intent_label])
-        intent_label_id, = dataset.intent_label2onehot(intent_label)
+        intent_label_id = dataset.intent_label2onehot(intent_label)
         seg_ids = [0 for _ in input_ids]
 
         features = {"input_ids": input_ids,
