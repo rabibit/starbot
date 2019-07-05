@@ -37,7 +37,7 @@ class StarMessageProcessor(MessageProcessor):
     async def _parse_message(self, message):
         parsed_data = await super(StarMessageProcessor, self)._parse_message(message)
         parsed_data['text'] = message.origin_text
-        logger.info("parsed data: {}", parsed_data)
+        logger.info("parsed data: {}".format(parsed_data))
         return parsed_data
 
 
