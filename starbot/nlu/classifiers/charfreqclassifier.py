@@ -4,6 +4,10 @@ from rasa.nlu.components import Component, TrainingData, RasaNLUModelConfig, Mes
 from rasa.nlu.model import Metadata
 from pathlib import Path
 import json
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class CharFreqClassifier(Component):
@@ -59,6 +63,10 @@ class CharFreqClassifier(Component):
             ir['name'] = 'confirm'
             ir['confidence'] = 1
             message.set("intent", 'confirm', add_to_output=True)
+
+        if ir['confidence'] < 0.3:
+            logger.info("change intent from {} to other".format(ir['name']))
+            ir['name'] = 'other'
         message.set("intent", ir, add_to_output=True)
 
         return None
