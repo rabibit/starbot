@@ -27,7 +27,7 @@ class WebSocketOutput(OutputChannel):
         self.ws = ws
         self.messages = []
 
-    def send_text_message(self, recipient_id: Text, message: Text) -> None:
+    def send_text_message(self, recipient_id: Text, message: Text, **kwargs: Any) -> None:
         logger.info(f"bot say: {message}")
         self.messages.append(message)
 
