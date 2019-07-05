@@ -414,8 +414,8 @@ class BertExtractor(EntityExtractor):
         ir_label = self.intent_labels.decode(ir.tolist())[0]
         #ner_labels = self.ner_labels.decode(viterbi_seq)
         ner_labels = self.ner_labels.decode(ner)
-        print(ner)
-        print(ner_labels)
+        # print(ner)
+        # print(ner_labels)
         print("message.text={}".format(message_text))
         print("is_ood={}".format(result['ir_is_ood'][0].item()))
         for l, p in zip(self.intent_labels.labels, result['ir_prob'][0]):
