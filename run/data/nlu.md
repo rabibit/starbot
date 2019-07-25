@@ -84,8 +84,8 @@
 
 ## intent:book_room
 @room_type: 房间|房|标间|单人间|大床房|豪华大床房|总统套房
-@checkin_time: 今晚|明晚|今天|后天|周末|周六|一号|二号|十一号|二十号|二号下午|后天下午
-@guest_name: 张三|李四|王麻子|杨康|穆念慈|郭啸天|李萍|杨铁心|包惜弱|完颜洪烈|柯镇恶|朱聪|韩宝驹|南希仁|张阿生|全金发|韩小莹|刘女士|王先生
+@date: 今晚|明晚|今天|后天|周末|周六|一号|二号|十一号|二十号|二号下午|后天下午
+@person: 张三|李四|王麻子|杨康|穆念慈|郭啸天|李萍|杨铁心|包惜弱|完颜洪烈|柯镇恶|朱聪|韩宝驹|南希仁|张阿生|全金发|韩小莹|刘女士|王先生
 
 - 我想订一个[房间](room_type)
 - 我想订一间[房](room_type)
@@ -93,10 +93,10 @@
 - 我想订一个[标间](room_type)
 - 帮我订一个[大床房](room_type)
 - 可以帮我订一间[大床房](room_type)吗
-- 我想订个[大床房](room_type),[今晚](checkin_time)入住
+- 我想订个[大床房](room_type),[今晚](date)入住
 - 我想预订个[大床房](room_type)
 - 我打算预订个[豪华套房](room_type)
-- [今天](checkin_time)入住,还有空房间吗
+- [今天](date)入住,还有空房间吗
 - 我预订一间[大床房](room_type)豪华套房
 - 行，那就2间[大床房](room_type)
 - 两间[大床房](room_type)就可以了
@@ -105,28 +105,28 @@
 - 我觉得[两](count)间标间就足够了
 - 我打算预订个[豪华套房](room_type)
 - 我帮我朋友预订个[豪华套房](room_type)
-- 我叫[王大锤](guest_name)订[一](count)间[大床房](room_type)[今晚](checkin_time)的电话是[12345678](guest_phone_number)
+- 我叫[王大锤](person)订[一](count)间[大床房](room_type)[今晚](date)的电话是[12345678](number)
 - 我想订一个[房间](room_type)
-- 帮我订[一](count)间[今晚](checkin_time)的[大床房](room_type)
-- 我叫[如来](guest_name)想订一个[房间](room_type)
+- 帮我订[一](count)间[今晚](date)的[大床房](room_type)
+- 我叫[如来](person)想订一个[房间](room_type)
 - 给个[标单](room_type)
-- 就是我想订一间[房间](room_type)，就是[今晚](checkin_time)，订一个晚上
+- 就是我想订一间[房间](room_type)，就是[今晚](date)，订一个晚上
 - 你好，帮我订[一个](count)[单间](room_type)
-- 喂，帮我订[两个](count)房间，我那个恒大事业的，我姓[于](guest_name)
+- 喂，帮我订[两个](count)房间，我那个恒大事业的，我姓[于](person)
 - 帮我留[一个](count)[单人床](room_type)
-- 你好，[今天晚上](checkin_time)帮我订[八个](count)[房间](room_type)
+- 你好，[今天晚上](date)帮我订[八个](count)[房间](room_type)
 - 你好，帮我开[个](count)[双人房](room_type)，[标双](room_type)啊
 - 帮我订那[个](count)[豪单](room_type)吧
 - 那个帮我订[两个](count)[双人房](room_type)
 - 喂，给[个](count)[标双](room_type)
 - 你好，开[两个](count)[单间](room_type)给我
-- 喂，你好，帮我订[两间](count)[明天](checkin_time)的[标准单人房](room_type)
+- 喂，你好，帮我订[两间](count)[明天](date)的[标准单人房](room_type)
 - 喂，你好，我是县区委这边的，就是想订[三个](count)[行政单间](room_type)
-- 你这样子[明天](checkin_time)给我留[一个](count)[三人间](room_type)
+- 你这样子[明天](date)给我留[一个](count)[三人间](room_type)
 - 额，我有你这边那什么苏门卡嘛，你帮我开[两个](count)[单人大床房](room_type)
 - 喂，请给我订[两个](count)[标准间](room_type)
 - 那就[双人间](room_type)，订[两个](count)
-- 喂你好，麻烦订[一间](count)[单人房](room_type)[今晚](checkin_time)的
+- 喂你好，麻烦订[一间](count)[单人房](room_type)[今晚](date)的
 - 你好帮我订一间标单
 - 你好我想问一下你们有没有[单人房](room_type)
 - 你好先帮我订[两间](count)[标间](room_type)
@@ -143,68 +143,59 @@
 - 帮我看下[25](number)，[26](number)得[标双](room_type)怎么样
 
 ## intent: something_like
-- [0908](keyword)那种有没有
+- [大点的](thing)那种有没有
 
 ## intent: info
-- 可以啊，那你开[两间](count)我[晚上](checkin_time)到嘛
-- 额，[礼拜天](checkout_time)走
+- 可以啊，那你开[两间](count)我[晚上](date)到嘛
+- 额，[礼拜天](date)走
 
 
-@guest_name: 张三|李四|王麻子|杨康|穆念慈|郭啸天|李萍|杨铁心|包惜弱|完颜洪烈|柯镇恶|朱聪|韩宝驹|南希仁|张阿生|全金发|韩小莹|刘女士|王先生
-@guest_phone_number: 123456|0281234343|02312334345
+@person: 张三|李四|王麻子|杨康|穆念慈|郭啸天|李萍|杨铁心|包惜弱|完颜洪烈|柯镇恶|朱聪|韩宝驹|南希仁|张阿生|全金发|韩小莹|刘女士|王先生
 
 ## intent:info
 - [房间](room_type)
 - 这周可能是两个人，订一个[双人房](room_type)
 
 ## intent:info
-- [郭靖](guest_name)
-- 姓[宁](guest_name)呗
-- 两个人过去了，就报我的名字，你就说平安[夏老师](guest_name)或者[夏先生](guest_name)就可以了
-- 秦，住[8381](number)那个[秦小姐](guest_name)喔
+- [郭靖](person)
+- 姓[宁](person)呗
+- 两个人过去了，就报我的名字，你就说平安[夏老师](person)或者[夏先生](person)就可以了
+- 秦，住[8381](number)那个[秦小姐](person)喔
 
 
 ## intent:info
-- [18088888888](guest_phone_number)
-- [15988888888](guest_phone_number)是我的电话号码
-- 号码是[13188888888](guest_phone_number)
-- 我的电话号码是[13188888888](guest_phone_number)
-- 这是我的电话号码[13188888888](guest_phone_number)
+- [18088888888](number)
+- [15988888888](number)是我的电话号码
+- 号码是[13188888888](number)
+- 我的电话号码是[13188888888](number)
+- 这是我的电话号码[13188888888](number)
 
 
 ## intent:info
-- [今晚](checkin_time)
-- 我估计[今晚](checkin_time)入住
-- [3月18号](checkin_time)
-- 我打算[今晚](checkin_time)住进来
-- 我大概[今晚](checkin_time)到达
-- [周五](checkin_time)
-- [下周三](checkin_time)
+- [今晚](date)
+- 我估计[今晚](date)入住
+- [3月18号](date)
+- 我打算[今晚](date)住进来
+- 我大概[今晚](date)到达
+- [周五](date)
+- [下周三](date)
 
 
 ## intent:info
-- 我叫[杰哥](guest_name)
-- 我是[王先生](guest_name)
-- 我的名字是[杰哥](guest_name)
-- [郭靖](guest_name)
-- [黄蓉](guest_name)
-- 我叫[何任可](guest_name)
+- 我叫[杰哥](person)
+- 我是[王先生](person)
+- 我的名字是[杰哥](person)
+- [郭靖](person)
+- [黄蓉](person)
+- 我叫[何任可](person)
 
 
 ## intent:change_info
-@wrong_time: =checkin_time
-@wrong_name: =guest_name
-- 不是[今天](wrong_time)，是[明天](checkin_time)
-- 不是[张三](wrong_name)，是[李四](guest_name)
-- 名字不对，应该是[大锤](guest_name)
-- 时间错了，是[后天下午](checkin_time)
-- 不是[今天](wrong_time)是[明天](checkin_time)
-- 不是[张三](wrong_name)是[李四](guest_name)
-- 不是叫[张三](wrong_name)，我叫[李四](guest_name)
-- 不是[张三](wrong_name)我叫[李四](guest_name)
-- 我不叫[张三](wrong_name)我叫[李四](guest_name)
-- [晚上10点前](time)
-- 你好，美女原来我是预定你们[二十号](checkin_time)是一个标间，一个单人，现在想订两个标间
+@wrong_time: =date
+@wrong_name: =person
+- 名字不对，应该是[大锤](person)
+- 时间错了，是[后天下午](date)
+- 你好，美女原来我是预定你们[二十号](date)是一个标间，一个单人，现在想订两个标间
 
 
 ## intent:consultation
@@ -377,7 +368,7 @@
 - 那我们那个房间wifi名称应该是怎么找呢
 - 你们无线网是哪一个，我怎么连不上
 - 我是[6010](number) 那个,你这里 wifi是怎么连呢
-- 你好，我我想问一下我是[60](nunmber)的，我想问一下，有没有那个WIFI的
+- 你好，我我想问一下我是[60](number)的，我想问一下，有没有那个WIFI的
 - 你好，我想问一下那个WiFi怎么连
 - 那我们的房间的那个wifi，应该是怎么找的
 - 喂，无线网是哪一个？我怎么连不上？
@@ -386,25 +377,26 @@
 ## intent: where_is_the_wenxiang
 - 喂，怎么找不到哪个插电的蚊香呢？
 
-@goods_name: 烟 泡面 饼干 水
+@thing: 烟 泡面 饼干 水
 ## intent: order_something
 - 那个你让服务员给我拿个一次性的[胡须刀](thing)给我，拿到[1109](number)
 - 然后叫客房中心那个[一头](count)[肥皂](thing)上来
-- 前台有[打火机](goods_name)吗
-- 你好，我想问一下你们那里有[卫生纸](goods_name)吗
-- 你好，帮我送一个有[靠背的椅子](goods_name)到[1409](number)这里
-- 那个[1518](number)给拿[两幅](count)[扑克牌](goods_name)
-- 两点是吗，那个再帮我送[两罐](count)[仙草露](goods_name)上来，然后计房账，1808
-- 帮我拿瓶[水](goods_name)过来
-- 你好，[606](number)送[两瓶](count)[水](goods_name)
-- 我们这边是[1808](number)号房，然后让客房中心送[两瓶](count)[水](goods_name)和i[两双](count)[一次性拖鞋](goods_name)过来
-- 帮我拿[包](count)[烟](goods_name)上来
-- 嗯，拿[两瓶](count)[水](goods_name)到[1313](number)
-- 喂，你好，帮我房间送[几个](count)[衣架](goods_name)过来，好吧
-- 麻烦拿[十个](count)[一次性杯子](goods_name)到[2208](number)
-- 能帮我送几瓶[矿泉水](goods_name)上来吗
-- 有没有[打火机](goods_name)
-- 我这个房间怎么没[茶叶](goods_name)了呢
+- 前台有[打火机](thing)吗
+- 你好，我想问一下你们那里有[卫生纸](thing)吗
+- 你好，帮我送一个有[靠背的椅子](thing)到[1409](number)这里
+- 那个[1518](number)给拿[两幅](count)[扑克牌](thing)
+- 两点是吗，那个再帮我送[两罐](count)[仙草露](thing)上来，然后计房账，1808
+- 帮我拿瓶[水](thing)过来
+- 你好，[606](number)送[两瓶](count)[水](thing)
+- 我们这边是[1808](number)号房，然后让客房中心送[两瓶](count)[水](thing)和i[两双](count)[一次性拖鞋](thing)过来
+- 帮我拿[包](count)[烟](thing)上来
+- 嗯，拿[两瓶](count)[水](thing)到[1313](number)
+- 喂，你好，帮我房间送[几个](count)[衣架](thing)过来，好吧
+- 麻烦拿[十个](count)[一次性杯子](thing)到[2208](number)
+- 能帮我送几瓶[矿泉水](thing)上来吗
+- 有没有[打火机](thing)
+- 我这个房间怎么没[茶叶](thing)了呢
+- 我的房间里都好几天没有[茶叶](thing)了
 - 帮我送[一卷](count)那个[纸](thing)上来
 - 你好我这是[1618](number)房，给我送[五个](count)[衣架](thing)上来
 - 你好，[1906](number)那里有[蓝龙](thing)吗
@@ -419,7 +411,7 @@
 - 你好，前台，我是[2009](number)，麻烦你送[两张](count)[白纸](thing)上来
 - 能给我房间送[个](count)[袋子](thing)来吗
 - 叫下服务员拿下那个叫什么，[垃圾袋](thing)吧，明天装湿衣服的
-- 你好，帮我送[两个](count)[杯](thind)上来
+- 你好，帮我送[两个](count)[杯](thing)上来
 - 我那个房间里面好几天，好几天没有[茶叶](thing)了
 - 麻烦帮我告诉客房中心，然后让他们拿[两个](count)[牙刷](thing)过来
 - 请问有[打火机](thing)吗
@@ -429,10 +421,10 @@
 - 帮我拿[四瓶](count)[矿泉水](thing)到[1802](number)
 - [1802](number)送[一副](count)[扑克牌](thing)
 - [1413a](number)[一副](count)[扑克](thing)钱已将给前台了
-- [911](number)要[一包](count)[玉溪](goods_name)，[挂房费](pay_method)
-- [饼干](goods_name)帮我拿[几个](count)上来
-- 你给我送[几个](count)[酒碗](goods_name)吧
-- 那给我送[一个](count)[剃须刀](goods_name)上来
+- [911](number)要[一包](count)[玉溪](thing)，[挂房费](pay_method)
+- [饼干](thing)帮我拿[几个](count)上来
+- 你给我送[几个](count)[酒碗](thing)吧
+- 那给我送[一个](count)[剃须刀](thing)上来
 - [2102](number)给我拿[两瓶](count)[矿泉水](thing)上来
 - 我是[1118](number)我想问一下你们这里有[熨斗](thing)
 - 哪个[1518](number)给拿[两幅](count)[扑克牌](thing)
@@ -466,6 +458,8 @@
 - 什么东西都没有啊
 
 ## intent: is_there_xxx
+- 这边还有[快餐](thing)么?
+- 你好上面有[粉](thing)吃么，现在
 - [饮料](thing)有没有啊
 - 你好你们前台有[饮料](thing)没有
 - 五楼没有，那你有[蚊香](thing)吗，有蚊子
@@ -507,6 +501,12 @@
 - 那拿[两瓶](count)上[1808](number)号房
 
 ## intent: info
+- [挂到房账上面](pay_method)
+- [现金](pay_method)
+- [现付](pay_method)
+- [微信](pay_method)
+- [挂账](pay_method)，多少钱一盒
+- [挂账](pay_method)的了
 - [挂房费](pay_method)
 - [12345张](count)
 
@@ -548,10 +548,6 @@
 ## intent: ask_price_for_changing_room
 - 你好那个换房是加[20](number)块是吗
 
-## intent: ask_for_food
-- 这边还有[快餐](food_name)么?
-- 你好上面有[粉](food_name)吃么，现在
-
 ## intent: not_found
 - 好像找过没有诶
 
@@ -569,12 +565,8 @@
 - 你好我想问一下你，你们的[矿泉水](thing)和[茶叶](thing)是免费的么？
 
 ## intent: complain
-# TODO: 训练情感分析
 - 恩什么都弄不了
 - 六点钟就开始了，闷得要死，我睡都睡不了
-- 恩什么都弄不了
-- 六点钟就开始了，闷得要死，我睡都睡不了
-- 那个之前问的网线怎么还没有送上来
 - 到底能不能送，你直接给个话啊
 
 ## intent: ask_to_clean_room
@@ -595,9 +587,6 @@
 
 ## intent: network_problem
 - 为什么没有网络呢
-
-## intent: ask_for_dry_tea
-- 我的房间里都好几天没有茶叶了
 
 ## intent: ask_to_open_door
 - 你好，是这样子，因为我有个同事是住在[802](number)，叫王二丫，然后我现在要去他房间拿样东西，他现在出外面了，你们可以帮开一下门吗，是要给他打电话吗
@@ -620,15 +609,17 @@
 - 把两个床的[床单](thing)换下啊，好久没换了吧
 
 ## intent: ask_for_phone_number
+- 喂，你好，你们这个[订餐](subject_of_phone_number)电话是多少
+- 喂，你这个[订餐](subject_of_phone_number)的电话是多少啦
 - [餐厅](subject_of_phone_number)电话是多少
 - [楼上KTV](subject_of_phone_number)电话号码是多少啊
 
 ## intent: ask_for_traffic_info
-- 我想问一下，去南宁的汽车
+- 我想问一下，去[南宁](location)的汽车
 
 ## intent: info
 - 你好我美团上面订了一间房
-- [十二点](checkin_time)，[一点](checkin_time)前来可以么，但是我已经给钱了
+- [十二点](date)，[一点](date)前来可以么，但是我已经给钱了
 
 ## intent: delay_checkin
 - 恩大概要晚一点
@@ -666,13 +657,11 @@
 - 恩，附近有[超市](thing)吗
 - 咱们旁边有个[桑拿](thing)是吧？
 
-## intent: how_far_is_the_nearest_store
-- 附近超市有多远
+## intent: how_far?
+- 附近[超市]()有多远
 
 ## intent: conplain
 - 这么[远](distance)
-
-## intent: give_up
 - 那没办法了谢谢
 
 ## intent: comfirm_location
@@ -695,16 +684,113 @@
 
 ## intent: is_vip_the_same
 - 会员也是这样吗
+- 那会员呢
 
-## intent: re_confirm
-- 最迟一点半是吧
+## intent: repeat_confirm
+- [最迟一点半](isit)是吧
+- [180](isit)是吧
+- [1917,7点10分](isit)是吧，好的
+- [消费两瓶水](isit)是吧好
+- [还有一个青菜是番薯叶](isit)是吧
+- [薇辣](isit)是吧
+- [青椒炒蛋](isit)是吧
+- [2份米饭](isit)是吧
+- [餐厅](isit)是吧
+- [你那边够钟了](isit)是吧
+- [够钟了](isit)是吧可以延期得吗
+- [送2个](isit)是吧
+- [这样](isit)是吧
+- [好的现在可以拿上去洗](isit)是吧
+- [直接可以烘](isit)是吧
+- [一点半](isit)是吧
+- [到了](isit)是吧
+- [你好，你想多开票](isit)是吧
+- [1203](isit)是吧
+- [12楼](isit)是吧
+- [2007](isit)对吧
+- [1808拿2个牙刷](isit)是吧
+- [半个小时](isit)是吧
+- [8个8](isit)是吧
+- [2点以前](isit)是吧
+- [喔弄好了](isit)是吧，那你们要及时说清楚
+- [2张凳子](isit)是吧
+- [1406](isit)是吧
+- [613](isit)对吧
+- [房间没有](isit)是吧
+- [没有要一个](isit)是吧
+- [1016](isit)对吧
+- [咱们旁边有个桑拿](isit)是吧？
+- 哦，我知道，就是说，不是有个什么什么这个，[是咱酒店内部的吧](isit)是吧？
+- [没有了](isit)是吧？
+- 哦，你这个就[没有加床服务](isit)是吧
+- [在六楼](isit)是吧
+- 好，[现在送](isit)是吧
+- [送两个](isit)是吧
+- [你是2016](isit)是吧
+- [2016](isit)是吧
+- [送到房间](isit)是吧
+- [三个9](isit)是吧，好好
+- 你好[前台](isit)是吧
+- 然后，是[自己结账的](isit)是吧
+- [没办不得](isit)是吧
+- [2013](isit)是吧
+- [八个8](isit)是吧
+- [十六](isit)是吧
+- [还有一个透明的箱子](isit)是吧
+- [那个出风口那](isit)是吧
+- [喜莲](isit)是吧
+- [2007](isit)是吧
+- [1808拿两个牙刷](isit)是吧
+- [总台](isit)是吧
+- [按那个机顶盒的电源键](isit)是吧
+- [电视](isit)是吧
+- 我这个是[1006](isit)是吧
+- [是中建八局，刚刚订了两间房](isit)是吧
+- [268的](isit)是吧
+- [都有](isit)是吧
+- [到了](isit)是吧
+- [续住](isit)是吧，好的
+- [八个8](isit)是吧
+- [直接拿过去](isit)是吧
+- [你在网上下单](isit)是吧
+- [1016](isit)是吧
+- [华为](isit)是吧
+- 那就华为就行了，您就说，[613](isit)是吧
+- [一点半](isit)是吧
+- [就是没有电脑](isit)是吧
+- [房屋没有的](isit)是吧
+- [就是拿房卡去就得了](isit)是吧
+- [房间没有](isit)是吧
+- 没有哈，[要一个](isit)是吧
+- 六楼，就是[报房号就行了](isit)是吧
+- 你好，就，[这边是客房服务](isit)是吧
+- 我想问一下只有那个套房，[只有十五楼时可以座椅](isit)是吧
+- 没有没有，我想确认一下就是[只有十五楼是套房而已，其他都没有东西](isit)是吧
+- [其他原路都不不动](isit)是吧
+- 你好，[那个换房就加二十块](isit)是吧
+- [1406](isit)是吧
+- 你看一下，你，你那个[是自助餐](isit)是吧
+- 哦哦，[在十楼](isit)是吧
+- [有个烘干机](isit)是吧
+- [都要一张](isit)是吧
+- [1016](isit)是吧
+- 怎么称呼您，您是[要订那些聚会](isit)是吧
+- [直接下单](isit)是吧
+- [也是两百三](isit)是吧
+- [两百三](isit)是吧
+- [之前我们同事给你打电话](isit)是吧
+- [给个双人间](isit)是吧，那你大概住多少天
+- [住七八天，只要一个房](isit)是吧
+- [晚上七点](isit)是吧
+- [送两个](isit)对吧，您稍等
+
 
 ## intent: buy_or_borrow
 - 要[一个](count)是买吗
 
 ## intent: info
 - 那好，我是[813a](number)
-- [现在](checkin_time)过去
+- [现在](date)过去
 
 ## intent: this_phone
 - 肯定啊就这个号码
@@ -713,7 +799,7 @@
 - 那我怎么办
 
 ## intent: query_book_record
-- 能帮我看下[唐莲](guest_name)的预订有吗
+- 能帮我看下[唐莲](person)的预订有吗
 
 ## intent: ask_if_ferry
 - 欸，你们可以那个接送是吧
@@ -777,7 +863,7 @@
 - 我是那个一旅的导游，那个今天晚上有人在那里住一下
 
 ## intent: meituan_ticket_comfirm
-- 你好，这边是美团的，订单尾号[3320](number)[胡冬丽](guest_name)[今天](checkin_time)入住[一晚](duration)[商务单人房](room_type)[一间](count)，[198](price)含双早订单可以接吗？
+- 你好，这边是美团的
 
 ## intent: is_breakfast_custom?
 - 你好，我想问一下你们早餐是那种自助餐吗？
@@ -790,15 +876,6 @@
 - 额
 - 诶恩
 - 哦
-
-## intent: how_to_pay
-- 挂到房账上面
-- 现金
-- 现付
-- 微信
-- 挂账，多少钱一盒
-- 挂账的了
-
 
 ## intent: ask_how_to_pay
 - 这边是怎么付费呢
@@ -817,7 +894,7 @@
 - 拿一个[苹果](charger_type)6的充电器，好吗
 - 如果有那个[苹果](charger_type)的充电器的话也给我拿一根线过来
 - [915](number)要个安卓充电器
-- 请帮我拿一个充电器到[915](nember)
+- 请帮我拿一个充电器到[915](number)
 - 你好，帮我拿个充电器，[501](number)
 - 你好，请问你这里有那个[苹果](charger_type)充电器没有
 - 你好，麻烦[1610](number)帮我拿一个充电器
@@ -990,6 +1067,7 @@
 
 
 ## intent: urge
+- 那个之前问的网线怎么还没有送上来
 - 你好你这个网络什么时候能好啊
 - 你好，我们这[1808](number)号房要的那个牙刷和水怎么还没送过来呀
 - 你好，充电器还没送过来吗
@@ -1004,13 +1082,13 @@
 
 
 ## intent: cancel_booking
-- 你好，美女，我们原来预定[20号](checkin_time)[两个](count)[标间](room_type)，现在不需要了，谢谢你
+- 你好，美女，我们原来预定[20号](date)[两个](count)[标间](room_type)，现在不需要了，谢谢你
 
 
 ## intent: info
-- [六点半](awake_time)这样
-- [6点50](awake_time)
-- [六点，五十](awake_time)
+- [六点半](time)这样
+- [6点50](time)
+- [六点，五十](time)
 
 
 ## intent: how_to_call
@@ -1074,11 +1152,6 @@
 
 ## intent: is_there_night_snack
 - 我想问下你们这里还有宵夜没有
-
-
-## intent: ## intent: ask_for_phone_number
-- 喂，你好，你们这个订餐电话是多少
-- 喂，你这个订餐的电话是多少啦
 
 
 ## intent: is_there_breakfast
