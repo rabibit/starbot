@@ -386,6 +386,8 @@
 
 @thing: 烟 泡面 饼干 水
 ## intent: order_something
+- 你好，能不能拿个大点的[胶袋](thing)给装衣服呀
+- 你好，帮我拿两套牙刷到[1312](number)这里来可以吗
 - 那个你让服务员给我拿个一次性的[胡须刀](thing)给我，拿到[1109](number)
 - 然后叫客房中心那个[一头](count)[肥皂](thing)上来
 - 前台有[打火机](thing)吗
@@ -471,6 +473,8 @@
 - 我没有看到任何东西耶
 
 ## intent: is_there_xxx
+- 你好，请问你们这有[洗衣机](thing)没有呀
+- 这个房间有[牙刷](thing)吗
 - 这边还有[快餐](thing)么?
 - 你好上面有[粉](thing)吃么，现在
 - [饮料](thing)有没有啊
@@ -572,6 +576,8 @@
 - 你好，我这边是[1515](number)刚入住的，我想一下我可以换其他房间么
 - 你好，[151](number)我这么久都没人上来你给我换别的房间可以吗
 - 那你给我换个[双标](room_type)
+- 你好，美女原来我是预定你们二十号是[一个](count)[标间](room_type)，[一个](count)[单人](room_type)，现在想订[两个](count)[标间](room_type)
+
 
 ## intent: ask_price_for_changing_room
 - 你好那个换房是加[20](number)块是吗
@@ -696,6 +702,9 @@
 - [现在](time)洗衣房可以洗衣服吗
 
 ## intent: is_there_cloth_drier
+- 你好，我想问一下你这里有那个烘干衣服的吗
+- 我想请问一下你们这里有没有那个衣服烘干的服务啊
+- 你好，我想问一下，你们酒店是有烘干衣服的，是吗
 - 那个烘干机有空得可以用吗
 - 啊姐，上面可以晒衣服吗
 - 你好我想问下你们酒店是有烘干衣服的吗
@@ -919,6 +928,8 @@
 - 不够
 
 ## is_meal_available_now
+- 我想点一下餐最晚到几点
+- 我想问下晚餐是多久开始
 - 你好现在可以吃饭了吗
 - 我想问一下现在餐厅开始服务没有
 - 我现在去吃饭可以不
@@ -936,37 +947,43 @@
 - 你好我们那个只有一张早餐票，我们两个人
 - 你好我们开那个房的得一张早餐票的我们开双人房的
 
-## intent: query_dinner_time
-- 我想点一下餐最晚到几点
-- 我想问下晚餐是多久开始
+# intent: query_foods
+#- 哪里有什么[吃得](keyword)
+#- [包子](keyword)有什么
 
-## intent: query_foods
-- 哪里有什么[吃得](keyword)
-- [包子](keyword)有什么
-
-## intent: and_xxx
-- 恩还有[水](thing)啊
+# intent: and_xxx
+#- 恩还有[水](thing)啊
 
 ## intent: lack_of_thing
 - 但[牙刷](thing)只有一根，不够用啊
+- 那[毛巾](thing)只有一条，我们是两个人
+- 我们有两个人，可以[茶杯](thing)只有一套，不够用
+- 还差一条[毛巾](thing)
+- 再拿一套[茶杯](thing)来，我们两个人，不够用
 
 ## intent: how_much_did_i_spend
 - 帮我看哈我昨天在03号厢消费了多少
+- 看看[1902](number)房间总共消费了多少
+- 帮我算哈[1234](number)花了好多钱
+- 麻烦帮我算算[8302](number)消费了好多钱
 
 ## intent: is_manager_there
 - 喂，请问你们酒店的经理在吗？
+- 喂，我找你们经理
+- 我问哈你们经理在哪里
+- 麻烦帮我联系一下你们经理
 
 ## intent: info
 - 我是那个一旅的导游，那个今天晚上有人在那里住一下
 
-## intent: meituan_ticket_comfirm
-- 你好，这边是美团的
+# intent: meituan_ticket_comfirm
+#- 你好，这边是美团的
 
-## intent: is_breakfast_custom?
-- 你好，我想问一下你们早餐是那种自助餐吗？
+# intent: is_breakfast_custom?
+#- 你好，我想问一下你们早餐是那种自助餐吗？
 
-## intent: i_have_booked_some_room
-- 喂，你好，刚刚我在携程上订了你们那个[5个](count)[房间](room_type)，[4个](count)[大床房](room_type)，然后[1个](count)[双床房](room_type)
+# intent: i_have_booked_some_room
+#- 喂，你好，刚刚我在携程上订了你们那个[5个](count)[房间](room_type)，[4个](count)[大床房](room_type)，然后[1个](count)[双床房](room_type)
 
 ## intent: hmm
 - 嗯嗯
@@ -976,10 +993,9 @@
 
 ## intent: ask_how_to_pay
 - 这边是怎么付费呢
-
-
-## intent: ask_for_toothbrush
-- 你好，帮我拿两套牙刷到[1312](number)这里来可以吗
+- 可以刷卡不呢
+- 你们支持刷信用卡不
+- 你是支持微信或者支付宝支付不呢
 
 
 ## intent: ask_for_charger
@@ -1001,10 +1017,6 @@
 - 还有那个[苹果](charger_type)的充电器吗
 - 你好，[613](number)送一个，那个充电器，那个是，反正是[华为](charger_type)那种，圆孔的扁的那种
 - 请问你这里，酒店这里有没有这个[华为](charger_type)手机的充电线呢
-
-
-## intent: is_there_any_toothbrush
-- 这个房间有牙刷吗
 
 
 ## intent: stay_extension
@@ -1075,10 +1087,10 @@
 
 ## intent: where_is_laundry_room
 - 洗衣服在哪里
-
-
-## intent: ask_for_changing_booking
-- 你好，美女原来我是预定你们二十号是一个标间，一个单人，现在想订两个标间
+- 请问洗衣房在哪里
+- 能告诉我洗衣房在哪里吗
+- 我想知道洗衣服在哪里
+- 我需要把衣服拿到哪里去洗
 
 
 ## intent: other_issue_needs_service
@@ -1166,9 +1178,10 @@
 
 
 ## intent: account_issues
-- 你好，问一下710可以挂125吗
-- 你好，803可以挂150吗
-
+- 你好，问一下[710](number)可以挂[125](number)吗
+- 你好，[803](number)可以挂[150](number)吗
+- 帮我把[908](number)挂在[907](number)
+- 那个可以把[123](number)挂在[456](number)上吧
 
 
 ## intent: info
@@ -1186,22 +1199,11 @@
 - 你们这个电话内线怎么使用的
 
 
-## intent: package_cloths
-- 你好，能不能拿个大点的胶袋给装衣服呀
-
-
-## intent: is_there_any_washer
-- 你好，请问你们这有洗衣机没有呀
-
-
 ## intent: confirm_extend_condition
 - 你帮我报一下十三楼哪些房间是续住的
-
-
-## intent: is_there_drying_service
-- 你好，我想问一下你这里有那个烘干衣服的吗
-- 我想请问一下你们这里有没有那个衣服烘干的服务啊
-- 你好，我想问一下，你们酒店是有烘干衣服的，是吗
+- 麻烦帮我查看哈哪些还有续住
+- 你把续住的报一下
+- 你帮我看看哪些房间要续住
 
 
 ## intent: ask_for_changing_room
@@ -1217,16 +1219,21 @@
 - 酒店有按摩的吗
 - 我想问一下酒店有那个按摩之类的服务吗
 - 有按摩那个吗
+- 有点有按摩服务吗
 
 
 ## intent: where_is_tv_controller
 - 请问房间里是不是应该还有个电视机的遥控器，我只看到一个机顶盒的遥控器
 - 你好，我们[1406](number)房间的电视遥控器怎么只有一个啊，有一个没电了
 - 你们房间里是不是应该还有一个电视机的遥控器啊，我只看到一个机顶盒的遥控器啊
+- 你们电视遥控器放在哪里的
 
 
 ## intent: is_there_night_snack
 - 我想问下你们这里还有宵夜没有
+- 你们晚上提供宵夜不呢
+- 晚上可以点宵夜吗
+- 餐厅晚上提供服务吗
 
 
 ## intent:is_breakfast_included
@@ -1244,10 +1251,14 @@
 
 ## intent: query_supper_time
 - 你好，我想问一下那个晚餐是几点钟
-
-
-## intent: can_deliver
+- 我想问一下一般晚餐几点开始
+- 那个大概几点可以去吃晚餐
+- 晚餐是什么时候
+- 晚餐是几点到几点
 
 
 ## intent: can_order_meal
 - 那个，那个有有订餐的吗
+- 对了，你们酒店可以订餐吗
+- 酒店有订餐服务吗
+- 酒店餐厅是可以订餐的吧
