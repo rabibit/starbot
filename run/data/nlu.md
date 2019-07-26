@@ -135,15 +135,15 @@
 - 给[个](count)[标单](room_type)
 - 给个[标双](room_type)
 
-## intent: is_room_available
-- 你好，[标准间](room_type)有吗
-- 你好，我想问下你大床房还有吗
-- 还有标双吗
-- 请问有单间吗
-- 帮我看下[25](number)，[26](number)得[标双](room_type)怎么样
-
 ## intent: something_like
-- [大点的](thing)那种有没有
+- [大点的](feature)那种有没有
+- [靠窗户](feature)那种有没有
+- [豪华的](feature)那种有没有
+- [带麻将的](feature)那种有没有
+- [带按摩椅的](feature)那种有没有
+- [带浴缸的](feature)那种有没有
+- [带电脑](feature)那种有没有
+- [带空调的](feature)那种有没有
 
 ## intent: info
 - 可以啊，那你开[两间](count)我[晚上](date)到嘛
@@ -232,24 +232,26 @@
 - 我说，问一下就今天在你们酒店订一个[标间](room_type)多少钱？
 - 就是这样，是那个，你们那个[大床房](room_type)跟那个[标间](room_type)价格是一样的？
 
-## intent:is_breakfast_included
-- 含早餐吗
-
 
 ## intent:room_available
+- 你好，[标准间](room_type)有吗
+- 你好，我想问下你[大床房](room_type)还有吗
+- 还有[标双](room_type)吗
+- 请问有[单间](room_type)吗
+- 帮我看下[25](number)，[26](number)得[标双](room_type)怎么样
 - 还有空房间吗
 - 我明天入住，还有房间吗
-- 有标间吗
-- 有大床房吗
-- 有商务套房吗
-- 有豪华套房吗
-- 你那边还有双人房么
-- 那里有没有麻将房呀
-- 你好，请问还有标间吗
+- 有[标间](room_type)吗
+- 有[大床房](room_type)吗
+- 有[商务套房](room_type)吗
+- 有[豪华套房](room_type)吗
+- 你那边还有[双人房](room_type)么
+- 那里有没有[麻将房](room_type)呀
+- 你好，请问还有[标间](room_type)吗
 - 你好我想问一下还有没有房间
-- 你好，我想请问一下，明天的要两件标间，还有吗
-- 请问一下那个单人套房多少钱一间啊
-- 你好，我想问一下你们有那个电脑房吗
+- 你好，我想请问一下，明天的要两件[标间](room_type)，还有吗
+- 请问一下那个[单人套房](room_type)多少钱一间啊
+- 你好，我想问一下你们有那个[电脑房](room_type)吗
 - 你好，你们有没有房间晚上
 - 还有房间吗
 
@@ -269,6 +271,7 @@
 - 你能做什么
 - 你能帮我做什么
 - 你有什么功能
+- 你有什么特别的
 
 ## intent:ask_for_help
 @action: 倒茶 打水 办事儿 写作业 打卡
@@ -349,15 +352,15 @@
 - 我想问下wifi密码
 - 你们这个wifi密码是多少
 - 我想问一下这里的无线是多少
-- 你好，就是1206那个WiFi密码是多少
+- 你好，就是[1206](number)那个WiFi密码是多少
 - 我想问一下你们WiFi的密码是多少
 - 喂，你好，请问一下那个wifi密码是多少
 - 你好，我想问一下哪个wifi密码多少
-- 你好，我是607房间的，请问哪个wifi密码是多少呢
+- 你好，我是[607](number)房间的，请问哪个wifi密码是多少呢
 - 那个酒店的WiFi密码是多少
 - 我想问一下你们这里，这个，WiFi还有密码是吧
 - 你好，请问一下你们这个WiFi，房间的怎么连接，那个密码多少
-- 你好，怎么，我刚才是1508的客人，你们这房间的WiFi是什么呀，密码
+- 你好，怎么，我刚才是[1508](number)的客人，你们这房间的WiFi是什么呀，密码
 - 那个WiFi的，电话，不是，密码是多少
 - WiFi密码多少啊
 - 喂，想问你们这个WiFi密码是多少啊
@@ -376,6 +379,10 @@
 
 ## intent: where_is_the_wenxiang
 - 喂，怎么找不到哪个插电的蚊香呢？
+- 你们蚊香放在哪里呢
+- 我找不到蚊香
+- 那个蚊香在哪里呀
+- 能告诉我蚊香在哪里吗
 
 @thing: 烟 泡面 饼干 水
 ## intent: order_something
@@ -454,8 +461,14 @@
 - 帮我送[个](count)[快餐垫](thing)上来
 - 你好，能帮我送[几瓶](count)[矿泉水](thing)上来吗
 
-## intent: are_you_sure
+## intent: not_found
+- 好像找过没有诶
 - 什么东西都没有啊
+- 我什么都没有看到呀
+- 没有呀
+- 确实啥都没看见
+- 真的没有
+- 我没有看到任何东西耶
 
 ## intent: is_there_xxx
 - 这边还有[快餐](thing)么?
@@ -499,6 +512,9 @@
 
 ## intent: number_of_thing
 - 那拿[两瓶](count)上[1808](number)号房
+- [两瓶](count)矿泉水
+- [三包](count)烟
+- 那给我送[四盒](count)饼干吧
 
 ## intent: info
 - [挂到房账上面](pay_method)
@@ -519,25 +535,37 @@
 - 我想问下你们今天问早餐券
 
 ## intent: where_to_have_breakfast
+- 你好，早餐是在几楼呀
+- 你好，请问一下那个早餐是在几楼啊
 - 你好，请问早餐在几楼?
 - 你们早点在几楼啊
 - 问一下这个早餐在几楼
 - 你好请问早餐在几楼啊
 
 ## intent: when_to_have_breakfast
+- 你们这上面还有早餐吃吗
+- 你好，你们早餐到几点
+- 你好，想问一下这些早餐什么时候开始
 - 我想问一下那个早餐是几点到几点
 - 你们这早餐到多少
 
 ## intent: when_to_have_lunch
 - 14号中午，想问一下这些中餐的话都是什么时候上齐
+- 请问午餐什么时候开始
+- 啥时候可以吃午餐
+- 午餐一般是什么时候
+- 中午饭是什么时候
 
 ## intent: is_there_breakfast_now
 - 还有早餐吃么
-
-## intent: is_it_over
+- 现在还可以吃早餐吗
+- 还有早餐供应吗
+- 早餐是不是已经结束了
 - 现在结束了没有啊？
 - 现在结束没啊
 - 那现在不是结束了
+- 早餐是不是结束了
+- 现在是不是不可以吃早餐了
 
 ## intent: ask_to_change_room
 - 你好，[715](number)就是异味很重哦，可以换间房吗，首房啊
@@ -547,24 +575,30 @@
 
 ## intent: ask_price_for_changing_room
 - 你好那个换房是加[20](number)块是吗
-
-## intent: not_found
-- 好像找过没有诶
-
-## intent: chitchat
-- 那我怎么办，我指甲剪给撇掉了
+- 换成[豪单](room_type)需要加多少钱呢
+- 我想换个[大床房](room_type)，价格如何调整
+- 换个[套房](room_type)需要加多少前
 
 ## intent: leave_over_something
-- 你好我是昨天住在你们1713的客人，退房的时候我有[一副眼镜](thing)忘记拿了
+- 你好我是昨天住在你们[1713](number)的客人，退房的时候我有[一副眼镜](thing)忘记拿了
 - 你帮我问一下看看那个清洁阿姨有没有见到，[1713](number)
+- 我手机[充电器](thing)忘在[8080](number)了
+- 我的[电脑电源](thing)好像落在酒店了，能帮我看看吗，房间号是[1913](number)
 
 ## intent: info
 - 额，你好，额。。我，我柳州的，叫马克帧那，经常在你这里住的呀
 
 ## intent: is_it_free
 - 你好我想问一下你，你们的[矿泉水](thing)和[茶叶](thing)是免费的么？
+- 你好我想问一下你，你们的[牙刷](thing)和[茶叶](thing)是免费的么？
+- 你好我想问一下你，你们的[牙刷](thing)和[剃须刀](thing)是免费的么？
+- 你们这个[剃须刀](thing)是免费使用吗
 
 ## intent: complain
+- 那我怎么办
+- 这么[远](distance)
+- 那没办法了谢谢
+- 那我怎么办，我指甲剪给撇掉了
 - 恩什么都弄不了
 - 六点钟就开始了，闷得要死，我睡都睡不了
 - 到底能不能送，你直接给个话啊
@@ -587,6 +621,9 @@
 
 ## intent: network_problem
 - 为什么没有网络呢
+- 我连接上wifi还是不能上网
+- 我无法浏览网页
+- 这个房间怎么没有搜索到网络信号呢
 
 ## intent: ask_to_open_door
 - 你好，是这样子，因为我有个同事是住在[802](number)，叫王二丫，然后我现在要去他房间拿样东西，他现在出外面了，你们可以帮开一下门吗，是要给他打电话吗
@@ -607,6 +644,8 @@
 ## intent: ask_to_change_thing
 - 我是1507的客人，我感觉那个[床单](thing)很湿很潮，可不可以给我换一个
 - 把两个床的[床单](thing)换下啊，好久没换了吧
+- 这个厕所的[垃圾桶](thing)好脏，能换一个吗
+- 那个[卷纸浸](thing)水了，麻烦换一个
 
 ## intent: ask_for_phone_number
 - 喂，你好，你们这个[订餐](subject_of_phone_number)电话是多少
@@ -616,6 +655,9 @@
 
 ## intent: ask_for_traffic_info
 - 我想问一下，去[南宁](location)的汽车
+- 有去[北京](location)的车吗
+- 去[火车站](location)怎么走
+- 去[人民公园](location)有公交车吗
 
 ## intent: info
 - 你好我美团上面订了一间房
@@ -623,14 +665,23 @@
 
 ## intent: delay_checkin
 - 恩大概要晚一点
+- 估计要完一个小时
+- 可能会完半个钟头吧
+- 我要迟点才能到达酒店
 
 ## intent: is_my_room_ready
 - 你好我想问一下那个房间可以用了么
+- 房间打扫好了吗
+- 我可以换过去了吗 
+- 现在可以用了不
 
 ## intent: is_my_cloth_ready
 - 我想问一下我的衣服干没有
 - 那个[601](number)那个衣服洗好了吗，烘干了吗
 - 我问下帮我晒得衣服干了没有
+- 请问衣服洗好了吗
+- 衣服烘干了吗
+-  [0910](number)的衣服晾干了没
 
 ## intent: ask_for_laundry
 - 洗衣物在哪里
@@ -650,41 +701,55 @@
 - 你好我想问下你们酒店是有烘干衣服的吗
 - 我想问下外面有露台那个地方可以晒衣服吗，我们打球衣服晒不干
 
-## intent: cloth_not_dry
-- 你[802](number)有个衣服这里洗了，不够干，我这里没有衣架了，想送过去还给你
+# intent: cloth_not_dry
+#- 你[802](number)有个衣服这里洗了，不够干，我这里没有衣架了，想送过去还给你
 
 ## intent: is_there_xxx_around
 - 恩，附近有[超市](thing)吗
 - 咱们旁边有个[桑拿](thing)是吧？
+- 附近哪里有[SPA](thing)
+- 前面是不是有个[按摩院](thing)呀
 
 ## intent: how_far?
-- 附近[超市]()有多远
-
-## intent: conplain
-- 这么[远](distance)
-- 那没办法了谢谢
+- 附近[超市](thing)有多远
+- 那个[桑拿](thing)有多远
+- 走到那里要多久
+- 那个[SPA](thing)离酒店多远 
 
 ## intent: comfirm_location
 - 是[南宁](location)吗
+- 是去[北京](location)吗
+- [火车站](location)对吧
+- [广州](location)是不是
 
 ## intent: cancel_book_room
+- 你好，美女，我们原来预定[20号](date)[两个](count)[标间](room_type)，现在不需要了，谢谢你
 - 不好意思我定错了我可以取消吗，我在南宁
 - 我在南宁不好意思定错了，我没看
 - 你先看下能取消吗
+- 实在不好意思，我下单没有注意地址，我要取消刚才的订单
 
-## intent: charger_type
-- [安卓](charger_type)的
+# intent: charger_type
+#- [安卓](charger_type)的
 
 ## intent: can_deliver?
 - 可以送餐吗
+- 可以送到房间吗
+- 麻烦帮我送到[932](number)，可以吗
+- 能不能送到我房间来
 
 ## intent: any_other?
 - 还有什么菜
 - 除了套房以外得比较好的房间是什么
+- 还有别的吃的吗
+- 还有别的可选的吗
+- 除了那个远的，还有稍微近点的么
 
 ## intent: is_vip_the_same
 - 会员也是这样吗
 - 那会员呢
+- 会员会不会便宜点
+- 我是你们的会员，可以在优惠点吗
 
 ## intent: repeat_confirm
 - [最迟一点半](isit)是吧
@@ -693,24 +758,24 @@
 - [消费两瓶水](isit)是吧好
 - [还有一个青菜是番薯叶](isit)是吧
 - [薇辣](isit)是吧
-- [青椒炒蛋](isit)是吧
-- [2份米饭](isit)是吧
-- [餐厅](isit)是吧
-- [你那边够钟了](isit)是吧
+- [青椒炒蛋](isit)对吧
+- [2份米饭](isit)对吧
+- [餐厅](isit)对吧
+- [你那边够钟了](isit)对吧
 - [够钟了](isit)是吧可以延期得吗
-- [送2个](isit)是吧
+- [送2个](isit)对吧
 - [这样](isit)是吧
 - [好的现在可以拿上去洗](isit)是吧
-- [直接可以烘](isit)是吧
+- [直接可以烘](isit)对吧
 - [一点半](isit)是吧
 - [到了](isit)是吧
 - [你好，你想多开票](isit)是吧
-- [1203](isit)是吧
+- [1203](isit)对吧
 - [12楼](isit)是吧
 - [2007](isit)对吧
 - [1808拿2个牙刷](isit)是吧
 - [半个小时](isit)是吧
-- [8个8](isit)是吧
+- [8个8](isit)对吧
 - [2点以前](isit)是吧
 - [喔弄好了](isit)是吧，那你们要及时说清楚
 - [2张凳子](isit)是吧
@@ -751,10 +816,10 @@
 - [到了](isit)是吧
 - [续住](isit)是吧，好的
 - [八个8](isit)是吧
-- [直接拿过去](isit)是吧
-- [你在网上下单](isit)是吧
-- [1016](isit)是吧
-- [华为](isit)是吧
+- [直接拿过去](isit)对吧
+- [你在网上下单](isit)对吧
+- [1016](isit)对吧
+- [华为](isit)对吧
 - 那就华为就行了，您就说，[613](isit)是吧
 - [一点半](isit)是吧
 - [就是没有电脑](isit)是吧
@@ -787,6 +852,9 @@
 
 ## intent: buy_or_borrow
 - 要[一个](count)是买吗
+- 来[一个](count)，是买还是借呢
+- 你这个是只能买吗
+- 那可以借吗
 
 ## intent: info
 - 那好，我是[813a](number)
@@ -794,38 +862,67 @@
 
 ## intent: this_phone
 - 肯定啊就这个号码
+- 就是这个号码
+- 没错，就留我打电话这个号码
+- 是的，就是它
 
-## intent: how_can_i_do
-- 那我怎么办
+# intent: how_can_i_do
+#- 那我怎么办
 
 ## intent: query_book_record
 - 能帮我看下[唐莲](person)的预订有吗
+- 麻烦帮我看哈我订了哪些房
+- 你看看[廖雯雯](person)有预订吗
+- [张总](person)是不是已经订过房了
 
 ## intent: ask_if_ferry
 - 欸，你们可以那个接送是吧
 - 你好我刚刚在美团定了一间房，我想问问你们那是不是有车接送得
+- 你们是不是提供接送服务呀
+- 那个你们酒店提供接送不呢
 
 ## intent: how_much_if_stay_until
 - 我[四点钟](time)退房收多少钱啊
+- 过了退房时间要加多少钱
+- 我想延迟2小时退房，需要额外加钱吗
+- 我打算[三点钟](time)退房，看看要再给多少
 
 ## intent: is_it_ok
 - 那个我身份证丢了，我在车站开得身份证名可以用吗
+- 那个我的身份证没有带，临时开了一个身份证明，可以不
+- 我只带了驾驶证，可以吗
+- 除了身份证，用结婚证可以办理入住登记吗
 
 ## intent: query_agreement_price
 - 问下[税务局](org)协议价多少钱
+- 我是[星网智慧](org)的，请问协议价格是多少
+- 那个协议价格是多少，[锐捷网络](org)
+- 那个我是[清华](org)老师，请问协议价格是多少呀
 
 ## intent: fetch_it_myself?
 - 喔等下直接下去拿吗
+- 哦，是直接下去拿是吧
+- 那好，我直接下去拿
+- 是不是自己下去拿就是了
 
 ## intent: can_i_have_invoice
 - 我问下你们那是可以开发票得吧
+- 我到时候需要开发票，你们那里可以开吧
+- 结帐时可以开发票吧
+- 所有的消费都是可以开发票的吧
 
 ## intent: wanna_more
 - 我这边是想多开可以吗
+- 那个我是打算多开点，可不可以
+- 发票可以开多点吗
+- 开发票时可以比实际消费额多吗
 - 不够
 
 ## is_meal_available_now
 - 你好现在可以吃饭了吗
+- 我想问一下现在餐厅开始服务没有
+- 我现在去吃饭可以不
+- 那个餐厅一般几点可以吃饭
 
 ## intent: ask_for_more_breakfast_ticket
 - 你好我们那个只有一张早餐票，我们两个人
@@ -1039,14 +1136,6 @@
 - 你好，我是中建八局的，我刚才订了就是有两间房给我退掉吧今天
 
 
-## intent: ask_for_tissue
-- 你好，我这里是1306，然后我这里那个抽纸没有了
-
-
-## intent: ask_for_drinkingwater
-- 那个免费的饮用水也没有了
-
-
 ## intent: query_checkout_time
 - 我想问一下最迟几点退房
 - 总机我想问一下我们这个退房是在两点以前吧
@@ -1081,9 +1170,6 @@
 - 你好，803可以挂150吗
 
 
-## intent: cancel_booking
-- 你好，美女，我们原来预定[20号](date)[两个](count)[标间](room_type)，现在不需要了，谢谢你
-
 
 ## intent: info
 - [六点半](time)这样
@@ -1110,17 +1196,6 @@
 
 ## intent: confirm_extend_condition
 - 你帮我报一下十三楼哪些房间是续住的
-
-
-## intent: query_breakfast_time
-- 你们这上面还有早餐吃吗
-- 你好，你们早餐到几点
-- 你好，想问一下这些早餐什么时候开始
-
-
-## intent: query_breakfast_place
-- 你好，早餐是在几楼呀
-- 你好，请问一下那个早餐是在几楼啊
 
 
 ## intent: is_there_drying_service
@@ -1154,7 +1229,8 @@
 - 我想问下你们这里还有宵夜没有
 
 
-## intent: is_there_breakfast
+## intent:is_breakfast_included
+- 含早餐吗
 - 这边提供早餐么
 - 你好我想问下你们这个有没有早餐送的
 - 这里是不是有早餐吃的啊？
