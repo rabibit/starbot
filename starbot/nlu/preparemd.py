@@ -56,6 +56,8 @@ available_sections = [INTENT, SYNONYM, REGEX, LOOKUP]
 
 
 class MDWriter(MarkdownWriter):
+    extend_corpus = False
+
     def __init__(self, repeat=1):
         self.repeat = repeat
 
@@ -85,11 +87,12 @@ class MDWriter(MarkdownWriter):
     def _generate_message_md2(self, message):
         """generates markdown for a message object."""
         items = [self._generate_message_md(message.as_dict())]
-        for item in self._generate_extra_msg_md(message):
-            items.append(item)
-        for md in items[:]:
-            for q in message.questions:
-                items.append(q + md)
+        if self.extend_corpus:
+            for item in self._generate_extra_msg_md(message):
+                items.append(item)
+            for md in items[:]:
+                for q in message.questions:
+                    items.append(q + md)
         items *= self.repeat
         return '\n- '.join(items)
 

@@ -28,10 +28,13 @@ def preprocess(message, tracker):
 
 
 class StarMessageProcessor(MessageProcessor):
+    add_prequestion = False
+
     async def _handle_message_with_tracker(
         self, message: UserMessage, tracker: DialogueStateTracker
     ):
-        message = preprocess(message, tracker)
+        if self.add_prequestion:
+            message = preprocess(message, tracker)
         return await super(StarMessageProcessor, self)._handle_message_with_tracker(message, tracker)
 
     async def _parse_message(self, message):
