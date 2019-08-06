@@ -4,6 +4,7 @@ import os
 import sys
 import shutil
 import logging
+import tensorflow as tf
 from pathlib import Path
 from starbot.nlu.preparemd import convert
 from starbot.utils.download import download
@@ -17,6 +18,9 @@ MITIE_MODEL_URL = "https://cloud.kvin.wang:8443/s/XEeQkZeqYb7fDYT/download"
 MITIE_MODEL_FILE = "total_word_feature_extractor.dat"
 
 logging.getLogger().setLevel("DEBUG")
+
+# This fixes that tensorflow 1.14 don't emit logs
+tf.get_logger().addHandler(logging.StreamHandler(sys.stdout))
 
 logger = logging.getLogger(__name__)
 base = Path(__file__).parent
