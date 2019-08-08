@@ -420,7 +420,7 @@ class BertExtractor(EntityExtractor):
         print("is_ood={}".format(result['ir_is_ood'][0].item()))
         for l, p in zip(self.intent_labels.labels, result['ir_prob'][0]):
             bar = '#' * int(30*p)
-            print("{:<15}:{:.3f} {}".format(l, p, bar))
+            print("{:<32}:{:.3f} {}".format(l, p, bar))
 
         entities = mark_message_with_labels(message_text, ner_labels[1:])
         ir = {
