@@ -178,13 +178,14 @@ class BertExtractor(EntityExtractor):
             slf._prepare_for_prediction(model_dir, meta)
             return slf
 
-    def _prepare_for_prediction(self, model_dir, meta):
+    def _prepare_for_prediction(self, model_dir, meta, load_labels=True):
         base_dir = Path(model_dir)/meta['bert_ner_dir']
         self.config.bert_config = str(base_dir/self.CONFIG_NAME)
         self.config.init_checkpoint = str(base_dir/self.MODEL_NAME)
         self.config.vocab_file = str(base_dir/self.VOCAB_NAME)
-        self.ner_labels = LabelMap.load(Path(base_dir)/'ner_labels.json')
-        self.intent_labels = LabelMap.load(Path(base_dir)/'intent_labels.json')
+        if load_labels:
+            self.ner_labels = LabelMap.load(Path(base_dir)/'ner_labels.json')
+            self.intent_labels = LabelMap.load(Path(base_dir)/'intent_labels.json')
         self.vocab = load_vocab(self.config.vocab_file)
         self.estimator = self._create_estimator(meta['num_ner_labels'],
                                                 meta['num_intent_labels'], 0, 0, is_training=False)
@@ -289,7 +290,7 @@ class BertExtractor(EntityExtractor):
             "bert_ner_dir": self.MODEL_DIR,
             "num_ner_labels": self.num_ner_labels,
             "num_intent_labels": self.num_intent_labels,
-        })
+        }, load_labels=False)
         for example in training_data.training_examples:
             self.process(example)
 
