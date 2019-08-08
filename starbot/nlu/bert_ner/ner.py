@@ -284,8 +284,14 @@ class BertExtractor(EntityExtractor):
             alltest.append([msg, label])
         import json
         json.dump(alltest, open('alltest.json', 'w'))
+
+        self._prepare_for_prediction(self.config.tmp_model_dir, {
+            "bert_ner_dir": self.MODEL_DIR,
+            "num_ner_labels": self.num_ner_labels,
+            "num_intent_labels": self.num_intent_labels,
+        })
         for example in training_data.training_examples:
-            example.set('bert_embedding', 'aaaa')
+            self.process(example)
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
