@@ -4,6 +4,12 @@ import os
 import sys
 import shutil
 import logging
+
+tmpdir = os.path.abspath('.tmp')
+os.environ['TMP'] = tmpdir
+shutil.rmtree(tmpdir, ignore_errors=True)
+os.makedirs(tmpdir, exist_ok=True)
+
 import tensorflow as tf
 from pathlib import Path
 from starbot.nlu.preparemd import convert
@@ -74,8 +80,6 @@ def main():
     os.system('cat {} configs/policy_config.yml > rasa_prj/config.yml'.format(tmp_nlu_config_file))
     from rasa.__main__ import main
     os.chdir('rasa_prj')
-    os.system('mkdir -p tmp')
-    os.environ['TMP'] = 'tmp'
     os.environ['LOG_LEVEL_LIBRARIES'] = 'INFO'
     sys.argv = sys.argv[:1] + ['train', 'nlu']
     main()
