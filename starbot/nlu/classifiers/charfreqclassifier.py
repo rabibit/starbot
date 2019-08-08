@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class CharFreqClassifier(Component):
+    requires = ['bert_embedding']
 
     def __init__(self, component_config: Optional[Dict[Text, Any]] = None) -> None:
         super().__init__(component_config)
@@ -41,6 +42,7 @@ class CharFreqClassifier(Component):
             self, training_data: TrainingData, cfg: RasaNLUModelConfig, **kwargs: Any
     ) -> None:
         for message in training_data.training_examples:
+            print("{} bert_embedding={}".format(message.text, message.data['bert_embedding']))
             message: Message = message
             if message.data['intent'] != 'other':
                 self.all_chars.update(set(message.text))

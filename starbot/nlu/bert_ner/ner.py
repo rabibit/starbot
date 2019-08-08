@@ -126,7 +126,7 @@ class PredictServer(threading.Thread):
 
 
 class BertExtractor(EntityExtractor):
-    provides = ["entities"]
+    provides = ["entities", "bert_embedding"]
     ner_labels: LabelMap
     intent_labels: LabelMap
     predictor: PredictServer
@@ -284,6 +284,8 @@ class BertExtractor(EntityExtractor):
             alltest.append([msg, label])
         import json
         json.dump(alltest, open('alltest.json', 'w'))
+        for example in training_data.training_examples:
+            example.set('bert_embedding', 'aaaa')
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
