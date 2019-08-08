@@ -78,7 +78,7 @@ class Dataset:
 
     def ood_label2id(self, labels):
         assert not isinstance(labels, str)
-        return [1.0 if 'other' in lable else 0.0 for lable in labels]
+        return [1.0 if 'other' == label else 0.0 for label in labels]
 
 
 def create_dataset(examples: Iterable[Message]) -> Dataset:
