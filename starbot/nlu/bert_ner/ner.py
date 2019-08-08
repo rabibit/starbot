@@ -290,6 +290,8 @@ class BertExtractor(EntityExtractor):
         meta = self.persist('', 'tmp')
         self._prepare_for_prediction('tmp', meta)
         for example in training_data.training_examples:
+            example.ref_data = example.data
+            example.data = {}
             self.process(example)
 
     def _pad(self, lst, v):
