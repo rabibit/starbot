@@ -77,7 +77,7 @@ def main():
     os.system('mkdir -p tmp')
     os.environ['TMP'] = 'tmp'
     os.environ['LOG_LEVEL_LIBRARIES'] = 'INFO'
-    sys.argv = sys.argv[:1] + ['train']
+    sys.argv = sys.argv[:1] + ['train', 'nlu']
     main()
 
 
