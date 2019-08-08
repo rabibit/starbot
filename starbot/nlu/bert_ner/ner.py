@@ -287,12 +287,8 @@ class BertExtractor(EntityExtractor):
         json.dump(alltest, open('alltest.json', 'w'))
 
         os.mkdir('tmp')
-        self.persist('', 'tmp')
-        self._prepare_for_prediction('tmp', {
-            "bert_ner_dir": "",
-            "num_ner_labels": self.num_ner_labels,
-            "num_intent_labels": self.num_intent_labels,
-        }, load_labels=False)
+        meta = self.persist('', 'tmp')
+        self._prepare_for_prediction('tmp', meta)
         for example in training_data.training_examples:
             self.process(example)
 
@@ -397,7 +393,7 @@ class BertExtractor(EntityExtractor):
         for suffix in ['.index', '.meta', '.data-00000-of-00001']:
             # output/result_dir/ch
             dst = outdir / (self.MODEL_NAME + suffix)
-            save(bert_tmp / (prefix + suffix), outdir / dst)
+            save(bert_tmp / (prefix + suffix), dst)
         save(self.config.bert_config, outdir / self.CONFIG_NAME)
         save(self.config.vocab_file, outdir / self.VOCAB_NAME)
 
