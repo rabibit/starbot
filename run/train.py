@@ -54,6 +54,9 @@ def download_mitie_model_if_need():
 
 
 def main():
+    if len(sys.argv) == 1:
+        sys.argv.append('bert')
+
     if len(sys.argv) != 2:
         print("Usage ./train.py bert|mitie")
         sys.exit()
