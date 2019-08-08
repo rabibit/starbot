@@ -42,7 +42,7 @@ class CharFreqClassifier(Component):
             self, training_data: TrainingData, cfg: RasaNLUModelConfig, **kwargs: Any
     ) -> None:
         for message in training_data.training_examples:
-            if message.data['intent']['name'] != message.ref_data['intent']:
+            if message.data['intent']['name'] != message.ref_data['intent'] or message.data['intent']['confidence'] < 0.9:
                 print(message.text)
                 print("   predict={}".format(message.data))
                 print("     truth={}".format(message.ref_data))
