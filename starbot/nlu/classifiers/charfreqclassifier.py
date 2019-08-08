@@ -42,7 +42,7 @@ class CharFreqClassifier(Component):
             self, training_data: TrainingData, cfg: RasaNLUModelConfig, **kwargs: Any
     ) -> None:
         for message in training_data.training_examples:
-            print("{} bert_embedding={}".format(message.text, message.data['bert_embedding']))
+            print("{} data={}".format(message.text, message.data))
             message: Message = message
             if message.data['intent'] != 'other':
                 self.all_chars.update(set(message.text))
