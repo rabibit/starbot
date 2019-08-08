@@ -43,7 +43,9 @@ class CharFreqClassifier(Component):
     ) -> None:
         for message in training_data.training_examples:
             if message.data['intent']['name'] != message.ref_data['intent']:
-                print("{} data={}".format(message.text, message.data))
+                print(message.text)
+                print("   predict={}".format(message.data))
+                print("     truth={}".format(message.ref_data))
             message: Message = message
             if message.data['intent'] != 'other':
                 self.all_chars.update(set(message.text))
