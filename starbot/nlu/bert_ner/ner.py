@@ -286,8 +286,10 @@ class BertExtractor(EntityExtractor):
         import json
         json.dump(alltest, open('alltest.json', 'w'))
 
-        self._prepare_for_prediction(self.config.tmp_model_dir, {
-            "bert_ner_dir": self.MODEL_DIR,
+        os.mkdir('tmp')
+        self.persist('', 'tmp')
+        self._prepare_for_prediction('tmp', {
+            "bert_ner_dir": "",
             "num_ner_labels": self.num_ner_labels,
             "num_intent_labels": self.num_intent_labels,
         }, load_labels=False)
