@@ -282,14 +282,14 @@ class BertExtractor(EntityExtractor):
 
         with tempfile.TemporaryDirectory() as tempdir:
             meta = self.persist('', tempdir)
-            self._prepare_for_prediction(tempdir, meta)
+            predictor = BertExtractor.load(meta, tempdir)
 
-        for example in training_data.training_examples:
-            ir, ner = self._ir_and_ner(example.text)
-            example.set('prediction', {
-                'ir': ir,
-                'ner': ner
-            })
+            for example in training_data.training_examples:
+                ir, ner = predictor._ir_and_ner(example.text)
+                example.set('prediction', {
+                    'ir': ir,
+                    'ner': ner
+                })
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
