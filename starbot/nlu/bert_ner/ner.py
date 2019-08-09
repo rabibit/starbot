@@ -1,6 +1,7 @@
 import os
 import shutil
 import logging
+import tempfile
 import threading
 import tensorflow as tf
 from queue import Queue
@@ -278,21 +279,17 @@ class BertExtractor(EntityExtractor):
             except KeyboardInterrupt:
                 if not self.config.allow_interrupt:
                     raise
-        alltest = []
-        for example in train_examples:
-            msg = ''.join(example.chars[1:-1])
-            label = example.intent
-            alltest.append([msg, label])
-        import json
-        json.dump(alltest, open('alltest.json', 'w'))
 
-        os.mkdir('tmp')
-        meta = self.persist('', 'tmp')
-        self._prepare_for_prediction('tmp', meta)
+        with tempfile.TemporaryDirectory() as tempdir:
+            meta = self.persist('', tempdir)
+            self._prepare_for_prediction(tempdir, meta)
+
         for example in training_data.training_examples:
-            example.ref_data = example.data
-            example.data = {}
-            self.process(example)
+            ir, ner = self._ir_and_ner(example.text)
+            example.set('prediction', {
+                'ir': ir,
+                'ner': ner
+            })
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
