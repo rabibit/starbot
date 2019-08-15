@@ -1,7 +1,5 @@
 policies:
-  - name: KerasPolicy
-    epochs: 100
-    max_history: 5
+  - name: starbot.policy.directaction.DirectAction
   - name: FallbackPolicy
     fallback_action_name: 'action_default_fallback'
   - name: MemoizationPolicy

@@ -2,20 +2,6 @@ intents:
   - greet
   - bye
   - ok
-  - "no"
-  - book_room:
-      use_entities: false
-  - chitchat:
-      use_entities: false
-  - affirm
-  - info
-  - deny
-  - stop
-  - thankyou
-  - consultation
-  - room_available
-  - room_price
-  - enha
 
 forms:
   - room_form
@@ -43,6 +29,7 @@ actions:
   - utter_room_price
   - utter_enha
   - utter_thankyou
+  - action_process_intent
 
 slots:
   requested_slot:
@@ -71,56 +58,10 @@ slots:
 
 templates:
   utter_default:
-    - text: "我暂时不明白你的意思，我正在努力学习更多的知识"
+    - text: "你说啥"
 
   utter_greet:
-    - text: "您好，这里是未来酒店，请问有什么需要呢?"
+    - text: "您好前台"
 
   utter_bye:
-    - text: "拜拜"
-
-  utter_ok:
-    - text: "ok"
-
-  utter_no:
-    - text: "no"
-
-  utter_great:
-    - text: "great"
-
-  utter_noworries:
-    - text: "不客气!"
-
-  utter_ask_room_type:
-    - text: "我们有标准间和大床房, 请问您需要哪种房间？"
-
-  utter_ask_guest_name:
-    - text: "好的，请问怎么称呼您？"
-
-  utter_ask_guest_phone_number:
-    - text: "您的联系电话?"
-
-  utter_ask_checkin_time:
-    - text: "您什么时候入住呢?"
-
-  utter_chitchat:
-    - text: "嗯嗯"
-
-  utter_done:
-    - text: "您的房间已预留，请问还有其他需要么？"
-
-  utter_introduction:
-    - text: "我们酒店是一家集客房，餐饮，足浴为一体的商务酒店，在成都地区是最具中国文化特色的精品酒店风格，它以古朴，典雅，简约，时尚，温馨为主，汇集中国传统文化精华，将为您提供满意周到的精致服务。"
-
-  utter_room_idle:
-    - text: "目前房间充裕，您可以预订未来任何时间的房间"
-
-  utter_room_price:
-    - text: "我们设有标准间100元，商务标间300元，豪华包房500元。"
-    - text: "请问您需要什么房间呢？"
-
-  utter_enha:
-    - text: "：）"
-
-  utter_thankyou:
-    - text: "不客气"
+    - text: "再见"
