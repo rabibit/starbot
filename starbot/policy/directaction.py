@@ -15,7 +15,7 @@ class DirectAction(Policy):
     def __init__(
             self,
             featurizer: Optional[TrackerFeaturizer] = None,
-            priority: int = 2,
+            priority: int = 4,
     ) -> None:
         super(DirectAction, self).__init__(featurizer, priority)
 
