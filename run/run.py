@@ -37,9 +37,10 @@ class StarMessageProcessor(MessageProcessor):
             message = preprocess(message, tracker)
         return await super(StarMessageProcessor, self)._handle_message_with_tracker(message, tracker)
 
-    async def _parse_message(self, message):
-        parsed_data = await super(StarMessageProcessor, self)._parse_message(message)
-        parsed_data['text'] = message.origin_text
+    async def _parse_message(self, message, *a):
+        parsed_data = await super(StarMessageProcessor, self)._parse_message(message, *a)
+        if self.add_prequestion:
+            parsed_data['text'] = message.origin_text
         logger.info("parsed data: {}".format(parsed_data))
         return parsed_data
 
