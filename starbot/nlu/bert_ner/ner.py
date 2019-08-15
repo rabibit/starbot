@@ -1,6 +1,7 @@
 import os
 import shutil
 import logging
+import tempfile
 import threading
 import tensorflow as tf
 from queue import Queue
@@ -138,6 +139,7 @@ class BertExtractor(EntityExtractor):
     MODEL_NAME = "model.ckpt"
     CONFIG_NAME = "config.json"
     VOCAB_NAME = "vocab.txt"
+    tmp_model_dir: tempfile.TemporaryDirectory
 
     def __init__(self, component_config: Dict[Text, Any]):
         self.defaults = {k: v for k, v in vars(Config).items() if not k.startswith('__')}
@@ -178,8 +180,14 @@ class BertExtractor(EntityExtractor):
             slf._prepare_for_prediction(model_dir, meta)
             return slf
 
+    def __del__(self):
+        self.tmp_model_dir.cleanup()
+
     def _prepare_for_prediction(self, model_dir, meta, load_labels=True):
-        base_dir = Path(model_dir)/meta['bert_ner_dir']
+        self.tmp_model_dir = tempfile.TemporaryDirectory()
+        base_dir = self.tmp_model_dir.name
+        logger.info(f'moving bert model to {base_dir}')
+        shutil.move(str(Path(model_dir)/meta['bert_ner_dir']), base_dir)
         self.config.bert_config = str(base_dir/self.CONFIG_NAME)
         self.config.init_checkpoint = str(base_dir/self.MODEL_NAME)
         self.config.vocab_file = str(base_dir/self.VOCAB_NAME)
