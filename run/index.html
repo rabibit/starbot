@@ -7,9 +7,9 @@
   WebChat.default.init({
     selector: "#webchat",
     initPayload: "/greet",
-    interval: 1000, // 1000 ms between each message
+    interval: 100, // 100 ms between each message
     customData: {"userId": "123"}, // arbitrary custom data. Stay minimal as this will be added to the socket
-    socketUrl: "http://gpu.kvin.wang:5005",
+    socketUrl: "http://localhost:5005",
     socketPath: "/socket.io/",
     title: "StarBot",
     subtitle: "",
