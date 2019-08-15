@@ -60,7 +60,7 @@ def download_mitie_model_if_need():
 
 def main():
     args = parser.parse_args()
-    config = args.config
+    config = args.model
 
     if config == 'bert':
         nlu_config_file = "bert_nlu_config.yml"
