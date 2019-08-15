@@ -151,6 +151,10 @@ else:
                 '额 你好 额 我 我成都的',
                 '额 你好 额 我 我成都的 叫张全蛋那',
                 '额 你好 额 我 我成都的 叫张全蛋那 经常过来住的',
+                '你刚才打电话过来的吗',
+                '是你刚才打过来的吗',
+                '你找我有事吗',
+                '我打电话到订票处了',
             ]
     #COMMONMSG = json.load(open('test.json'))
     model_file = get_latest_model(os.path.abspath('rasa_prj/models/'))
