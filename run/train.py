@@ -4,6 +4,7 @@ import os
 import sys
 import shutil
 import logging
+import argparse
 
 tmpdir = os.path.abspath('.tmp')
 os.environ['TMP'] = tmpdir
@@ -15,6 +16,10 @@ from pathlib import Path
 from starbot.nlu.preparemd import convert
 from starbot.utils.download import download
 from tempfile import TemporaryDirectory
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-c', '--model', default='bert', choices=['bert', 'mitie'], help='Using which model, bert or mitie')
+parser.add_argument('-m', '--module', default='all', choices=['all', 'core', 'nlu'], help='The module to be trained')
 
 BERT_MODEL_URL = "https://cloud.kvin.wang:8443/s/ZabQxpnJeHBymg6/download"
 BERT_MODEL_FILE = "checkpoint.zip"
@@ -54,13 +59,8 @@ def download_mitie_model_if_need():
 
 
 def main():
-    if len(sys.argv) == 1:
-        sys.argv.append('bert')
-
-    if len(sys.argv) != 2:
-        print("Usage ./train.py bert|mitie")
-        sys.exit()
-    config = sys.argv[1]
+    args = parser.parse_args()
+    config = args.config
 
     if config == 'bert':
         nlu_config_file = "bert_nlu_config.yml"
@@ -84,7 +84,9 @@ def main():
     from rasa.__main__ import main
     os.chdir('rasa_prj')
     os.environ['LOG_LEVEL_LIBRARIES'] = 'INFO'
-    sys.argv = sys.argv[:1] + ['train', 'nlu']
+    sys.argv = sys.argv[:1] + ['train']
+    if args.module != 'all':
+        sys.argv.append(args.module)
     main()
 
 
