@@ -139,7 +139,7 @@ class BertExtractor(EntityExtractor):
     MODEL_NAME = "model.ckpt"
     CONFIG_NAME = "config.json"
     VOCAB_NAME = "vocab.txt"
-    tmp_model_dir: tempfile.TemporaryDirectory
+    tmp_model_dir: tempfile.TemporaryDirectory = None
 
     def __init__(self, component_config: Dict[Text, Any]):
         self.defaults = {k: v for k, v in vars(Config).items() if not k.startswith('__')}
@@ -181,7 +181,8 @@ class BertExtractor(EntityExtractor):
             return slf
 
     def __del__(self):
-        self.tmp_model_dir.cleanup()
+        if self.tmp_model_dir:
+            self.tmp_model_dir.cleanup()
 
     def _prepare_for_prediction(self, model_dir, meta, load_labels=True):
         # The model_dir will be removed by rasa after loaded.
