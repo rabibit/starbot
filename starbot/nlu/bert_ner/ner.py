@@ -184,10 +184,13 @@ class BertExtractor(EntityExtractor):
         self.tmp_model_dir.cleanup()
 
     def _prepare_for_prediction(self, model_dir, meta, load_labels=True):
+        # The model_dir will be removed by rasa after loaded.
+        # So we need to move it to keep it live
         self.tmp_model_dir = tempfile.TemporaryDirectory()
-        base_dir = self.tmp_model_dir.name
+        base_dir = Path(self.tmp_model_dir.name)/meta['bert_ner_dir']
         logger.info(f'moving bert model to {base_dir}')
         shutil.move(str(Path(model_dir)/meta['bert_ner_dir']), base_dir)
+
         self.config.bert_config = str(base_dir/self.CONFIG_NAME)
         self.config.init_checkpoint = str(base_dir/self.MODEL_NAME)
         self.config.vocab_file = str(base_dir/self.VOCAB_NAME)
