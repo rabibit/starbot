@@ -2,7 +2,7 @@ from typing import Text, Dict, Any
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 
 
-class HandlerBase:
+class BaseHandler:
     def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
         """
         :param tracker:

@@ -1,6 +1,6 @@
 
 from typing import List
 from . import wifi
-from .handler import HandlerBase
+from .handler import BaseHandler
 
-handlers: List[HandlerBase] = [wifi.WifiHandler()]
+handlers: List[BaseHandler] = [wifi.WifiHandler()]
