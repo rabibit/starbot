@@ -4,6 +4,7 @@ from rasa.core.domain import Domain
 from rasa.core.featurizers import TrackerFeaturizer
 from rasa.core.policies.policy import Policy
 from rasa.core.trackers import DialogueStateTracker
+from rasa.core.events import UserUttered
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +47,9 @@ class DirectAction(Policy):
             If memorized action was found returns 1.1 for its index,
             else returns 0.0 for all actions."""
         result = [0.0] * domain.num_actions
-        index = domain.index_for_action('action_process_intent')
-        result[index] = 1.0
+        if tracker.events and isinstance(tracker.events[-1], UserUttered):
+            index = domain.index_for_action('action_process_intent')
+            result[index] = 1.0
         return result
 
     def persist(self, path: Text) -> None:
