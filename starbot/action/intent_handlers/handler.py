@@ -109,7 +109,7 @@ class BaseHandler:
         :param dispatcher:
         :param tracker:
         :param domain:
-        :return: return False 继续匹配下一个handler
+        :return: a list of events
         """
         raise NotImplementedError
 
