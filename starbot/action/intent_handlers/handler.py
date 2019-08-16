@@ -1,4 +1,4 @@
-from typing import Text, Dict, Any, List
+from typing import Text, Dict, Any, List, Optional
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 
 
@@ -121,3 +121,12 @@ class BaseHandler:
     def get_last_user_intent(tracker: Tracker):
         msg = tracker.latest_message
         return msg and msg.get('intent', {}).get('name') or None
+
+    @staticmethod
+    def get_entity(tracker: Tracker, name: Text) -> Optional[Text]:
+        if not tracker.latest_message:
+            return None
+        for entity in tracker.latest_message.get('entities', []):
+            if entity['entity'] == name:
+                return entity['value']
+

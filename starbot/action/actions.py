@@ -17,10 +17,11 @@ class ProcessIntentAction(Action):
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         for handler in handlers:
-            if handler.match(tracker, domain):
-                logger.debug(f'Matched handler {handler} for {tracker.latest_message}')
-                rv = handler.process(dispatcher, tracker, domain)
-                return rv or []
+            events = handler.process(dispatcher, tracker, domain)
+            if events is None:
+                continue
+            logger.debug(f'Handler {handler} processed {tracker.latest_message}')
+            return events
         dispatcher.utter_template('utter_default', tracker)
         return []
 
