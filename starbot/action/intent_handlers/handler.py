@@ -119,7 +119,5 @@ class BaseHandler:
 
     @staticmethod
     def get_last_user_intent(tracker: Tracker):
-        lmsg = tracker.latest_message
-        return (lmsg
-                and lmsg.get('parse_data', {}).get('intent', {}).get('name')
-                or None)
+        msg = tracker.latest_message
+        return msg and msg.get('intent', {}).get('name') or None
