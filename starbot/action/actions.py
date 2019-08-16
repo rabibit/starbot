@@ -19,5 +19,8 @@ class ProcessIntentAction(Action):
         for handler in handlers:
             if handler.match(tracker, domain):
                 logger.debug(f'Matched handler {handler} for {tracker.latest_message}')
-                return handler.process(dispatcher, tracker, domain)
+                rv = handler.process(dispatcher, tracker, domain)
+                return rv or []
+        dispatcher.utter_template('utter_default', tracker)
+        return []
 
