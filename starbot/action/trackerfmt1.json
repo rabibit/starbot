@@ -1,0 +1,48 @@
+{
+    "latest_action_name": "action_listen",
+    "_paused": false,
+    "followup_action": null,
+    "latest_message": {
+        "entities": [],
+        "intent": {
+            "confidence": 0.9999810457229614,
+            "name": "greet"
+        },
+        "text": "你好"
+    },
+    "active_form": {},
+    "slots": {
+        "guest_name": null,
+        "guest_phone_number": null,
+        "confirmed": null,
+        "requested_slot": null,
+        "checkin_time": null,
+        "room_type": null
+    },
+    "sender_id": "3606bb557bb941349ef95ae6130e9858",
+    "events": [
+        {
+            "policy": null,
+            "timestamp": 1565922915.001813,
+            "confidence": null,
+            "event": "action",
+            "name": "action_listen"
+        },
+        {
+            "input_channel": "socketio",
+            "timestamp": 1565922915.979327,
+            "event": "user",
+            "parse_data": {
+                "entities": [],
+                "intent": {
+                    "confidence": 0.9999810457229614,
+                    "name": "greet"
+                },
+                "text": "你好"
+            },
+            "text": "你好",
+            "message_id": "6b030a1a05a24d93b4e743032f9ff2a6",
+            "metadata": null
+        }
+    ]
+}
