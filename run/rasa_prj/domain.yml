@@ -65,3 +65,7 @@ templates:
 
   utter_bye:
     - text: "再见"
+
+  utter_wifi_info:
+    - text: "Wifi名称是俊美的拼音全拼，密码是8个8"
+

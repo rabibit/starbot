@@ -14,6 +14,6 @@ class WifiHandler(BaseHandler):
             return False
 
     def process(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]):
-        dispatcher.utter_message("Wifi Info")
-        pass
+        dispatcher.utter_template("utter_wifi_info", tracker)
+        return True
 
