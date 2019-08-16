@@ -7,16 +7,7 @@ from rasa_sdk.events import Form
 
 class ChargerHandler(BaseHandler):
     def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
-        intent = self.get_last_user_intent(tracker)
-        if intent in {
-            'ask_for_charger'
-        }:
-            return True
-        # 如果正在
-        if tracker.active_form.get('name') == 'charger':
-            return True
-
-        return False
+        return True
 
     def process(self,
                 dispatcher: CollectingDispatcher,

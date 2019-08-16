@@ -17,6 +17,8 @@ class ProcessIntentAction(Action):
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         for handler in handlers:
+            if not handler.match(tracker, domain):
+                continue
             events = handler.process(dispatcher, tracker, domain)
             if events is None:
                 continue
