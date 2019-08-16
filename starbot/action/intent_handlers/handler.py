@@ -1,4 +1,4 @@
-from typing import Text, Dict, Any
+from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 
 
@@ -104,7 +104,7 @@ class BaseHandler:
     def process(self,
                 dispatcher: CollectingDispatcher,
                 tracker: Tracker,
-                domain: Dict[Text, Any]) -> bool:
+                domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         """
         :param dispatcher:
         :param tracker:

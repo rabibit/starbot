@@ -1,6 +1,6 @@
 
 from .handler import BaseHandler
-from typing import Text, Dict, Any
+from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 
 
@@ -13,7 +13,10 @@ class WifiHandler(BaseHandler):
         else:
             return False
 
-    def process(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]):
+    def process(self,
+                dispatcher: CollectingDispatcher,
+                tracker: Tracker,
+                domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         dispatcher.utter_template("utter_wifi_info", tracker)
-        return True
+        return []
 
