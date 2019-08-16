@@ -101,7 +101,10 @@ class HandlerBase:
         """
         raise NotImplementedError
 
-    def process(self, dispatcher: CollectingDispatcher, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
+    def process(self,
+                dispatcher: CollectingDispatcher,
+                tracker: Tracker,
+                domain: Dict[Text, Any]) -> bool:
         """
         :param dispatcher:
         :param tracker:
@@ -116,6 +119,7 @@ class HandlerBase:
 
     @staticmethod
     def get_last_user_intent(tracker: Tracker):
-        for event in tracker.events[::-1]:
-            if event['event'] == 'user':
-                return event.get('parse_data', {}).get('intent', {}).get('name')
+        lmsg = tracker.latest_message
+        return (lmsg
+                and lmsg.get('parse_data', {}).get('intent', {}).get('name')
+                or None)
