@@ -63,6 +63,6 @@ if __name__ == '__main__':
     patch_it()
 
     from rasa.__main__ import main
-    sys.argv = sys.argv[:1] + ['run', '--enable-api']
+    sys.argv = sys.argv[:1] + ['run', '--enable-api', '--debug', ]
     main()
 
