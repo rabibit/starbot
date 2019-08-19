@@ -17,6 +17,8 @@ class ProcessIntentAction(Action):
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         if tracker.latest_message:
+            if handlers[0].is_last_message_user(tracker):
+                dispatcher.utter_message(f'/intent is {tracker.latest_message.get("intent")}')
             confidence = tracker.latest_message.get('intent', {}).get('confidence')
             if confidence is not None and confidence < 0.99:
                 dispatcher.utter_template('utter_default', tracker)
