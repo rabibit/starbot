@@ -4,5 +4,5 @@ policies:
 #  - name: FallbackPolicy
 #    fallback_action_name: 'action_default_fallback'
 #    priority: 3
-  - name: FormPolicy
-    priority: 6
+#  - name: FormPolicy
+#    priority: 6
