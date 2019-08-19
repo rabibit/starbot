@@ -22,7 +22,7 @@ class ProcessIntentAction(Action):
             events = handler.process(dispatcher, tracker, domain)
             if events is None:
                 continue
-            logger.debug(f'Handler {handler} processed {tracker.latest_message}')
+            logger.debug(f'Handler {handler} processed \u001b[32m{tracker.latest_message}\u001b[0m')
             return events
         dispatcher.utter_template('utter_default', tracker)
         return []
