@@ -16,6 +16,11 @@ class ProcessIntentAction(Action):
             dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+        if tracker.latest_message:
+            confidence = tracker.latest_message.get('intent', {}).get('confidence')
+            if confidence is not None and confidence < 0.99:
+                dispatcher.utter_template('utter_default', tracker)
+                return []
         for handler in handlers:
             if not handler.match(tracker, domain):
                 continue
