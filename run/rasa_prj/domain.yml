@@ -3,9 +3,6 @@ intents:
   - bye
   - ok
 
-forms:
-  - room_form
-
 entities:
   - room_type
   - guest_name
