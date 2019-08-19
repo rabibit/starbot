@@ -19,6 +19,7 @@ class ProcessIntentAction(Action):
         if tracker.latest_message:
             if handlers[0].is_last_message_user(tracker):
                 dispatcher.utter_message(f'/intent is {tracker.latest_message.get("intent")}')
+                dispatcher.utter_message(f'/entities {tracker.latest_message.get("entities")}')
             confidence = tracker.latest_message.get('intent', {}).get('confidence')
             if confidence is not None and confidence < 0.99:
                 dispatcher.utter_template('utter_default', tracker)
