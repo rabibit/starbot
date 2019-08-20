@@ -4,6 +4,7 @@ from rasa_sdk import Action
 from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 from .intent_handlers import handlers
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,8 @@ class ProcessIntentAction(Action):
                 continue
             logger.debug(f'Handler {handler} processed \u001b[32m{tracker.latest_message}\u001b[0m')
             return events
-        dispatcher.utter_template('utter_default', tracker)
+        # dispatcher.utter_template('utter_default', tracker)
+        msg = random.choice(['啥', '你说啥', '什么']) + random.choice(['我没听清', ''])
+        dispatcher.utter_message(msg)
         return []
 
