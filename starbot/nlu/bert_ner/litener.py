@@ -92,7 +92,9 @@ class LiteExtractor(EntityExtractor):
             return lst
 
     def _create_single_feature_from_message(self, message: Message):
-        return message.get('prediction', {}).get('embedding')
+        emb = message.get('embedding')
+        message.set('embedding', None)
+        return emb
 
     def _create_single_feature(self, example: Sentence, dataset: Dataset):
         embedding = example.message.get('prediction', {}).get('embedding')
@@ -131,7 +133,14 @@ class LiteExtractor(EntityExtractor):
 
     def _predict(self, message: Message) -> List[Dict[Text, Any]]:
         """Take a sentence and return entities in json format"""
-        ner = self.model.predict(self._create_single_feature_from_message(message))
+        features = self._create_single_feature_from_message(message)
+        features = np.array([features])
+        features = tf.constant(features)
+        if not hasattr(self, 'model_loaded'):
+            self.jmodel = tf.keras.models.load_model('/codes/starbot/run/rasa_prj/models/nlu/litener/model.h5')
+            self.model_loaded = True
+        ner = self.jmodel.predict(features, steps=1)[0]
+        ner = np.argmax(ner, axis=-1)
         ner_labels = self.ner_labels.decode(ner)
         logger.info('ner_labels = {}'.format(ner_labels))
         return mark_message_with_labels(message.text, ner_labels[1:])
