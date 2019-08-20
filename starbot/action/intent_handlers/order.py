@@ -76,6 +76,4 @@ class OrderHandler(BaseHandler):
                     elif sroom_number is None and room_number is None:
                         dispatcher.utter_message("请问您的房号是多少？")
                         return events
-            else:
-                return [Form(None)]
         return None
