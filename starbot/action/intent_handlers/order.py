@@ -3,7 +3,7 @@ from .handler import BaseHandler
 from typing import Text, Dict, Any, List, Optional
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 from rasa_sdk.events import Form
-from rasa_sdk.events import SlotSet
+from rasa_sdk.events import SlotSet, AllSlotsReset
 
 
 class OrderHandler(BaseHandler):
@@ -30,6 +30,7 @@ class OrderHandler(BaseHandler):
                 events.append(SlotSet('room_number', room_number))
             if thing is not None and count is not None and room_number is not None:
                 dispatcher.utter_message("好的，您要的{}马上为您送过来".format(thing))
+                events.append(AllSlotsReset())
                 events.append(Form(None))
                 return events
             else:
@@ -64,6 +65,7 @@ class OrderHandler(BaseHandler):
                         and (count is not None or scount is not None) \
                         and (room_number is not None or sroom_number is not None):
                     dispatcher.utter_message("好的，您要的{}马上为您送过来".format(thing or sthing))
+                    events.append(AllSlotsReset())
                     events.append(Form(None))
                     return events
                 else:
