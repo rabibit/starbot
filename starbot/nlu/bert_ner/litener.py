@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 def create_model(num_ner_labels: int, max_seq_length: int, bert_dimension: int) -> Sequential:
     model = Sequential()
-    model.add(Flatten(input_shape=(None, max_seq_length, bert_dimension)))
+    model.add(Flatten(input_shape=(max_seq_length, bert_dimension)))
     model.add(Bidirectional(LSTM(768, return_sequences=True)))
     model.add(Dense(num_ner_labels))
     model.add(Activation('softmax'))
@@ -80,7 +80,7 @@ class LiteExtractor(EntityExtractor):
 
         inputs, labels = zip(*self._prepare_features(dataset))
 
-        self.model.fit(inputs, labels, epochs=10)
+        self.model.fit(inputs, labels, batch_size=32, epochs=10)
 
     def _pad(self, lst, v):
         n = self.input_length - len(lst)
