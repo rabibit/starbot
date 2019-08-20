@@ -23,7 +23,8 @@ class ProcessIntentAction(Action):
                 dispatcher.utter_message(f'/entities {tracker.latest_message.get("entities")}')
             confidence = tracker.latest_message.get('intent', {}).get('confidence')
             if confidence is not None and confidence < 0.99:
-                dispatcher.utter_template('utter_default', tracker)
+                msg = random.choice(['啥', '你说啥', '什么']) + random.choice(['我没听清', ''])
+                dispatcher.utter_message(msg)
                 return []
         for handler in handlers:
             if not handler.match(tracker, domain):
@@ -33,8 +34,6 @@ class ProcessIntentAction(Action):
                 continue
             logger.debug(f'Handler {handler} processed \u001b[32m{tracker.latest_message}\u001b[0m')
             return events
-        # dispatcher.utter_template('utter_default', tracker)
-        msg = random.choice(['啥', '你说啥', '什么']) + random.choice(['我没听清', ''])
-        dispatcher.utter_message(msg)
+        dispatcher.utter_template('utter_default', tracker)
         return []
 
