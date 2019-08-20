@@ -53,6 +53,21 @@ slots:
     auto_fill: false
 
 
+  thing:
+    type: unfeaturized
+    auto_fill: false
+
+
+  count:
+    type: unfeaturized
+    auto_fill: false
+
+
+  number:
+    type: unfeaturized
+    auto_fill: false
+
+
 templates:
   utter_default:
     - text: "你说啥"
