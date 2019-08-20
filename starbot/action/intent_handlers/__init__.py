@@ -7,6 +7,7 @@ from .simple import SimpleHandler
 from .charger import ChargerHandler
 from .alarm_clock import AlarmClockHandler
 from .order import OrderHandler
+from .ask_for_phone_number import AskForPhoneNumberHandler
 from .handler import BaseHandler
 
 handlers: List[BaseHandler] = [WifiHandler(),
@@ -15,5 +16,6 @@ handlers: List[BaseHandler] = [WifiHandler(),
                                ChargerHandler(),
                                AlarmClockHandler(),
                                OrderHandler(),
+                               AskForPhoneNumberHandler(),
                                SimpleHandler()
                                ]

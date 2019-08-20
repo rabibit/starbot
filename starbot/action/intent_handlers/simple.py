@@ -53,7 +53,7 @@ class SimpleHandler(BaseHandler):
         'is_breakfast_included': '您好，特价房是不包含早餐的，其它的都包含',
         'is_it_free': '您可以免费使用',
         'is_it_ok': '对的',
-        'is_manager_there': '不好意思，我们这里没有按摩服务',
+        'is_manager_there': '不好意思，经理不在',
         'is_my_cloth_ready': '已经干了，直接去洗衣房取就是了',
         'is_my_room_ready': '可以用了',
         'is_there_any_massage': '酒店附近有一个按摩服务店',
