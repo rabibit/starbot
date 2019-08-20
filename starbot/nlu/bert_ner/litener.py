@@ -2,6 +2,7 @@ import os
 import shutil
 import logging
 import tempfile
+import numpy as np
 from pathlib import Path
 
 import tensorflow as tf
@@ -22,11 +23,10 @@ logger = logging.getLogger(__name__)
 
 def create_model(num_ner_labels: int, max_seq_length: int, bert_dimension: int) -> Sequential:
     model = Sequential()
-    model.add(Flatten(input_shape=(max_seq_length, bert_dimension)))
     model.add(Bidirectional(LSTM(768, return_sequences=True)))
     model.add(Dense(num_ner_labels))
     model.add(Activation('softmax'))
-    model.compile(loss='crossentropy', optimizer='adam')
+    model.compile(loss='sparse_categorical_crossentropy', optimizer='adam')
     return model
 
 
@@ -65,7 +65,7 @@ class LiteExtractor(EntityExtractor):
 
     def _prepare_for_prediction(self, model_dir):
         mdir = Path(model_dir) / self.MODEL_DIR
-        self.model = tf.keras.models.load(mdir / 'model.h5')
+        self.model = tf.keras.models.load_model(mdir / 'model.h5')
         self.ner_labels = LabelMap.load(mdir / 'ner_labels.json')
 
     def train(self,
@@ -79,6 +79,8 @@ class LiteExtractor(EntityExtractor):
         self.model = create_model(num_ner_labels, 128, 768)
 
         inputs, labels = zip(*self._prepare_features(dataset))
+        inputs = np.array(inputs)
+        labels = np.array(labels)
 
         self.model.fit(inputs, labels, batch_size=32, epochs=10)
 
@@ -131,5 +133,6 @@ class LiteExtractor(EntityExtractor):
         """Take a sentence and return entities in json format"""
         ner = self.model.predict(self._create_single_feature_from_message(message))
         ner_labels = self.ner_labels.decode(ner)
+        logger.info('ner_labels = {}'.format(ner_labels))
         return mark_message_with_labels(message.text, ner_labels[1:])
 
