@@ -63,7 +63,7 @@ class OrderHandler(BaseHandler):
                 if (thing is not None or sthing is not None) \
                         and (count is not None or scount is not None) \
                         and (room_number is not None or sroom_number is not None):
-                    dispatcher.utter_message("好的，您要的{}马上为您送过来".format(thing))
+                    dispatcher.utter_message("好的，您要的{}马上为您送过来".format(thing or sthing))
                     events.append(Form(None))
                     return events
                 else:
