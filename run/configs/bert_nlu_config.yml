@@ -28,4 +28,7 @@ pipeline:
     init_checkpoint: "../checkpoint/bert_model.ckpt"
     vocab_file: "../checkpoint/vocab.txt"
     tmp_model_dir: "../output/result_dir"
+
+  - name: "starbot.LiteExtractor"
+    max_seq_length: 128
 #  - name: "starbot.CharFreqClassifier"

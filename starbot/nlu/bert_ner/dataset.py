@@ -43,6 +43,7 @@ class Sentence(typing.NamedTuple):
     chars: List[str]
     labels: List[str]
     intent: str
+    message: Message
 
 
 class Dataset:
@@ -133,7 +134,7 @@ def create_dataset(examples: Iterable[Message]) -> Dataset:
             global_labels.add("I-" + name)
         chars = ['[CLS]'] + chars + ['[SEP]']
         labels = ['[CLS]'] + labels + ['[SEP]']
-        sentences.append(Sentence(chars=chars, labels=labels, intent=intent))
+        sentences.append(Sentence(chars=chars, labels=labels, intent=intent, message=msg))
     return Dataset(sentences, global_labels, global_intents)
 
 

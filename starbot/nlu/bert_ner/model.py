@@ -42,6 +42,7 @@ class BertNerModel:
                 output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)
             self.ner_model = NerCRFModel(output_layer, ner_label_ids, input_mask, config)
             self.ner_prediction = self.ner_model.output
+            self.embedding = output_layer
             #self.crf_params = self.ner_model.trans_params
 
         with tf.variable_scope("intent"):
@@ -383,11 +384,11 @@ def model_fn_builder(bert_config, num_ner_labels, num_intent_labels, init_checkp
                 mode=mode,
                 predictions={
                     "ner": model.ner_prediction,
-                    #"crf_params": model.crf_params,
                     "ir": model.intent_prediction,
                     "ir_prob": model.intent_model.prediction,
                     "ir_is_ood": model.intent_model.is_ood,
-                    "sn": features["sn"]
+                    "sn": features["sn"],
+                    "embedding": model.embedding
                 },
                 scaffold_fn=scaffold_fn
             )

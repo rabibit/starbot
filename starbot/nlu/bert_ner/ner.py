@@ -171,7 +171,7 @@ class BertExtractor(EntityExtractor):
              model_metadata: Optional[Metadata] = None,
              cached_component: Optional[Component] = None,
              **kwargs: Any
-             ) -> Component:
+             ) -> 'BertExtractor':
 
         if cached_component:
             return cached_component
@@ -296,10 +296,11 @@ class BertExtractor(EntityExtractor):
             predictor = BertExtractor.load(meta, tempdir)
 
             for example in training_data.training_examples:
-                ir, ner = predictor._ir_and_ner(example.text)
+                ir, ner, emb = predictor._predict(example.text)
                 example.set('prediction', {
                     'ir': ir,
-                    'ner': ner
+                    'ner': ner,
+                    'embedding': emb,
                 })
 
     def _pad(self, lst, v):
@@ -378,11 +379,12 @@ class BertExtractor(EntityExtractor):
         return input_fn
 
     def process(self, message: Message, **kwargs: Any) -> None:
-        ir, ner = self._ir_and_ner(message.text)
+        ir, ner, embedding = self._predict(message.text)
         extracted = self.add_extractor_name(ner)
         message.set("entities", message.get("entities", []) + extracted,
                     add_to_output=True)
         message.set("intent", ir, add_to_output=True)
+        message.set("embedding", embedding, add_to_output=True)
 
     def persist(self,
                 file_name: Text,
@@ -416,7 +418,7 @@ class BertExtractor(EntityExtractor):
             "num_intent_labels": self.num_intent_labels,
         }
 
-    def _ir_and_ner(self, message_text: str) -> (str, List[Dict[Text, Any]]):
+    def _predict(self, message_text: str) -> (str, List[Dict[Text, Any]]):
         """Take a sentence and return entities in json format"""
         # <class 'dict'>:
         # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
@@ -444,7 +446,7 @@ class BertExtractor(EntityExtractor):
             'name': ir_label,
             'confidence': 0 if result['ir_is_ood'] > 0.6 else result['ir_prob'][0][ir[0]].item()
         }
-        return ir, entities
+        return ir, entities, result['embedding'][0]
 
     def test_predict(self, message_text, label):
         result = self.predictor.predict(self._create_single_feature_from_message(message_text))
