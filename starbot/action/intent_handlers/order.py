@@ -22,6 +22,10 @@ class OrderHandler(BaseHandler):
             count = self.get_entity(tracker, 'count')
             room_number = self.get_entity(tracker, 'number')
             events = []
+            if thing in ('茶叶', '蚊香'):
+                dispatcher.utter_message("稍等一下我让服务员送过去".format(thing))
+                return []
+
             if thing is not None:
                 events.append(SlotSet('thing', thing))
             if count is not None:

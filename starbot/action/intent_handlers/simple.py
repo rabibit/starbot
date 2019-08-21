@@ -1,6 +1,11 @@
 from .handler import BaseHandler
 from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
+from rasa_sdk.events import SlotSet
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class SimpleHandler(BaseHandler):
@@ -14,10 +19,10 @@ class SimpleHandler(BaseHandler):
         'ask_for_help': '好的，没问题',
         'ask_for_laundry': '您好，洗衣房在七楼，所有设备全自助',
         'ask_for_more_breakfast_ticket': '不好意思，请稍后，马上给您补上',
-        'ask_for_phone_number': 'xxx的电话号码是123456789',
-        'ask_for_price': 'xxx的价格是888元',
+        'ask_for_phone_number': '电话号码是123456789',
+        'ask_for_price': '8元',
         'ask_for_something_to_eat': '我们这里有饼干和方便面',
-        'ask_for_traffic_info': '到xxx可以乘坐1路公交或者直接打的',
+        'ask_for_traffic_info': '可以乘坐1路公交或者直接打的',
         'ask_for_wifi_info': 'wifi账号是智慧酒店的拼音首字母，密码是8个8',
         'ask_for_wifi_password': 'wifi账号是智慧酒店的拼音首字母，密码是8个8',
         'ask_how_to_pay': '我们这里可以微信支付，支付宝支付以及刷卡',
@@ -74,7 +79,7 @@ class SimpleHandler(BaseHandler):
         'order_something': '好的，马上给您送来',
         'other': '很遗憾，小智无能为力',
         'other_issue_needs_service': '好的，尽快给您处理',
-        'query_agreement_price': 'xxx的协议价格是八折',
+        'query_agreement_price': '标间200，大床房210',
         'query_book_record': '您暂时没有预订记录',
         'query_checkout_time': '我们这里最晚两点退房',
         'query_supper_time': '晚餐是下午五点到晚上九点',
@@ -103,5 +108,10 @@ class SimpleHandler(BaseHandler):
                 tracker: Tracker,
                 domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         intent = self.get_last_user_intent(tracker)
+        events = []
+        if intent == 'ask_for_price':
+            thing = self.get_entity(tracker, 'thing')
+            events.append(SlotSet('thing', thing))
+            logger.info(f'ask_for_price set slot thing is {thing}')
         dispatcher.utter_message(self.responses.get(intent, 'What?'))
-        return []
+        return events

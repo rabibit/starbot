@@ -135,11 +135,10 @@ class LiteExtractor(EntityExtractor):
         """Take a sentence and return entities in json format"""
         features = self._create_single_feature_from_message(message)
         features = np.array([features])
-        features = tf.constant(features)
         if not hasattr(self, 'model_loaded'):
-            self.jmodel = tf.keras.models.load_model('/codes/starbot/run/rasa_prj/models/nlu/litener/model.h5')
+            self.model = tf.keras.models.load_model('/codes/starbot/run/rasa_prj/models/nlu/litener/model.h5')
             self.model_loaded = True
-        ner = self.jmodel.predict(features, steps=1)[0]
+        ner = self.model.predict(features)[0]
         ner = np.argmax(ner, axis=-1)
         ner_labels = self.ner_labels.decode(ner)
         logger.info('ner_labels = {}'.format(ner_labels))
