@@ -31,4 +31,5 @@ pipeline:
 
   - name: "starbot.LiteExtractor"
     max_seq_length: 128
+  - name: "starbot.ClearEmbedding"
 #  - name: "starbot.CharFreqClassifier"

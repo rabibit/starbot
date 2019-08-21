@@ -37,6 +37,8 @@ class LiteExtractor(EntityExtractor):
     graph: tf.Graph
     session: tf.Session
 
+    requires = ['embedding']
+
     MODEL_DIR = 'litener'
 
     def __init__(self, component_config: Dict[Text, Any]):
@@ -97,9 +99,7 @@ class LiteExtractor(EntityExtractor):
             return lst
 
     def _create_single_feature_from_message(self, message: Message):
-        emb = message.get('embedding')
-        message.set('embedding', None)
-        return emb
+        return message.get('embedding')
 
     def _create_single_feature(self, example: Sentence, dataset: Dataset):
         embedding = example.message.get('prediction', {}).get('embedding')

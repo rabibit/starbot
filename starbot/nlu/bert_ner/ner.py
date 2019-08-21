@@ -127,7 +127,7 @@ class PredictServer(threading.Thread):
 
 
 class BertExtractor(EntityExtractor):
-    provides = ["entities", "bert_embedding"]
+    provides = ["entities", "embedding"]
     ner_labels: LabelMap
     intent_labels: LabelMap
     predictor: PredictServer
