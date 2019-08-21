@@ -34,6 +34,8 @@ class LiteExtractor(EntityExtractor):
     model: Sequential
     num_ner_labels: int
     ner_labels: LabelMap
+    graph: tf.Graph
+    session: tf.Session
 
     MODEL_DIR = 'litener'
 
@@ -65,7 +67,10 @@ class LiteExtractor(EntityExtractor):
 
     def _prepare_for_prediction(self, model_dir):
         mdir = Path(model_dir) / self.MODEL_DIR
-        self.model = tf.keras.models.load_model(mdir / 'model.h5')
+        self.graph = tf.Graph()
+        self.session = tf.Session(graph=self.graph)
+        with self.graph.as_default(), self.session.as_default():
+                self.model = tf.keras.models.load_model(mdir / 'model.h5')
         self.ner_labels = LabelMap.load(mdir / 'ner_labels.json')
 
     def train(self,
@@ -135,10 +140,9 @@ class LiteExtractor(EntityExtractor):
         """Take a sentence and return entities in json format"""
         features = self._create_single_feature_from_message(message)
         features = np.array([features])
-        if not hasattr(self, 'model_loaded'):
-            self.model = tf.keras.models.load_model('/codes/starbot/run/rasa_prj/models/nlu/litener/model.h5')
-            self.model_loaded = True
-        ner = self.model.predict(features)[0]
+        tf.keras.backend.set_session(self.session)
+        with self.graph.as_default():
+            ner = self.model.predict(features)[0]
         ner = np.argmax(ner, axis=-1)
         ner_labels = self.ner_labels.decode(ner)
         logger.info('ner_labels = {}'.format(ner_labels))
