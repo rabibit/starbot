@@ -1,14 +1,11 @@
-import os
-import shutil
 import logging
-import tempfile
 import numpy as np
 from pathlib import Path
 
 import tensorflow as tf
 from rasa.nlu.training_data import Message
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Bidirectional, LSTM, Activation, Flatten
+from tensorflow.keras.layers import Dense, Bidirectional, LSTM, Activation
 from rasa.nlu.components import Component
 from rasa.nlu.config import RasaNLUModelConfig
 from rasa.nlu.extractors import EntityExtractor
@@ -16,7 +13,7 @@ from rasa.nlu.extractors import EntityExtractor
 from typing import Dict, Text, Any, Optional, List
 from rasa.nlu.model import Metadata
 from rasa_nlu.training_data import TrainingData
-from starbot.nlu.bert_ner.dataset import LabelMap, create_dataset, Dataset, Sentence, mark_message_with_labels
+from starbot.nlu.pipelines.bert_embedding import LabelMap, create_dataset, Dataset, Sentence, mark_message_with_labels
 
 logger = logging.getLogger(__name__)
 

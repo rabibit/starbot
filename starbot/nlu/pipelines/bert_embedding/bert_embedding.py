@@ -11,8 +11,8 @@ import numpy as np
 from bert import modeling
 from bert.tokenization import load_vocab
 from rasa.nlu.extractors import EntityExtractor
-from starbot.nlu.bert_ner.model import model_fn_builder
-from starbot.nlu.bert_ner.dataset import create_dataset, mark_message_with_labels, LabelMap
+from starbot.nlu.pipelines.bert_embedding import model_fn_builder
+from starbot.nlu.pipelines.bert_embedding import create_dataset, mark_message_with_labels, LabelMap
 
 # for type hint
 from typing import Any, List, Optional, Text, Dict
@@ -21,7 +21,7 @@ from rasa.nlu.model import Metadata
 from rasa.nlu.components import Component
 from rasa.nlu.config import RasaNLUModelConfig
 from rasa.nlu.training_data import Message, TrainingData
-from starbot.nlu.bert_ner.dataset import Dataset, Sentence
+from starbot.nlu.pipelines.bert_embedding import Dataset, Sentence
 
 logger = logging.getLogger(__name__)
 
