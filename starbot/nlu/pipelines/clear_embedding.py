@@ -5,7 +5,7 @@ from rasa.nlu.training_data import Message
 
 
 class ClearEmbedding(Component):
-    requires = ['embedding']
+    requires = ['bert_embedding']
 
     def process(self, message: Message, **kwargs: Any) -> None:
-        message.set("embedding", None)
+        message.set("bert_embedding", None)

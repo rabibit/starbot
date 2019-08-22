@@ -13,7 +13,11 @@ from rasa.nlu.extractors import EntityExtractor
 from typing import Dict, Text, Any, Optional, List
 from rasa.nlu.model import Metadata
 from rasa_nlu.training_data import TrainingData
-from starbot.nlu.pipelines.bert_embedding import LabelMap, create_dataset, Dataset, Sentence, mark_message_with_labels
+from starbot.nlu.pipelines.bert_embedding.dataset import (LabelMap,
+                                                          create_dataset,
+                                                          Dataset,
+                                                          Sentence,
+                                                          mark_message_with_labels)
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +38,7 @@ class LiteExtractor(EntityExtractor):
     graph: tf.Graph
     session: tf.Session
 
-    requires = ['embedding']
+    requires = ['bert_embedding']
 
     MODEL_DIR = 'litener'
 
@@ -96,10 +100,10 @@ class LiteExtractor(EntityExtractor):
             return lst
 
     def _create_single_feature_from_message(self, message: Message):
-        return message.get('embedding')
+        return message.get('bert_embedding')
 
     def _create_single_feature(self, example: Sentence, dataset: Dataset):
-        embedding = example.message.get('prediction', {}).get('embedding')
+        embedding = example.message.get('bert_embedding')
 
         ner_labels = self._pad(example.labels, '[PAD]')
         ner_label_ids = dataset.ner_label2id(ner_labels)

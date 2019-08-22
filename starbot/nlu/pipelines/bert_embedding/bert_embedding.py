@@ -11,8 +11,8 @@ import numpy as np
 from bert import modeling
 from bert.tokenization import load_vocab
 from rasa.nlu.extractors import EntityExtractor
-from starbot.nlu.pipelines.bert_embedding import model_fn_builder
-from starbot.nlu.pipelines.bert_embedding import create_dataset, mark_message_with_labels, LabelMap
+from starbot.nlu.pipelines.bert_embedding.model import model_fn_builder
+from starbot.nlu.pipelines.bert_embedding.dataset import create_dataset, mark_message_with_labels, LabelMap
 
 # for type hint
 from typing import Any, List, Optional, Text, Dict
@@ -21,7 +21,7 @@ from rasa.nlu.model import Metadata
 from rasa.nlu.components import Component
 from rasa.nlu.config import RasaNLUModelConfig
 from rasa.nlu.training_data import Message, TrainingData
-from starbot.nlu.pipelines.bert_embedding import Dataset, Sentence
+from starbot.nlu.pipelines.bert_embedding.dataset import Dataset, Sentence
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,7 @@ class PredictServer(threading.Thread):
 
 
 class BertExtractor(EntityExtractor):
-    provides = ["entities", "embedding"]
+    provides = ["entities", "bert_embedding"]
     ner_labels: LabelMap
     intent_labels: LabelMap
     predictor: PredictServer
@@ -297,11 +297,7 @@ class BertExtractor(EntityExtractor):
 
             for example in training_data.training_examples:
                 ir, ner, emb = predictor._predict(example.text)
-                example.set('prediction', {
-                    'ir': ir,
-                    'ner': ner,
-                    'embedding': emb,
-                })
+                example.set('bert_embedding', emb)
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
@@ -384,7 +380,7 @@ class BertExtractor(EntityExtractor):
         message.set("entities", message.get("entities", []) + extracted,
                     add_to_output=True)
         message.set("intent", ir, add_to_output=True)
-        message.set("embedding", embedding, add_to_output=True)
+        message.set("bert_embedding", embedding, add_to_output=True)
 
     def persist(self,
                 file_name: Text,
