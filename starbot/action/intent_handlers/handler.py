@@ -153,12 +153,9 @@ class BaseForm:
                 raise NotImplementedError
             entity = self.get_entity(k)
             slot = self.get_slot(k)
-            if slot is None:
-                setattr(self, k, slot)
-            else:
-                setattr(self, k, type_(slot))
+            setattr(self, k, slot)
             if entity is not None:
-                self._entities[k].append(type_(entity))
+                self._entities[k].append(entity)
         for k, v in self._entities.items():
             # TODO: support multiple values slots
             setattr(self, k, v[0])

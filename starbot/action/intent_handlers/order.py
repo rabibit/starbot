@@ -115,6 +115,7 @@ class SimpleOrderHandler(BaseFormHandler):
         if form.number is None:
             self.utter_message("请问您的房号是多少?")
             return False
+        return True
 
     def commit(self):
         self.utter_message("好的，您要的{}马上为您送过来".format(self.form.thing))
