@@ -145,6 +145,17 @@ class BaseForm:
         self._tracker = tracker
         self._fill()
 
+    def _fill(self):
+        for k, annotation in self.__annotations__.items():
+            entity = self.get_entity(k)
+            slot = self.get_slot(k)
+            setattr(self, k, slot)
+            if entity is not None:
+                self._entities[k].append(entity)
+        for k, v in self._entities.items():
+            # TODO: support multiple values slots
+            setattr(self, k, v[0])
+
     def get_slot(self, name) -> Any:
         self._tracker.slots.get(name)
 
@@ -155,16 +166,6 @@ class BaseForm:
             if entity['entity'] == name:
                 return entity['value']
 
-    def _fill(self):
-        for k, annotation in self.__annotations__.items():
-            entity = self.get_entity(k)
-            slot = self.get_slot(k)
-            setattr(self, k, slot)
-            if entity is not None:
-                self._entities[k].append(entity)
-            for k, v in self._entities.items():
-                setattr(self, k, v)
-
     def slot_filling_events(self):
         rv = []
         for k, v in self._entities.items():
@@ -172,7 +173,12 @@ class BaseForm:
         return rv
 
 
+class SkipThisHandler(Exception):
+    pass
+
+
 class BaseFormHandler(BaseHandler):
+    events: List[Any]
     tracker: Tracker
     dispatcher: CollectingDispatcher
     domain: Dict[Text, Any]
@@ -189,6 +195,15 @@ class BaseFormHandler(BaseHandler):
     def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
         return True
 
+    def skip(self):
+        raise SkipThisHandler()
+
+    def set_slot(self, name, value):
+        self.events.append(SlotSet(name, value))
+
+    def clear_slot(self, name):
+        self.set_slot(name, None)
+
     def process(self,
                 dispatcher: CollectingDispatcher,
                 tracker: Tracker,
@@ -196,9 +211,18 @@ class BaseFormHandler(BaseHandler):
         self.dispatcher = dispatcher
         self.tracker = tracker
         self.domain = domain
+        self.events = []
+        try:
+            events = self._do_process()
+            return self.events + events
+        except SkipThisHandler:
+            return None
+
+    def _do_process(self) -> List[Dict[Text, Any]]:
+        tracker = self.tracker
         trigger = self.form_trigger(get_user_intent(tracker))
         if not (trigger or tracker.active_form and tracker.active_form.get('name') == self.form_name):
-            return None
+            return self.skip()
         # TODO: 有激活表单但是有些意图可能导致切换表单
         self.form = self.Form(tracker)
         if self.validate():
@@ -226,3 +250,4 @@ class BaseFormHandler(BaseHandler):
 def get_user_intent(tracker: Tracker):
     msg = tracker.latest_message
     return msg and msg.get('intent', {}).get('name') or None
+
