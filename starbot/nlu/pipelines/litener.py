@@ -22,7 +22,7 @@ from starbot.nlu.pipelines.bert_embedding.dataset import (LabelMap,
 logger = logging.getLogger(__name__)
 
 
-def create_model(num_ner_labels: int, max_seq_length: int, bert_dimension: int) -> Sequential:
+def create_model(num_ner_labels: int) -> Sequential:
     model = Sequential()
     model.add(Bidirectional(LSTM(768, return_sequences=True)))
     model.add(Dense(num_ner_labels))
@@ -45,11 +45,13 @@ class LiteExtractor(EntityExtractor):
     def __init__(self, component_config: Dict[Text, Any]):
         super().__init__(component_config)
         self.input_length = component_config['max_seq_length']
+        self.batch_size = component_config['batch_size']
+        self.epochs = component_config['epochs']
 
     @classmethod
     def create(cls,
                component_config: Dict[Text, Any],
-               config: RasaNLUModelConfig) -> Component:
+               config: RasaNLUModelConfig) -> 'Component':
         return super(LiteExtractor, cls).create(component_config, config)
 
     @classmethod
@@ -57,7 +59,7 @@ class LiteExtractor(EntityExtractor):
              meta: Dict[Text, Any],
              model_dir: Optional[Text] = None,
              model_metadata: Optional[Metadata] = None,
-             cached_component: Optional[Component] = None,
+             cached_component: Optional['LiteExtractor'] = None,
              **kwargs: Any
              ) -> 'LiteExtractor':
 
@@ -84,13 +86,13 @@ class LiteExtractor(EntityExtractor):
         self.ner_labels = dataset.ner_labels
         num_ner_labels = len(dataset.ner_labels) + 1
 
-        self.model = create_model(num_ner_labels, 128, 768)
+        self.model = create_model(num_ner_labels)
 
         inputs, labels = zip(*self._prepare_features(dataset))
         inputs = np.array(inputs)
         labels = np.array(labels)
 
-        self.model.fit(inputs, labels, batch_size=32, epochs=10)
+        self.model.fit(inputs, labels, batch_size=self.batch_size, epochs=self.epochs)
 
     def _pad(self, lst, v):
         n = self.input_length - len(lst)
