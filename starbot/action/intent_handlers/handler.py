@@ -1,4 +1,7 @@
+from collections import defaultdict
 from typing import Text, Dict, Any, List, Optional
+
+from rasa_sdk.events import SlotSet, Form, AllSlotsReset
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 
 
@@ -104,7 +107,7 @@ class BaseHandler:
     def process(self,
                 dispatcher: CollectingDispatcher,
                 tracker: Tracker,
-                domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+                domain: Dict[Text, Any]) -> Optional[List[Dict[Text, Any]]]:
         """
         :param dispatcher:
         :param tracker:
@@ -130,3 +133,96 @@ class BaseHandler:
             if entity['entity'] == name:
                 return entity['value']
 
+
+class BaseForm:
+    def __init__(self, tracker: Tracker):
+        if not hasattr(self, '__annotations__'):
+            self.__annotations__ = {}
+        for k in self.__annotations__:
+            if not hasattr(self, k):
+                setattr(self, k, None)
+        self._entities: Dict[(Text, Any)] = defaultdict(list)
+        self._tracker = tracker
+        self._fill()
+
+    def get_slot(self, name) -> Any:
+        self._tracker.slots.get(name)
+
+    def get_entity(self, name: Text) -> Optional[Text]:
+        if not self._tracker.latest_message:
+            return None
+        for entity in self._tracker.latest_message.get('entities', []):
+            if entity['entity'] == name:
+                return entity['value']
+
+    def _fill(self):
+        for k, annotation in self.__annotations__.items():
+            entity = self.get_entity(k)
+            slot = self.get_slot(k)
+            setattr(self, k, slot)
+            if entity is not None:
+                self._entities[k].append(entity)
+            for k, v in self._entities.items():
+                setattr(self, k, v)
+
+    def slot_filling_events(self):
+        rv = []
+        for k, v in self._entities.items():
+            rv.append(SlotSet(k, v))
+        return rv
+
+
+class BaseFormHandler(BaseHandler):
+    tracker: Tracker
+    dispatcher: CollectingDispatcher
+    domain: Dict[Text, Any]
+
+    class Form(BaseForm):
+        __name__ = ''
+
+    form: Form
+
+    @property
+    def form_name(self):
+        return self.Form.__name__
+
+    def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
+        return True
+
+    def process(self,
+                dispatcher: CollectingDispatcher,
+                tracker: Tracker,
+                domain: Dict[Text, Any]) -> Optional[List[Dict[Text, Any]]]:
+        self.dispatcher = dispatcher
+        self.tracker = tracker
+        self.domain = domain
+        trigger = self.form_trigger(get_user_intent(tracker))
+        if not (trigger or tracker.active_form and tracker.active_form.get('name') == self.form_name):
+            return None
+        # TODO: 有激活表单但是有些意图可能导致切换表单
+        self.form = self.Form(tracker)
+        if self.validate():
+            self.commit()
+            return [AllSlotsReset(), Form(None)]
+        else:
+            events = self.form.slot_filling_events()
+            if trigger:
+                events.insert(0, Form(self.form_name))
+            return events
+
+    def utter_message(self, message):
+        self.dispatcher.utter_message(message)
+
+    def form_trigger(self, intent: Text):
+        raise NotImplementedError
+
+    def validate(self):
+        raise NotImplementedError
+
+    def commit(self):
+        raise NotImplementedError
+
+
+def get_user_intent(tracker: Tracker):
+    msg = tracker.latest_message
+    return msg and msg.get('intent', {}).get('name') or None
