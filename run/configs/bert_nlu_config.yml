@@ -1,6 +1,6 @@
 language: "zh"
 pipeline:
-  - name: "starbot.BertExtractor"
+  - name: "starbot.BertEmbedding"
     # env
     use_tpu: false
     tpu_name: ""

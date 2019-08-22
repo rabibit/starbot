@@ -126,7 +126,7 @@ class PredictServer(threading.Thread):
                 logger.error('sn missing: {}'.format(sn))
 
 
-class BertExtractor(EntityExtractor):
+class BertEmbedding(EntityExtractor):
     provides = ["entities", "bert_embedding"]
     ner_labels: LabelMap
     intent_labels: LabelMap
@@ -150,7 +150,7 @@ class BertExtractor(EntityExtractor):
                component_config: Dict[Text, Any],
                config: RasaNLUModelConfig) -> Component:
 
-        slf: BertExtractor = super(BertExtractor, cls).create(component_config, config)
+        slf: BertEmbedding = super(BertEmbedding, cls).create(component_config, config)
         slf._prepare_for_training(config)
         return slf
 
@@ -171,7 +171,7 @@ class BertExtractor(EntityExtractor):
              model_metadata: Optional[Metadata] = None,
              cached_component: Optional[Component] = None,
              **kwargs: Any
-             ) -> 'BertExtractor':
+             ) -> 'BertEmbedding':
 
         if cached_component:
             return cached_component
@@ -293,7 +293,7 @@ class BertExtractor(EntityExtractor):
 
         with tempfile.TemporaryDirectory() as tempdir:
             meta = self.persist('', tempdir)
-            predictor = BertExtractor.load(meta, tempdir)
+            predictor = BertEmbedding.load(meta, tempdir)
 
             for example in training_data.training_examples:
                 ir, ner, emb = predictor._predict(example.text)
