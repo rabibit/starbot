@@ -118,12 +118,11 @@ class BaseHandler:
 
     @staticmethod
     def is_last_message_user(tracker: Tracker):
-        return tracker.events and tracker.events[-1]['event'] == 'user'
+        return is_last_message_user(tracker)
 
     @staticmethod
     def get_last_user_intent(tracker: Tracker):
-        msg = tracker.latest_message
-        return msg and msg.get('intent', {}).get('name') or None
+        return get_user_intent(tracker)
 
     @staticmethod
     def get_entity(tracker: Tracker, name: Text) -> Optional[Text]:
@@ -255,3 +254,6 @@ def get_user_intent(tracker: Tracker):
     msg = tracker.latest_message
     return msg and msg.get('intent', {}).get('name') or None
 
+
+def is_last_message_user(tracker: Tracker):
+    return tracker.events and tracker.events[-1]['event'] == 'user'

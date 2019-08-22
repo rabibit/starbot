@@ -4,6 +4,7 @@ from rasa_sdk import Action
 from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 from starbot.action.intent_handlers import handlers
+from starbot.action.intent_handlers.handler import is_last_message_user
 import random
 
 logger = logging.getLogger(__name__)
@@ -19,14 +20,15 @@ class ProcessIntentAction(Action):
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         what_msg = random.choice(['啥', '你说啥', '什么']) + random.choice(['我没听清', ''])
         if tracker.latest_message:
-            if handlers[0].is_last_message_user(tracker):
+            if is_last_message_user(tracker):
                 dispatcher.utter_message(f'/intent is {tracker.latest_message.get("intent")}')
                 dispatcher.utter_message(f'/entities {tracker.latest_message.get("entities")}')
             confidence = tracker.latest_message.get('intent', {}).get('confidence')
             if confidence is not None and confidence < 0.9:
                 dispatcher.utter_message(what_msg)
                 return []
-        for handler in handlers:
+        for Handler in handlers:
+            handler = Handler()
             if not handler.match(tracker, domain):
                 continue
             events = handler.process(dispatcher, tracker, domain)

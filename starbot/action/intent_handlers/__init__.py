@@ -1,5 +1,3 @@
-
-from typing import List
 from .wifi import WifiHandler
 from .ask_if_ferry import AskIfFerryHandler
 from .bye import ByeHandler
@@ -10,12 +8,12 @@ from .order import SimpleOrderHandler
 from .ask_for_phone_number import AskForPhoneNumberHandler
 from .handler import BaseHandler
 
-handlers: List[BaseHandler] = [WifiHandler(),
-                               ByeHandler(),
-                               AskIfFerryHandler(),
-                               ChargerHandler(),
-                               AlarmClockHandler(),
-                               SimpleOrderHandler(),
-                               AskForPhoneNumberHandler(),
-                               SimpleHandler()
-                               ]
+handlers = [WifiHandler,
+            ByeHandler,
+            AskIfFerryHandler,
+            ChargerHandler,
+            AlarmClockHandler,
+            SimpleOrderHandler,
+            AskForPhoneNumberHandler,
+            SimpleHandler,
+            ]
