@@ -87,7 +87,7 @@ class OrderHandler(BaseHandler):
 
 class SimpleOrderHandler(BaseFormHandler):
     class Form(BaseForm):
-        __name__ = 'order'
+        __tag__ = 'order'
         thing: str
         count: int
         number: int

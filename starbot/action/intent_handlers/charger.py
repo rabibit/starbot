@@ -5,7 +5,7 @@ from typing import Text
 
 class ChargerHandler(BaseFormHandler):
     class Form(BaseForm):
-        __name__ = 'charger'
+        __tag__ = 'charger'
         charger_type: Text
     form: Form
 

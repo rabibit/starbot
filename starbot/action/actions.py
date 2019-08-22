@@ -3,7 +3,7 @@ from rasa_sdk import Action
 
 from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
-from .intent_handlers import handlers
+from starbot.action.intent_handlers import handlers
 import random
 
 logger = logging.getLogger(__name__)
@@ -37,4 +37,59 @@ class ProcessIntentAction(Action):
             return events
         dispatcher.utter_message(what_msg)
         return []
+
+
+if __name__ == "__main__":
+    action = ProcessIntentAction()
+    tracker = Tracker('',
+                      slots={
+                          'checkin_time': None,
+                          'confirmed': None,
+                          'count': ['两个'],
+                          'guest_name': None,
+                          'guest_phone_number': None,
+                          'number': None,
+                          'requested_slot': None,
+                          'room_type': None,
+                          'thing': ['面包'],
+                      },
+                      latest_message={
+                          'intent': {'name': 'info'},
+                          'entities': {}
+                      },
+                      events=[],
+                      paused=False,
+                      followup_action=None,
+                      active_form={'name': 'order'},
+                      latest_action_name=None
+                      )
+    tracker = Tracker('',
+                      slots={
+                          'checkin_time': None,
+                          'confirmed': None,
+                          'count': None,
+                          'guest_name': None,
+                          'guest_phone_number': None,
+                          'number': None,
+                          'requested_slot': None,
+                          'room_type': None,
+                          'thing': None,
+                      },
+                      latest_message={
+                          'intent': {'name': 'info'},
+                          'entities': [{'entity': 'thing', 'value': '面包'}]
+                      },
+                      events=[],
+                      paused=False,
+                      followup_action=None,
+                      active_form={'name': 'order'},
+                      latest_action_name=None
+                      )
+
+    class Dispatcher:
+        def utter_message(self, message):
+            print(f'utter {message}')
+
+    actions = action.run(Dispatcher(), tracker, {})
+    print(actions)
 

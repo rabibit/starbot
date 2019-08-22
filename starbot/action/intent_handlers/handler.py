@@ -135,6 +135,8 @@ class BaseHandler:
 
 
 class BaseForm:
+    __tag__ = ''
+
     def __init__(self, tracker: Tracker):
         if not hasattr(self, '__annotations__'):
             self.__annotations__ = {}
@@ -146,18 +148,23 @@ class BaseForm:
         self._fill()
 
     def _fill(self):
-        for k, annotation in self.__annotations__.items():
+        for k, type_ in self.__annotations__.items():
+            if issubclass(type_, List):
+                raise NotImplementedError
             entity = self.get_entity(k)
             slot = self.get_slot(k)
-            setattr(self, k, slot)
+            if slot is None:
+                setattr(self, k, slot)
+            else:
+                setattr(self, k, type_(slot))
             if entity is not None:
-                self._entities[k].append(entity)
+                self._entities[k].append(type_(entity))
         for k, v in self._entities.items():
             # TODO: support multiple values slots
             setattr(self, k, v[0])
 
     def get_slot(self, name) -> Any:
-        self._tracker.slots.get(name)
+        return self._tracker.slots.get(name)
 
     def get_entity(self, name: Text) -> Optional[Text]:
         if not self._tracker.latest_message:
@@ -169,7 +176,7 @@ class BaseForm:
     def slot_filling_events(self):
         rv = []
         for k, v in self._entities.items():
-            rv.append(SlotSet(k, v))
+            rv.append(SlotSet(k, v[0]))
         return rv
 
 
@@ -184,13 +191,13 @@ class BaseFormHandler(BaseHandler):
     domain: Dict[Text, Any]
 
     class Form(BaseForm):
-        __name__ = ''
+        __tag__ = ''
 
     form: Form
 
     @property
     def form_name(self):
-        return self.Form.__name__
+        return self.Form.__tag__
 
     def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
         return True
