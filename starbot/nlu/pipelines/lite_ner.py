@@ -12,7 +12,7 @@ from rasa.nlu.extractors import EntityExtractor
 
 from typing import Dict, Text, Any, Optional, List
 from rasa.nlu.model import Metadata
-from rasa_nlu.training_data import TrainingData
+from rasa.nlu.training_data import TrainingData
 from starbot.nlu.pipelines.bert_embedding.dataset import (LabelMap,
                                                           create_dataset,
                                                           Dataset,

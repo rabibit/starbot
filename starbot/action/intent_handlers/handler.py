@@ -1,4 +1,7 @@
+from collections import defaultdict
 from typing import Text, Dict, Any, List, Optional
+
+from rasa_sdk.events import SlotSet, Form, AllSlotsReset
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 
 
@@ -104,7 +107,7 @@ class BaseHandler:
     def process(self,
                 dispatcher: CollectingDispatcher,
                 tracker: Tracker,
-                domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+                domain: Dict[Text, Any]) -> Optional[List[Dict[Text, Any]]]:
         """
         :param dispatcher:
         :param tracker:
@@ -115,12 +118,11 @@ class BaseHandler:
 
     @staticmethod
     def is_last_message_user(tracker: Tracker):
-        return tracker.events and tracker.events[-1]['event'] == 'user'
+        return is_last_message_user(tracker)
 
     @staticmethod
     def get_last_user_intent(tracker: Tracker):
-        msg = tracker.latest_message
-        return msg and msg.get('intent', {}).get('name') or None
+        return get_user_intent(tracker)
 
     @staticmethod
     def get_entity(tracker: Tracker, name: Text) -> Optional[Text]:
@@ -130,3 +132,128 @@ class BaseHandler:
             if entity['entity'] == name:
                 return entity['value']
 
+
+class BaseForm:
+    __tag__ = ''
+
+    def __init__(self, tracker: Tracker):
+        if not hasattr(self, '__annotations__'):
+            self.__annotations__ = {}
+        for k in self.__annotations__:
+            if not hasattr(self, k):
+                setattr(self, k, None)
+        self._entities: Dict[(Text, Any)] = defaultdict(list)
+        self._tracker = tracker
+        self._fill()
+
+    def _fill(self):
+        for k, type_ in self.__annotations__.items():
+            if issubclass(type_, List):
+                raise NotImplementedError
+            entity = self.get_entity(k)
+            slot = self.get_slot(k)
+            setattr(self, k, slot)
+            if entity is not None:
+                self._entities[k].append(entity)
+        for k, v in self._entities.items():
+            # TODO: support multiple values slots
+            setattr(self, k, v[0])
+
+    def get_slot(self, name) -> Any:
+        return self._tracker.slots.get(name)
+
+    def get_entity(self, name: Text) -> Optional[Text]:
+        if not self._tracker.latest_message:
+            return None
+        for entity in self._tracker.latest_message.get('entities', []):
+            if entity['entity'] == name:
+                return entity['value']
+
+    def slot_filling_events(self):
+        rv = []
+        for k, v in self._entities.items():
+            rv.append(SlotSet(k, v[0]))
+        return rv
+
+
+class SkipThisHandler(Exception):
+    pass
+
+
+class BaseFormHandler(BaseHandler):
+    events: List[Any]
+    tracker: Tracker
+    dispatcher: CollectingDispatcher
+    domain: Dict[Text, Any]
+
+    class Form(BaseForm):
+        __tag__ = ''
+
+    form: Form
+
+    @property
+    def form_name(self):
+        return self.Form.__tag__
+
+    def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
+        return True
+
+    def skip(self):
+        raise SkipThisHandler()
+
+    def set_slot(self, name, value):
+        self.events.append(SlotSet(name, value))
+
+    def clear_slot(self, name):
+        self.set_slot(name, None)
+
+    def process(self,
+                dispatcher: CollectingDispatcher,
+                tracker: Tracker,
+                domain: Dict[Text, Any]) -> Optional[List[Dict[Text, Any]]]:
+        self.dispatcher = dispatcher
+        self.tracker = tracker
+        self.domain = domain
+        self.events = []
+        try:
+            events = self._do_process()
+            return self.events + events
+        except SkipThisHandler:
+            return None
+
+    def _do_process(self) -> List[Dict[Text, Any]]:
+        tracker = self.tracker
+        trigger = self.form_trigger(get_user_intent(tracker))
+        if not (trigger or tracker.active_form and tracker.active_form.get('name') == self.form_name):
+            return self.skip()
+        # TODO: 有激活表单但是有些意图可能导致切换表单
+        self.form = self.Form(tracker)
+        if self.validate():
+            self.commit()
+            return [AllSlotsReset(), Form(None)]
+        else:
+            events = self.form.slot_filling_events()
+            if trigger:
+                events.insert(0, Form(self.form_name))
+            return events
+
+    def utter_message(self, message):
+        self.dispatcher.utter_message(message)
+
+    def form_trigger(self, intent: Text):
+        raise NotImplementedError
+
+    def validate(self):
+        raise NotImplementedError
+
+    def commit(self):
+        raise NotImplementedError
+
+
+def get_user_intent(tracker: Tracker):
+    msg = tracker.latest_message
+    return msg and msg.get('intent', {}).get('name') or None
+
+
+def is_last_message_user(tracker: Tracker):
+    return tracker.events and tracker.events[-1]['event'] == 'user'
