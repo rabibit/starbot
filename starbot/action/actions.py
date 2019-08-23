@@ -21,6 +21,8 @@ class ProcessIntentAction(Action):
         what_msg = random.choice(['啥', '你说啥', '什么']) + random.choice(['我没听清', ''])
         if tracker.latest_message:
             if is_last_message_user(tracker):
+                msg = '\n'.join([f'{key}: {val}' for key, val in tracker.latest_message.items()])
+                logger.debug(f'\u001b[32m{msg}\u001b[0m')
                 dispatcher.utter_message(f'/intent is {tracker.latest_message.get("intent")}')
                 dispatcher.utter_message(f'/entities {tracker.latest_message.get("entities")}')
             confidence = tracker.latest_message.get('intent', {}).get('confidence')
@@ -34,8 +36,7 @@ class ProcessIntentAction(Action):
             events = handler.process(dispatcher, tracker, domain)
             if events is None:
                 continue
-            msg = '\n'.join([f'{key}: {val}' for key, val in tracker.latest_message.items()])
-            logger.debug(f'Handler {handler} processed \u001b[32m{msg}\u001b[0m')
+            logger.debug(f'Handler {handler} processed')
             return events
         dispatcher.utter_message(what_msg)
         return []

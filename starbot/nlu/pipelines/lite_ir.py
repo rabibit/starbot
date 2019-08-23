@@ -16,8 +16,7 @@ from rasa.nlu.training_data import TrainingData
 from starbot.nlu.pipelines.bert_embedding.dataset import (LabelMap,
                                                           create_dataset,
                                                           Dataset,
-                                                          Sentence,
-                                                          mark_message_with_labels)
+                                                          Sentence)
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +74,7 @@ class LiteClassifier(Component):
         self.session = tf.Session(graph=self.graph)
         with self.graph.as_default(), self.session.as_default():
                 self.model = tf.keras.models.load_model(mdir / 'model.h5')
-        self.ner_labels = LabelMap.load(mdir / 'ir_labels.json')
+        self.ir_labels = LabelMap.load(mdir / 'ir_labels.json')
 
     def train(self,
               training_data: TrainingData,
@@ -100,7 +99,7 @@ class LiteClassifier(Component):
         embedding = example.message.get('bert_embedding')
 
         ir_label = example.intent
-        ir_label_id = dataset.intent_label2id(ir_label)
+        ir_label_id = dataset.intent_label2id([ir_label])
         return embedding, ir_label_id
 
     def _prepare_features(self, dataset: Dataset):
@@ -110,7 +109,8 @@ class LiteClassifier(Component):
         return all_features
 
     def process(self, message: Message, **kwargs: Any) -> None:
-        ir = self._predict(message)
+        ir_label, confidence = self._predict(message)
+        ir = {'name': ir_label, 'confidence': confidence}
         message.set("lite_intent", ir, add_to_output=True)
 
     def persist(self,
@@ -127,18 +127,16 @@ class LiteClassifier(Component):
 
         label_file = outdir / 'ir_labels.json'
         logger.info('Saving {}'.format(label_file))
-        self.ner_labels.save(label_file)
+        self.ir_labels.save(label_file)
         return {}
 
-    def _predict(self, message: Message) -> List[Dict[Text, Any]]:
+    def _predict(self, message: Message) -> (str, float):
         """Take a sentence and return entities in json format"""
         features = self._create_single_feature_from_message(message)
         features = np.array([features])
         tf.keras.backend.set_session(self.session)
         with self.graph.as_default():
-            ir = self.model.predict(features)[0]
-        ir = np.argmax(ir, axis=-1)
-        ir_label = self.ner_labels.decode(ir)
-        logger.info('ir_labels = {}'.format(ir_label))
-        return mark_message_with_labels(message.text, ir_label)
-
+            logits = self.model.predict(features)
+        ir = np.argmax(logits, axis=-1)
+        ir_label = self.ir_labels.decode(ir)
+        return ir_label[0], logits[0][ir][0].item()
