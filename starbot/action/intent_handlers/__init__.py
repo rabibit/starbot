@@ -6,6 +6,7 @@ from .charger import ChargerHandler
 from .alarm_clock import AlarmClockHandler
 from .order import SimpleOrderHandler
 from .ask_for_phone_number import AskForPhoneNumberHandler
+from .book_room import BookRoomHander
 from .handler import BaseHandler
 
 handlers = [WifiHandler,
@@ -14,6 +15,7 @@ handlers = [WifiHandler,
             ChargerHandler,
             AlarmClockHandler,
             SimpleOrderHandler,
+            BookRoomHander,
             AskForPhoneNumberHandler,
             SimpleHandler,
             ]
