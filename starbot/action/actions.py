@@ -34,10 +34,9 @@ class ProcessIntentAction(Action):
             handler = intent_to_handlers[tracker.latest_message.get('intent', {}).get('name')]()
             events = handler.process(dispatcher, tracker, domain)
             logger.debug(f'Handler {handler} processed')
-            if tracker.active_form.get('name') in form_to_handlers.keys() \
-                    and tracker.active_form.get('name') != handler.form.form_name:
+            if tracker.active_form.get('name') in form_to_handlers.keys():
                 handler = form_to_handlers[tracker.active_form.get('name')]()
-                events.append(handler.process(dispatcher, tracker, domain))
+                events += handler.process(dispatcher, tracker, domain)
             if events is None:
                 return []
             return events
