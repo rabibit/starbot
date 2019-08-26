@@ -20,3 +20,5 @@ class WifiHandler(BaseHandler):
         dispatcher.utter_template("utter_wifi_info", tracker)
         return []
 
+    def continue_form(self):
+        return True

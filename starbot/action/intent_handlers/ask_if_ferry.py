@@ -20,3 +20,5 @@ class AskIfFerryHandler(BaseHandler):
         dispatcher.utter_template("您好，我们只提供机场的接送服务", tracker)
         return []
 
+    def continue_form(self):
+        return False

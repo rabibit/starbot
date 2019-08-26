@@ -116,6 +116,9 @@ class BaseHandler:
         """
         raise NotImplementedError
 
+    def continue_form(self):
+        raise NotImplementedError
+
     @staticmethod
     def is_last_message_user(tracker: Tracker):
         return is_last_message_user(tracker)

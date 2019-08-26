@@ -120,3 +120,5 @@ class SimpleOrderHandler(BaseFormHandler):
     def commit(self):
         self.utter_message("好的，您要的{}马上为您送过来".format(self.form.thing))
 
+    def continue_form(self):
+        return False

@@ -44,3 +44,5 @@ class BookRoomHandler(BaseFormHandler):
                                  .format(self.form.person, self.form.room_type, self.form.count, self.form.date,
                                          self.form.number))
 
+    def continue_form(self):
+        return False

@@ -36,3 +36,5 @@ class AskForPhoneNumberHandler(BaseHandler):
                     return []
         return None
 
+    def continue_form(self):
+        return False

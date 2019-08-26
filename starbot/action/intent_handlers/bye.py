@@ -20,3 +20,5 @@ class ByeHandler(BaseHandler):
         dispatcher.utter_template("再见", tracker)
         return []
 
+    def continue_form(self):
+        return True
