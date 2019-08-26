@@ -27,8 +27,8 @@ intent_to_handlers = {
 form_to_handlers = {
     'charger': ChargerHandler,
     'alarm_clock': AlarmClockHandler,
-    'order_something': SimpleOrderHandler,
-    'order': BookRoomHandler,
+    'order': SimpleOrderHandler,
+    'book_room': BookRoomHandler,
     'subject_of_phone_number': AskForPhoneNumberHandler,
 }
 

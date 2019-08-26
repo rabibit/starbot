@@ -18,12 +18,5 @@ class AskIfFerryHandler(BaseHandler):
                 tracker: Tracker,
                 domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         dispatcher.utter_template("您好，我们只提供机场的接送服务", tracker)
-        from starbot.action.intent_handlers import form_to_handlers
-        if tracker.active_form.get('name') in form_to_handlers.keys():
-            handler = form_to_handlers[tracker.active_form.get('name')]()
-            events = handler.process(dispatcher, tracker, domain)
-            if events is None:
-                return []
-            return events
         return []
 

@@ -5,6 +5,7 @@ from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 from starbot.action.intent_handlers import intent_to_handlers
 from starbot.action.intent_handlers.handler import is_last_message_user
+from starbot.action.intent_handlers import form_to_handlers
 import random
 
 logger = logging.getLogger(__name__)
@@ -32,9 +33,13 @@ class ProcessIntentAction(Action):
         if tracker.latest_message.get('intent', {}).get('name') in intent_to_handlers.keys():
             handler = intent_to_handlers[tracker.latest_message.get('intent', {}).get('name')]()
             events = handler.process(dispatcher, tracker, domain)
+            logger.debug(f'Handler {handler} processed')
+            if tracker.active_form.get('name') in form_to_handlers.keys() \
+                    and tracker.active_form.get('name') != handler.form.form_name:
+                handler = form_to_handlers[tracker.active_form.get('name')]()
+                events.append(handler.process(dispatcher, tracker, domain))
             if events is None:
                 return []
-            logger.debug(f'Handler {handler} processed')
             return events
         else:
             for Handler in intent_to_handlers.values():
