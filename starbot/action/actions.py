@@ -37,7 +37,7 @@ class ProcessIntentAction(Action):
             logger.debug(f'Handler {handler} processed')
             return events
         else:
-            for Handler in intent_to_handlers:
+            for Handler in intent_to_handlers.values():
                 handler = Handler()
                 if not handler.match(tracker, domain):
                     continue
