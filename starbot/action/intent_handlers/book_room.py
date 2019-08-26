@@ -30,9 +30,11 @@ class BookRoomHandler(BaseFormHandler):
 
         if form.person is None:
             self.utter_message("请问怎么称呼您？")
+            return False
 
         if form.date is None:
             self.utter_message("请问您什么时候入住？")
+            return False
 
         if form.number is None:
             self.utter_message("请问您的联系方式是？")
