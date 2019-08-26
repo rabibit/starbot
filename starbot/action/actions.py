@@ -3,6 +3,7 @@ from rasa_sdk import Action
 
 from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
+from rasa_sdk.events import AllSlotsReset
 from starbot.action.intent_handlers import intent_to_handlers
 from starbot.action.intent_handlers.handler import is_last_message_user
 from starbot.action.intent_handlers import form_to_handlers
@@ -32,6 +33,8 @@ class ProcessIntentAction(Action):
                 return []
         if tracker.latest_message.get('intent', {}).get('name') in intent_to_handlers.keys():
             handler = intent_to_handlers[tracker.latest_message.get('intent', {}).get('name')]()
+            if handler.continue_form() == False:
+                tracker.slots = {}
             events = handler.process(dispatcher, tracker, domain)
             logger.debug(f'Handler {handler} processed')
             if tracker.active_form.get('name') in form_to_handlers.keys() and handler.continue_form():
