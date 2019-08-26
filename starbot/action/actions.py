@@ -3,7 +3,7 @@ from rasa_sdk import Action
 
 from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
-from starbot.action.intent_handlers import handlers
+from starbot.action.intent_handlers import intent_to_handlers
 from starbot.action.intent_handlers.handler import is_last_message_user
 import random
 
@@ -29,15 +29,23 @@ class ProcessIntentAction(Action):
             if confidence is not None and confidence < 0.9:
                 dispatcher.utter_message(what_msg)
                 return []
-        for Handler in handlers:
-            handler = Handler()
-            if not handler.match(tracker, domain):
-                continue
+        if tracker.latest_message.get('intent', {}).get('name') in intent_to_handlers.keys():
+            handler = intent_to_handlers[tracker.latest_message.get('intent', {}).get('name')]()
             events = handler.process(dispatcher, tracker, domain)
             if events is None:
-                continue
+                return []
             logger.debug(f'Handler {handler} processed')
             return events
+        else:
+            for Handler in intent_to_handlers:
+                handler = Handler()
+                if not handler.match(tracker, domain):
+                    continue
+                events = handler.process(dispatcher, tracker, domain)
+                if events is None:
+                    continue
+                logger.debug(f'Handler {handler} processed')
+                return events
         dispatcher.utter_message(what_msg)
         return []
 
