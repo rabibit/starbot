@@ -18,7 +18,7 @@ class MyDispatcher(object):
 
     def utter_message(self, text: str):
 
-        self.messages.append(text)
+        self.messages.append("。。" + text)
 
 
 class ProcessIntentAction(Action):
