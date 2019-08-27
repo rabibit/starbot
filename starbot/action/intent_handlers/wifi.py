@@ -17,7 +17,7 @@ class WifiHandler(BaseHandler):
                 dispatcher: CollectingDispatcher,
                 tracker: Tracker,
                 domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_template("utter_wifi_info", tracker)
+        dispatcher.utter_message("Wifi名称是俊美的拼音全拼，密码是8个8")
         return []
 
     def continue_form(self):

@@ -12,7 +12,7 @@ import random
 logger = logging.getLogger(__name__)
 
 
-class MyDispatcher():
+class MyDispatcher(object):
     def __init__(self):
         self.messages: [str] = []
 
@@ -60,7 +60,7 @@ class ProcessIntentAction(Action):
                 handler = Handler()
                 if not handler.match(tracker, domain):
                     continue
-                events = handler.process(dispatcher, tracker, domain)
+                events = handler.process(my_dispatcher, tracker, domain)
                 if events is None:
                     continue
                 logger.debug(f'Handler {handler} processed')

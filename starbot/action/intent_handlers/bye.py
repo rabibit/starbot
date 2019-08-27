@@ -17,7 +17,7 @@ class ByeHandler(BaseHandler):
                 dispatcher: CollectingDispatcher,
                 tracker: Tracker,
                 domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_template("再见", tracker)
+        dispatcher.utter_message("再见")
         return []
 
     def continue_form(self):
