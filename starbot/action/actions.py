@@ -12,12 +12,28 @@ import random
 logger = logging.getLogger(__name__)
 
 
+class MyDispatcher(CollectingDispatcher):
+    def utter_message(self, text, **kwargs):
+        # type: (Text, Any) -> None
+        """"Send a text to the output channel"""
+
+        tmp_messages = self.messages.copy()
+        for var in tmp_messages:
+            if len(var) == 1 and var.keys()[0] == "text":
+                text += var.values()[0]
+                self.messages.remove(var)
+        message = {"text": text}
+        message.update(kwargs)
+
+        self.messages.append(message)
+
+
 class ProcessIntentAction(Action):
     def name(self):
         return "action_process_intent"
 
     def run(self,
-            dispatcher: CollectingDispatcher,
+            dispatcher: MyDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         what_msg = random.choice(['啥', '你说啥', '什么']) + random.choice(['我没听清', ''])
@@ -33,7 +49,7 @@ class ProcessIntentAction(Action):
                 return []
         if tracker.latest_message.get('intent', {}).get('name') in intent_to_handlers.keys():
             handler = intent_to_handlers[tracker.latest_message.get('intent', {}).get('name')]()
-            if handler.continue_form() == False:
+            if handler.continue_form() is False:
                 tracker.slots = {}
             events = handler.process(dispatcher, tracker, domain)
             logger.debug(f'Handler {handler} processed')
