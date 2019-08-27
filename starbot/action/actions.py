@@ -55,6 +55,20 @@ class ProcessIntentAction(Action):
                 return []
             dispatcher.utter_message("".join(my_dispatcher.messages))
             return events
+        elif intent_to_handlers['simple']().match(tracker, domain):
+            handler = intent_to_handlers['simple']()
+            if handler.continue_form() is False:
+                tracker.slots = {}
+            events = handler.process(my_dispatcher, tracker, domain)
+            logger.debug(f'Handler {handler} processed')
+            if tracker.active_form.get('name') in form_to_handlers.keys() and handler.continue_form():
+                handler = form_to_handlers[tracker.active_form.get('name')]()
+                events += handler.process(my_dispatcher, tracker, domain)
+            if events is None:
+                dispatcher.utter_message("".join(my_dispatcher.messages))
+                return []
+            dispatcher.utter_message("".join(my_dispatcher.messages))
+            return events
         else:
             for Handler in intent_to_handlers.values():
                 handler = Handler()
