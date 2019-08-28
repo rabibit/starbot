@@ -273,26 +273,25 @@ class NumberOf(FromPattern):
 
 
 class NumberOfHours(FromPattern):
+    """
+
+    >>> p = NumberOfHours('后')
+    >>> p.parse("半个钟头后")
+    0.5
+    >>> p.parse("1个半个钟头后")
+    >>> p.parse("1个半钟头后")
+    1.5
+    >>> p.parse("1个半钟后")
+    1.5
+    >>> p.parse("1个钟后")
+    1
+    >>> p.parse("1个钟前")
+    >>> NumberOfHours('前').parse("1个钟前")
+    1
+    """
+
     def __init__(self, key):
-        """
-
-        :param key:
-
-        >>> p = NumberOfHours('后')
-        >>> p.parse("半个钟头后")
-        0.5
-        >>> p.parse("一个半个钟头后")
-        >>> p.parse("一个半钟头后")
-        1.5
-        >>> p.parse("一个半钟后")
-        1.5
-        >>> p.parse("一个钟后")
-        1
-        >>> p.parse("一个钟前")
-        >>> NumberOfHours('前').parse("一个钟前")
-        1
-        """
-        pat = '(?:(\d+)|(?:(\d+)个半(>!个))|半)(?=个?(小时|钟头?)[以之]?){key}'
+        pat = f'(?:(\d+)|(?:(\d+)个半(?!个))|(?<!个)半)(?=个?(小时|钟头?)[以之]?{key})'
         super(NumberOfHours, self).__init__(pat)
 
     def parse(self, expr):
@@ -302,9 +301,10 @@ class NumberOfHours(FromPattern):
         txt = m.group()
         if txt == '半':
             return 0.5
-        n = int(m.group(1))
         if txt.endswith('个半'):
-            n += 0.5
+            n = int(m.group(2)) + 0.5
+        else:
+            n = int(m.group(1))
         return n
 
     def __get__(self, instance: 'RawTimeInfo', owner) -> Optional[float]:
