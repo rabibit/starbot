@@ -1,7 +1,7 @@
 import re
 import datetime
 
-from typing import Text, Optional
+from typing import Text, Optional, Union
 
 if __name__ == '__main__':
     from numberify import numberify, WEEK_PREFIX
@@ -374,128 +374,80 @@ class RawTimeInfo:
 
         :param expr:
         >>> t = RawTimeInfo('大前天')
-        >>> assert not t.yesterday
-        >>> assert not t.before_yesterday
-        >>> assert t.before_before_yesterday
+        >>> t.ensure_set_fields_only('before_before_yesterday')
 
         >>> t = RawTimeInfo('上前天')
-        >>> assert not t.yesterday
-        >>> assert not t.before_yesterday
-        >>> assert t.before_before_yesterday
+        >>> t.ensure_set_fields_only('before_before_yesterday')
 
         >>> t = RawTimeInfo('前天')
-        >>> assert not t.yesterday
-        >>> assert t.before_yesterday
-        >>> assert not t.before_before_yesterday
+        >>> t.ensure_set_fields_only('before_yesterday')
 
         >>> t = RawTimeInfo('大后天')
-        >>> assert not t.tomorrow
-        >>> assert not t.after_tomorrow
-        >>> assert t.after_after_tomorrow
+        >>> t.ensure_set_fields_only('after_after_tomorrow')
 
         >>> t = RawTimeInfo('后天')
-        >>> assert not t.tomorrow
-        >>> assert t.after_tomorrow
-        >>> assert not t.after_after_tomorrow
+        >>> t.ensure_set_fields_only('after_tomorrow')
 
         >>> t = RawTimeInfo('今天')
-        >>> t.today
-        True
-        >>> t.this_year
-        False
+        >>> t.ensure_set_fields_only('today')
 
         >>> t = RawTimeInfo('今年')
-        >>> t.today
-        False
-        >>> t.this_year
-        True
+        >>> t.ensure_set_fields_only('this_year')
 
         >>> t = RawTimeInfo('5天前')
-        >>> t.days_after
+        >>> t.ensure_set_fields_only('days_before')
         >>> t.days_before
         5
-        >>> t.years_before
-        >>> t.years_after
 
         >>> t = RawTimeInfo('5天以后')
+        >>> t.ensure_set_fields_only('days_after')
         >>> t.days_after
         5
-        >>> t.days_before
-        >>> t.years_before
-        >>> t.years_after
 
         >>> t = RawTimeInfo('这周')
-        >>> assert t.this_week
-        >>> assert not t.prev_week
-        >>> assert not t.prev_prev_week
-        >>> assert not t.next_week
-        >>> assert not t.next_next_week
+        >>> t.ensure_set_fields_only('this_week')
 
         >>> t = RawTimeInfo('这个周末')
-        >>> assert t.this_week
-        >>> assert not t.prev_week
-        >>> assert not t.prev_prev_week
-        >>> assert not t.next_week
-        >>> assert not t.next_next_week
+        >>> t.ensure_set_fields_only('this_week', 'week_day')
+        >>> t.week_day
+        0
 
         >>> t = RawTimeInfo('上周')
-        >>> assert not t.this_week
-        >>> assert t.prev_week
-        >>> assert not t.prev_prev_week
-        >>> assert not t.next_week
-        >>> assert not t.next_next_week
+        >>> t.ensure_set_fields_only('prev_week')
 
         >>> t = RawTimeInfo('上上周')
-        >>> assert not t.this_week
-        >>> assert not t.prev_week
-        >>> assert t.prev_prev_week
-        >>> assert not t.next_week
-        >>> assert not t.next_next_week
+        >>> t.ensure_set_fields_only('prev_prev_week')
 
         >>> t = RawTimeInfo('下周')
-        >>> assert not t.this_week
-        >>> assert not t.prev_week
-        >>> assert not t.prev_prev_week
-        >>> assert t.next_week
-        >>> assert not t.next_next_week
+        >>> t.ensure_set_fields_only('next_week')
 
         >>> t = RawTimeInfo('下下周')
-        >>> assert not t.this_week
-        >>> assert not t.prev_week
-        >>> assert not t.prev_prev_week
-        >>> assert not t.next_week
-        >>> assert t.next_next_week
+        >>> t.ensure_set_fields_only('next_next_week')
 
         >>> t = RawTimeInfo('下下星期一')
-        >>> assert not t.this_week
-        >>> assert not t.prev_week
-        >>> assert not t.prev_prev_week
-        >>> assert not t.next_week
-        >>> assert t.next_next_week
+        >>> t.ensure_set_fields_only('next_next_week', 'week_day')
+        >>> t.week_day
+        1
 
         >>> t = RawTimeInfo('年后1月份')
-        >>> t.next_year
-        True
+        >>> t.ensure_set_fields_only('next_year', 'month')
         >>> t.month
         1
-        >>> t.years_after
 
         >>> t = RawTimeInfo('5年后1月份')
+        >>> t.ensure_set_fields_only('years_after', 'month')
         >>> t.years_after
         5
-        >>> t.next_year
-        False
         >>> t.month
         1
 
         >>> t = RawTimeInfo('年前')
+        >>> t.ensure_set_fields_only('prev_year')
         >>> t.prev_year
         True
-        >>> t.years_before
 
         >>> t = RawTimeInfo('1年前')
-        >>> t.prev_year
-        False
+        >>> t.ensure_set_fields_only('years_before')
         >>> t.years_before
         1
 
@@ -506,10 +458,21 @@ class RawTimeInfo:
         >>> t = RawTimeInfo('半个小时后')
         >>> t.hours_after
         0.5
+        >>> t.ensure_set_fields_only('hours_after')
 
         >>> t = RawTimeInfo('2个半小时后')
         >>> t.hours_after
         2.5
+        >>> t.ensure_set_fields_only('hours_after')
+
+        >>> t = RawTimeInfo('10分钟后')
+        >>> t.minutes_after
+        10
+        >>> t.ensure_set_fields_only('minutes_after')
+
+        >>> t = RawTimeInfo('100分钟后')
+        >>> t.minutes_after
+        100
         """
         self.expr = expr
         self.year = parse_year(expr)
@@ -519,6 +482,20 @@ class RawTimeInfo:
         self.minute = parse_minute(expr)
         self.quarter = parse_quarter(expr)
         self.seconds = parse_seconds(expr)
+
+    def ensure_set_fields_only(self, *fields):
+        for k, t in self.__annotations__.items():
+            if k == 'expr':
+                continue
+            v = getattr(self, k)
+            if t == bool:
+                is_set = v
+            else:
+                is_set = v is not None
+            if k in fields:
+                assert is_set, f"Unexpected field {k} set to {v}"
+            else:
+                assert not is_set, f"Expect field {k} to be set"
 
     def display(self):
         items = [self.expr]
