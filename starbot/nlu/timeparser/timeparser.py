@@ -1,7 +1,7 @@
 import re
-import datetime
+from datetime import datetime, timedelta
 
-from typing import Text, Optional, Union
+from typing import Text, Optional, NoReturn, Union
 
 if __name__ == '__main__':
     from numberify import numberify, WEEK_PREFIX
@@ -11,6 +11,17 @@ else:
     from starbot.nlu.timeparser.pattern import patterns
 
 
+unreachable = False
+
+
+class ParseTimeError(Exception):
+    pass
+
+
+def abort(s: str) -> NoReturn:
+    raise ParseTimeError(s)
+
+
 def preprocess(text):
     p = re.compile(r'\s+|[的]+')
     text = p.sub('', text)
@@ -18,7 +29,7 @@ def preprocess(text):
     return text
 
 
-def get_time_tokens(text):
+def get_time_expressions(text):
     text = preprocess(text)
     cur = -1
     tokens = []
@@ -30,11 +41,11 @@ def get_time_tokens(text):
         else:
             tokens.append(token)
         cur = e
-    return tokens
+    return [TimeExpression(t) for t in tokens]
 
 
 def parse_all_time(text):
-    for token in get_time_tokens(text):
+    for token in get_time_expressions(text):
         yield TimePoint(token)
 
 
@@ -188,11 +199,28 @@ def parse_minute(text):
     25
 
     >>> parse_minute("1点3刻")
+    45
 
     >>> parse_minute("1时25")
     25
 
+    >>> parse_minute("1点半")
+    30
+
     """
+
+    pat = re.compile('(?<=\d[点时])半')
+    if pat.search(text):
+        return 30
+
+    quarter = parse_number_with_regex(
+        text,
+        re.compile('(?<=[点时过])[13](?=刻)')
+    )
+
+    if quarter is not None:
+        return quarter * 15
+
     return parse_number_with_regex(
         text,
         re.compile('([0-5]?[0-9](?=分(?!钟)))|((?<=(?<!小)[点时过])[0-6]?[0-9](?!刻))'),
@@ -224,22 +252,22 @@ def parse_quarter(text):
     )
 
 
-def parse_seconds(text):
+def parse_second(text):
     """
 
     :param text:
     :return:
 
-    >>> parse_seconds("1分25秒")
+    >>> parse_second("1分25秒")
     25
 
-    >>> parse_seconds("1分25")
+    >>> parse_second("1分25")
     25
 
-    >>> parse_seconds("1分0秒")
+    >>> parse_second("1分0秒")
     0
 
-    >>> parse_seconds("1分60")
+    >>> parse_second("1分60")
 
     """
     return parse_number_with_regex(
@@ -251,6 +279,35 @@ def parse_seconds(text):
 
 def appearing(text, pattern):
     return pattern.search(text) is not None
+
+
+def weekday_offset(base, weekday, delta_weeks):
+    """
+    计算X星期几与今天相差的天数
+
+    :param base:
+    :param weekday:
+    :param delta_weeks:
+    :return:
+
+    >>> weekday_offset(1, 2, 0)
+    1
+    >>> weekday_offset(1, 2, -1)
+    -6
+    >>> weekday_offset(1, 2, 1)
+    8
+    >>> weekday_offset(1, 0, 0)
+    6
+    >>> weekday_offset(1, 0, -1)
+    -1
+    >>> weekday_offset(0, 1, 1)
+    1
+    """
+    if weekday == 0:
+        weekday = 7
+    if base == 0:
+        base = 7
+    return weekday - base + delta_weeks*7
 
 
 class FromPattern:
@@ -320,9 +377,9 @@ class RawTimeInfo:
     hour: Optional[int] = None
     minute: Optional[int] = None
     quarter: Optional[int] = None
-    seconds: Optional[int] = None
+    second: Optional[int] = None
 
-    week_day: Optional[int] = NumberOf(f'(?:{WEEK_PREFIX})[0-6]')
+    weekday: Optional[int] = NumberOf(f'(?:{WEEK_PREFIX})[0-6]')
 
     #
     this_year: bool = Appearing('今年')
@@ -407,9 +464,9 @@ class RawTimeInfo:
         >>> t = RawTimeInfo('这周')
         >>> t.ensure_set_fields_only('this_week')
 
-        >>> t = RawTimeInfo('这个周末')
-        >>> t.ensure_set_fields_only('this_week', 'week_day')
-        >>> t.week_day
+        >>> t = RawTimeInfo('这个周0')
+        >>> t.ensure_set_fields_only('this_week', 'weekday')
+        >>> t.weekday
         0
 
         >>> t = RawTimeInfo('上周')
@@ -424,9 +481,9 @@ class RawTimeInfo:
         >>> t = RawTimeInfo('下下周')
         >>> t.ensure_set_fields_only('next_next_week')
 
-        >>> t = RawTimeInfo('下下星期一')
-        >>> t.ensure_set_fields_only('next_next_week', 'week_day')
-        >>> t.week_day
+        >>> t = RawTimeInfo('下下星期1')
+        >>> t.ensure_set_fields_only('next_next_week', 'weekday')
+        >>> t.weekday
         1
 
         >>> t = RawTimeInfo('年后1月份')
@@ -481,7 +538,7 @@ class RawTimeInfo:
         self.hour = parse_hour(expr)
         self.minute = parse_minute(expr)
         self.quarter = parse_quarter(expr)
-        self.seconds = parse_seconds(expr)
+        self.second = parse_second(expr)
 
     def ensure_set_fields_only(self, *fields):
         for k, t in self.__annotations__.items():
@@ -506,12 +563,21 @@ class RawTimeInfo:
         return f'RawTimeInfo<{info}>'
 
 
-def only_one(*seq) -> bool:
+def count_true(*seq) -> int:
     cnt = 0
     for e in seq:
         if e:
             cnt += 1
-    return cnt == 1
+    return cnt
+
+
+def at_most_one(*seq) -> bool:
+    return count_true(*seq) <= 1
+
+
+class TimeExpression:
+    def __init__(self, expr: str) -> None:
+        self.expr = expr
 
 
 class TimePoint:
@@ -520,20 +586,83 @@ class TimePoint:
     day: Optional[int] = None
     hour: Optional[int] = None
     minute: Optional[int] = None
-    seconds: Optional[int] = None
+    second: Optional[int] = None
+    weekday: Optional[int] = None
+
+    fuzzy_year = False
+    fuzzy_week = False
+    fuzzy_month = False
+    fuzzy_day = False
+    fuzzy_apm = False
 
     raw: RawTimeInfo
-    baseline: datetime.datetime
+    baseline: datetime
 
-    def __init__(self, time_expr: Text):
+    def __init__(self, time_expr: Union[Text, TimeExpression], baseline: datetime=None):
+        """
+
+        :param time_expr:
+        :param baseline:
+
+        >>> t = TimePoint("今天下午两点十分")
+        >>> t.year == t.baseline.year
+        True
+        >>> t.month == t.baseline.month
+        True
+        >>> t.day == t.baseline.day
+        True
+        >>> t.raw.afternoon
+        True
+        >>> t.hour
+        14
+        >>> t.minute
+        10
+        >>> t.second
+        >>> t.fuzzy_apm
+        False
+        >>> t.fuzzy_day
+        False
+        >>> t.fuzzy_year
+        False
+        >>> t.fuzzy_month
+        False
+        >>> t.fuzzy_week
+        False
+        """
+
+        if isinstance(time_expr, TimeExpression):
+            time_expr = time_expr.expr
+        else:
+            time_expr = preprocess(time_expr)
         self.raw = RawTimeInfo(time_expr)
-        self.baseline = datetime.datetime.now()
+        self.baseline = baseline or datetime.now()
         self.adjust_year(self.raw)
         self.adjust_month(self.raw)
         self.adjust_day(self.raw)
+        self.adjust_hour(self.raw)
+        self.adjust_minute(self.raw)
+        self.adjust_second(self.raw)
+        self.validate()
 
     def adjust_year(self, info: RawTimeInfo):
-        valid = only_one(
+        """
+
+        :param info:
+        :return:
+        >>> t = TimePoint("今年")
+        >>> t.year == t.baseline.year
+        True
+        >>> t.month
+        >>> t.day
+        >>> t.fuzzy_year
+        False
+
+        >>> t = TimePoint("去年")
+        >>> t.year == t.baseline.year - 1
+        True
+
+        """
+        cnt = count_true(
             info.year is not None,
             info.this_year,
             info.prev_year,
@@ -544,28 +673,58 @@ class TimePoint:
             info.years_after is not None,
             )
 
-        if valid:
-            if info.year is not None:
-                self.year = info.year
-            elif info.this_year:
-                self.year = self.baseline.year
-            elif info.prev_year:
-                self.year = self.baseline.year - 1
-            elif info.next_year:
-                self.year = self.baseline.year + 1
-            elif info.prev_prev_year:
-                self.year = self.baseline.year - 2
-            elif info.next_next_year:
-                self.year = self.baseline.year + 2
-            elif info.years_before is not None:
-                self.year = self.baseline.year - info.years_before
-            elif info.years_after is not None:
-                self.year = self.baseline.year + info.years_after
-            else:
-                assert not 'reachable'
+        if cnt == 0:
+            return
+
+        if cnt > 1:
+            abort('invalid year info')
+
+        if info.year is not None:
+            self.year = info.year
+        elif info.this_year:
+            self.year = self.baseline.year
+        elif info.prev_year:
+            self.year = self.baseline.year - 1
+        elif info.next_year:
+            self.year = self.baseline.year + 1
+        elif info.prev_prev_year:
+            self.year = self.baseline.year - 2
+        elif info.next_next_year:
+            self.year = self.baseline.year + 2
+        elif info.years_before is not None:
+            # TODO: set month and day?
+            self.year = self.baseline.year - info.years_before
+        elif info.years_after is not None:
+            self.year = self.baseline.year + info.years_after
+        else:
+            assert unreachable
 
     def adjust_month(self, info: RawTimeInfo):
-        valid = only_one(
+        """
+
+        :param info:
+        :return:
+
+        >>> t = TimePoint("下个月", baseline=datetime.strptime("2000-12-01", "%Y-%m-%d"))
+        >>> [t.year, t.month, t.day]
+        [2001, 1, None]
+
+        >>> t = TimePoint("上个月", baseline=datetime.strptime("2000-01-01", "%Y-%m-%d"))
+        >>> [t.year, t.month, t.day]
+        [1999, 12, None]
+
+        >>> t = TimePoint("5月")
+        >>> [t.year, t.month, t.day]
+        [None, 5, None]
+        >>> t.fuzzy_year
+        True
+
+        >>> t = TimePoint("一个月后", baseline=datetime.strptime("2000-01-30", "%Y-%m-%d"))
+        >>> [t.year, t.month, t.day, t.hour, t.minute]
+        [2000, 2, 29, None, None]
+
+        """
+        cnt = count_true(
             info.month is not None,
             info.this_month,
             info.prev_month,
@@ -575,46 +734,88 @@ class TimePoint:
             info.months_before is not None,
             info.months_after is not None,
         )
+        if cnt == 0:
+            return
 
-        if valid:
-            if info.month is not None:
-                self.month = info.month
-            elif info.this_month:
-                self.year = self.baseline.year
-                self.month = self.baseline.month
-            elif info.prev_month:
-                self.year = self.baseline.year
-                self.month = self.baseline.month - 1
-            elif info.prev_prev_month:
-                self.year = self.baseline.year
-                self.month = self.baseline.month - 2
-            elif info.next_month:
-                self.year = self.baseline.year
-                self.month = self.baseline.month + 1
-            elif info.next_next_month:
-                self.year = self.baseline.year
-                self.month = self.baseline.month + 2
-            elif info.months_before is not None:
-                self.year = self.baseline.year
-                self.month = self.baseline.month - info.months_before
-                self.day = self.baseline.day
-            elif info.months_after is not None:
-                self.year = self.baseline.year
-                self.month = self.baseline.month + info.months_after
-                self.day = self.baseline.day
-            else:
-                assert not 'reachable'
+        if cnt > 1:
+            abort('invalid month info')
 
-            if self.month > 12:
-                self.month -= 12
-                self.year -= 1
-            if self.month < 0:
-                self.month += 12
+        if info.month is not None:
+            self.month = info.month
+            if self.year is None:
+                self.fuzzy_year = True
+        elif info.this_month:
+            self.year = self.baseline.year
+            self.month = self.baseline.month
+        elif info.prev_month:
+            self.year = self.baseline.year
+            self.month = self.baseline.month - 1
+        elif info.prev_prev_month:
+            self.year = self.baseline.year
+            self.month = self.baseline.month - 2
+        elif info.next_month:
+            self.year = self.baseline.year
+            self.month = self.baseline.month + 1
+        elif info.next_next_month:
+            self.year = self.baseline.year
+            self.month = self.baseline.month + 2
+        elif info.months_before is not None:
+            self.set_date(self.baseline + timedelta(days=info.months_before*30))
+        elif info.months_after is not None:
+            self.set_date(self.baseline + timedelta(days=info.months_after*30))
+        else:
+            assert unreachable
+
+        if self.month > 12:
+            self.month -= 12
+            if self.year is not None:
                 self.year += 1
+        if self.month < 1:
+            self.month += 12
+            if self.year is not None:
+                self.year -= 1
 
     def adjust_day(self, info: RawTimeInfo):
-        valid = only_one(
-            info.day is not None or info.week_day is not None,
+        """
+
+        :param info:
+        :return:
+        >>> t = TimePoint("后天", baseline=datetime.strptime("1999-12-31", "%Y-%m-%d"))
+        >>> [t.year, t.month, t.day, t.hour, t.minute]
+        [2000, 1, 2, None, None]
+
+        >>> t = TimePoint("大后天", baseline=datetime.strptime("1999-12-31", "%Y-%m-%d"))
+        >>> [t.year, t.month, t.day, t.hour, t.minute]
+        [2000, 1, 3, None, None]
+
+        >>> t = TimePoint("三天后", baseline=datetime.strptime("1999-12-31", "%Y-%m-%d"))
+        >>> [t.year, t.month, t.day, t.hour, t.minute]
+        [2000, 1, 3, None, None]
+
+        >>> t = TimePoint("三天前", baseline=datetime.strptime("2000-01-01", "%Y-%m-%d"))
+        >>> [t.year, t.month, t.day, t.hour, t.minute]
+        [1999, 12, 29, None, None]
+
+        >>> t = TimePoint("明天", baseline=datetime.strptime("1999-12-31", "%Y-%m-%d"))
+        >>> [t.year, t.month, t.day, t.hour, t.minute]
+        [2000, 1, 1, None, None]
+
+        >>> t = TimePoint("昨天", baseline=datetime.strptime("2000-01-01", "%Y-%m-%d"))
+        >>> [t.year, t.month, t.day, t.hour, t.minute]
+        [1999, 12, 31, None, None]
+
+        >>> t = TimePoint("周末")
+        >>> t.fuzzy_week
+        True
+        >>> t.weekday
+        0
+        >>> t = TimePoint("这周下周周末")
+        Traceback (most recent call last):
+            ...
+        ParseTimeError: only one week modifier allowed
+        """
+        cnt = count_true(
+            info.day is not None or info.weekday is not None,
             info.today,
             info.yesterday,
             info.before_yesterday,
@@ -625,39 +826,331 @@ class TimePoint:
             info.days_before is not None,
             info.days_after is not None,
         )
-        if valid:
-            if info.day is not None:
-                self.day = info.day
-            elif info.week_day is not None:
-                # TODO
-                if info.this_week:
-                    pass
-            elif info.today:
-                self.set_date(self.baseline)
-            elif info.tomorrow:
-                self.set_date(self.baseline + datetime.timedelta(days=1))
-            elif info.after_tomorrow:
-                self.set_date(self.baseline + datetime.timedelta(days=2))
-            elif info.after_after_tomorrow:
-                self.set_date(self.baseline + datetime.timedelta(days=3))
-            elif info.yesterday:
-                self.set_date(self.baseline + datetime.timedelta(days=-1))
-            elif info.before_yesterday:
-                self.set_date(self.baseline + datetime.timedelta(days=-2))
-            elif info.before_before_yesterday:
-                self.set_date(self.baseline + datetime.timedelta(days=-3))
-            elif info.days_before:
-                self.set_date(self.baseline + datetime.timedelta(days=-info.days_before))
-            elif info.days_after:
-                self.set_date(self.baseline + datetime.timedelta(days=info.days_after))
+        if cnt == 0:
+            return
+
+        if cnt > 1:
+            abort('invalid day info')
+
+        if info.day is not None:
+            self.day = info.day
+            if self.month is None:
+                self.fuzzy_month = True
+        elif info.weekday is not None:
+            valid = at_most_one(
+                info.this_week,
+                info.prev_week,
+                info.next_week,
+                info.next_next_week,
+                info.prev_prev_week,
+            )
+            if not valid:
+                abort('only one week modifier allowed')
+
+            self.weekday = info.weekday
+            week = None
+
+            if info.this_week:
+                week = 0
+            elif info.prev_week:
+                week = -1
+            elif info.next_week:
+                week = 1
+            elif info.prev_prev_week:
+                week = -2
+            elif info.next_next_week:
+                week = 2
+
+            if week is None:
+                self.fuzzy_week = True
             else:
-                assert not 'reachable'
+                delta_days = weekday_offset(self.baseline.weekday(), info.weekday, week)
+                self.set_date(self.baseline + timedelta(days=delta_days))
+
+        elif info.today:
+            self.set_date(self.baseline)
+        elif info.tomorrow:
+            self.set_date(self.baseline + timedelta(days=1))
+        elif info.after_tomorrow:
+            self.set_date(self.baseline + timedelta(days=2))
+        elif info.after_after_tomorrow:
+            self.set_date(self.baseline + timedelta(days=3))
+        elif info.yesterday:
+            self.set_date(self.baseline + timedelta(days=-1))
+        elif info.before_yesterday:
+            self.set_date(self.baseline + timedelta(days=-2))
+        elif info.before_before_yesterday:
+            self.set_date(self.baseline + timedelta(days=-3))
+        elif info.days_before:
+            self.set_date(self.baseline + timedelta(days=-info.days_before))
+        elif info.days_after:
+            self.set_date(self.baseline + timedelta(days=info.days_after))
+        else:
+            assert unreachable
+
+    def adjust_hour(self, info: RawTimeInfo):
+        """
+
+        :param info:
+        :return:
+
+        >>> t = TimePoint("凌晨五点")
+        >>> t.year, t.month, t.day, t.hour, t.minute
+        (None, None, None, 5, None)
+
+        >>> t = TimePoint("下午五点")
+        >>> t.year, t.month, t.day, t.hour, t.minute
+        (None, None, None, 17, None)
+
+        >>> t = TimePoint("晚上五点")
+        >>> t.fuzzy_day, t.fuzzy_apm, t.hour, t.minute
+        (True, False, 17, None)
+
+        >>> t = TimePoint("中午1点半")
+        >>> t.hour, t.minute
+        (13, 30)
+
+        >>> t = TimePoint("中午12点半")
+        >>> t.hour, t.minute
+        (12, 30)
+
+        >>> t = TimePoint("晚上12点半")
+        >>> t.hour, t.minute
+        (0, 30)
+
+        >>> t = TimePoint("晚上11点半")
+        >>> t.hour, t.minute
+        (23, 30)
+
+        >>> t = TimePoint("晚上1点")
+        >>> t.hour, t.minute
+        (1, None)
+
+        >>> t = TimePoint("一个小时后", baseline=datetime.strptime("1999-12-31 23:59:59", "%Y-%m-%d %H:%M:%S"))
+        >>> t.year, t.month, t.day, t.hour, t.minute, t.second
+        (2000, 1, 1, 0, 59, 59)
+        """
+        cnt = count_true(
+            info.hour is not None,
+            info.hours_before is not None,
+            info.hours_after is not None,
+        )
+        if cnt == 0:
+            return
+        if cnt > 1:
+            abort('invalid hour info')
+
+        if info.hour is not None:
+            cnt = count_true(
+                info.early_morning,
+                info.morning,
+                info.noon,
+                info.afternoon,
+                info.night
+            )
+            if cnt > 1:
+                abort('invalid fuzzy time')
+            if cnt == 0:
+                self.fuzzy_apm = True
+            self.hour = info.hour
+            if self.day is None:
+                self.fuzzy_day = True
+            if self.hour <= 12:
+                if info.early_morning:
+                    if self.hour >= 10:
+                        self.hour += 12
+                elif info.morning:
+                    pass
+                elif info.noon:
+                    if self.hour < 5:
+                        self.hour += 12
+                elif info.afternoon:
+                    self.hour += 12
+                elif info.night:
+                    if self.hour > 4:
+                        self.hour += 12
+            self.hour %= 24
+        elif info.hours_after is not None:
+            self.set_datetime(self.baseline + timedelta(hours=info.hours_after))
+        elif info.hours_before is not None:
+            self.set_datetime(self.baseline - timedelta(hours=info.hours_before))
+        else:
+            assert unreachable
+
+    def adjust_minute(self, info: RawTimeInfo):
+        """
+
+        :param info:
+        :return:
+
+        >>> t = TimePoint("一点三刻")
+        >>> t.fuzzy_day, t.fuzzy_apm, t.hour, t.minute
+        (True, True, 1, 45)
+
+        >>> t = TimePoint("五分钟后", baseline=datetime.strptime("01:59:01", "%H:%M:%S"))
+        >>> t.hour, t.minute, t.second
+        (2, 4, 1)
+
+        >>> t = TimePoint("五分钟前", baseline=datetime.strptime("01:00:01", "%H:%M:%S"))
+        >>> t.hour, t.minute, t.second
+        (0, 55, 1)
+
+        """
+        cnt = count_true(
+            info.minute is not None,
+            info.minutes_after is not None,
+            info.minutes_before is not None,
+        )
+        if cnt == 0:
+            return
+
+        if cnt > 1:
+            abort('invalid minute')
+
+        if info.minute is not None:
+            if self.hour is None:
+                abort('standalone minute means nothing')
+            self.minute = info.minute
+        elif info.minutes_after is not None:
+            self.set_datetime(self.baseline + timedelta(minutes=info.minutes_after))
+        elif info.minutes_before is not None:
+            self.set_datetime(self.baseline - timedelta(minutes=info.minutes_before))
+        else:
+            assert unreachable
+
+    def adjust_second(self, info: RawTimeInfo):
+        if info.second is not None:
+            self.second = info.second
+
+    def validate(self):
+        """
+        >>> t = TimePoint("明年五点")
+        Traceback (most recent call last):
+            ...
+        ParseTimeError: time expression must not has a gap
+        """
+
+        # 时间阶梯必须连续, 中间不能有空洞，如："下个月五点"是错误的
+        data = [None, self.year, self.month, self.day, self.hour, self.minute, self.second]
+        data = [x is not None for x in data]
+        cnt = 0
+        for i in range(len(data)-1):
+            if data[i:i+2] == [False, True]:
+                cnt += 1
+        if cnt > 1:
+            abort('time expression must not has a gap')
+
+    def get_datetime_str(self):
+        return self.get_datetime().strftime("%Y-%m-%d %H:%M:%S")
+
+    def get_datetime(self):
+        """
+        >>> TimePoint("5月", baseline=datetime(year=2000, month=1, day=1)).get_datetime_str()
+        '2000-05-01 08:00:00'
+
+        >>> TimePoint("3月", baseline=datetime(year=2000, month=4, day=1)).get_datetime_str()
+        '2000-03-01 08:00:00'
+
+        >>> TimePoint("5号", baseline=datetime(year=2000, month=4, day=10)).get_datetime_str()
+        '2000-04-05 08:00:00'
+
+        >>> TimePoint("5号", baseline=datetime(year=2000, month=4, day=25)).get_datetime_str()
+        '2000-05-05 08:00:00'
+
+        >>> TimePoint("27号", baseline=datetime(year=2000, month=4, day=25)).get_datetime_str()
+        '2000-04-27 08:00:00'
+
+        >>> TimePoint("27号", baseline=datetime(year=2000, month=4, day=25)).get_datetime_str()
+        '2000-04-27 08:00:00'
+
+        >>> TimePoint("周一", baseline=datetime(year=2000, month=1, day=1)).get_datetime_str()  # 2000-01-01 星期5
+        '2000-01-04 08:00:00'
+
+        >>> TimePoint("周2", baseline=datetime(year=2000, month=1, day=8)).get_datetime_str()
+        '2000-01-05 08:00:00'
+
+        >>> TimePoint("两点钟", baseline=datetime(year=2000, month=1, day=1, hour=11)).get_datetime_str()
+        '2000-01-01 14:00:00'
+
+        """
+        if not at_most_one(
+                self.fuzzy_year,
+                self.fuzzy_month,
+                self.fuzzy_week,
+                self.fuzzy_day,
+        ):
+            abort('Too many fuzzy')
+
+        def get_nearest(points):
+            delta = [p - self.baseline for p in points]
+            _, nearest = min([(abs(d), i) for i, d in enumerate(delta)])
+            return points[nearest]
+
+        day = self.day or self.baseline.day
+        if self.fuzzy_year:
+            points = [
+                datetime(year=self.baseline.year-1, month=self.month, day=day),
+                datetime(year=self.baseline.year, month=self.month, day=day),
+                datetime(year=self.baseline.year+1, month=self.month, day=day),
+            ]
+            self.year = get_nearest(points).year
+
+        elif self.fuzzy_month:
+            month = self.baseline.month
+            points = [
+                datetime(year=self.baseline.year, month=month-1, day=day),
+                datetime(year=self.baseline.year, month=month, day=day),
+                datetime(year=self.baseline.year, month=month+1, day=day),
+            ]
+            nearest = get_nearest(points)
+            self.year = nearest.year
+            self.month = nearest.month
+        elif self.fuzzy_week:
+            today = self.baseline.weekday()
+            delta = self.weekday - today
+            # 周五六日说周一通常指下周一
+            if today in (5, 6, 0) and self.weekday == 1:
+                delta += 7
+            point = self.baseline + timedelta(days=delta)
+            self.year = point.year
+            self.month = point.month
+            self.day = point.day
+        elif self.fuzzy_day:
+            # 没说上下午的情况下，如果时间和当前时间靠近，则倾向于就近的时间
+            if self.fuzzy_apm:
+                if self.hour < 12:
+                    if self.hour + 12 - self.baseline.hour < 6:
+                        self.hour += 12
+
+            # 倾向于未来的时间
+            delta = self.hour - self.baseline.hour
+            if delta < 0:
+                delta += 24
+            point = self.baseline + timedelta(hours=delta)
+            self.year = point.year
+            self.month = point.month
+            self.day = point.day
+            self.hour = point.hour
+
+        year = self.year
+        month = self.month or 1
+        day = self.day or 1
+        hour = self.hour or 8
+        minute = self.minute or 0
+        second = self.second or 0
+
+        return datetime(year, month, day, hour, minute, second)
 
     def set_date(self, dt):
         self.day = dt.day
         self.year = dt.year
         self.month = dt.month
 
+    def set_datetime(self, dt):
+        self.set_date(dt)
+        self.hour = dt.hour
+        self.minute = dt.minute
+        self.second = dt.second
 
 
 if __name__ == '__main__':
