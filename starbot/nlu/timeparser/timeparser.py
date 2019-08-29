@@ -1095,7 +1095,7 @@ class TimePoint:
                 self.fuzzy_week,
                 self.fuzzy_day,
         ):
-            abort('Too many fuzzy')
+            abort(f'Too many fuzzy: {self.get_fuzzies()}')
 
         def get_nearest(points):
             delta = [p - self.baseline for p in points]
@@ -1180,14 +1180,17 @@ class TimePoint:
         self.minute = dt.minute
         self.second = dt.second
 
-    def __repr__(self):
+    def get_fuzzies(self):
         fuzzies = []
         for k in dir(self):
             if k.startswith('fuzzy_'):
                 v = getattr(self, k)
                 if v:
                     fuzzies.append(k)
-        flags = ','.join(fuzzies)
+        return ','.join(fuzzies)
+
+    def __repr__(self):
+        flags = self.get_fuzzies()
         ts = f'{self.year}-{self.month}-{self.day} {self.hour}:{self.minute}:{self.second} {self.weekday}'
         contents = [ts, self.raw.expr]
         if flags:
