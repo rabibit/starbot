@@ -7,6 +7,7 @@ from .alarm_clock import AlarmClockHandler
 from .order import SimpleOrderHandler
 from .ask_for_phone_number import AskForPhoneNumberHandler
 from .book_room import BookRoomHandler
+from .something_eat import SomethingEatHandler
 from .handler import BaseHandler
 
 
@@ -20,6 +21,7 @@ intent_to_handlers = {
     'order_something': SimpleOrderHandler,
     'book_room': BookRoomHandler,
     'ask_for_phone_number': AskForPhoneNumberHandler,
+    'ask_for_something_to_eat': SomethingEatHandler,
     'simple': SimpleHandler,
 }
 
