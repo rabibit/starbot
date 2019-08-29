@@ -132,6 +132,10 @@ class BaseHandler:
             if entity['entity'] == name:
                 return entity['value']
 
+    @staticmethod
+    def get_slot(tracker: Tracker, name: Text) -> Any:
+        return tracker.slots.get(name)
+
 
 class BaseForm:
     __tag__ = ''
