@@ -601,7 +601,7 @@ class TimePoint:
     weekday: Optional[int] = None
     ampm: Optional[str] = None
 
-    raw: RawTimeInfo
+    raw: Optional[RawTimeInfo]
     baseline: datetime
 
     def __init__(self, time_expr: Union[Text, TimeExpression], baseline: datetime=None):
@@ -648,6 +648,7 @@ class TimePoint:
             self.parse_raw()
         elif isinstance(time_expr, dict):
             self.load_dict(time_expr)
+            self.raw = None
         else:
             abort('Invalid time_expr type')
 
@@ -1280,7 +1281,7 @@ class TimePoint:
     def __repr__(self):
         flags = self.get_fuzzies()
         ts = f'{self.year}-{self.month}-{self.day} {self.hour}:{self.minute}:{self.second} {self.weekday}'
-        contents = [ts, self.raw.expr]
+        contents = [ts, self.raw and self.raw.expr or 'N/A']
         if flags:
             contents.insert(1, flags)
         contents = ' '.join(contents)
