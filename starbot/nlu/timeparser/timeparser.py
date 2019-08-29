@@ -423,8 +423,8 @@ class RawTimeInfo:
     minutes_before: Optional[int] = NumberOf('\d+(?=分钟[以之]?前)')
     minutes_after: Optional[int] = NumberOf('\d+(?=分钟[以之]?后)')
 
-    early_morning: bool = Appearing('凌晨|半夜')
-    morning: bool = Appearing('早(上|晨|间)|晨间|今早|明早|上午')
+    midnight: bool = Appearing('凌晨|半夜')
+    morning: bool = Appearing('早(上|晨|间)|晨间|(今|明|清|一)早|上午')
     noon: bool = Appearing('中午|午间')
     afternoon: bool = Appearing('下午|午后')
     night: bool = Appearing('昨晚|前晚|晚上|夜间|夜里|今晚|明晚|半夜')
@@ -599,12 +599,7 @@ class TimePoint:
     minute: Optional[int] = None
     second: Optional[int] = None
     weekday: Optional[int] = None
-
-    fuzzy_year = False
-    fuzzy_week = False
-    fuzzy_month = False
-    fuzzy_day = False
-    fuzzy_apm = False
+    ampm: Optional[str] = None
 
     raw: RawTimeInfo
     baseline: datetime
@@ -625,6 +620,8 @@ class TimePoint:
         >>> t.raw.afternoon
         True
         >>> t.hour
+        2
+        >>> t.computed_hour()
         14
         >>> t.minute
         10
@@ -641,20 +638,89 @@ class TimePoint:
         False
         """
 
-        if isinstance(time_expr, TimeExpression):
-            time_expr = time_expr.expr
-        else:
-            time_expr = preprocess(time_expr)
-        self.raw = RawTimeInfo(time_expr)
         self.baseline = baseline or datetime.now()
+        if isinstance(time_expr, TimeExpression):
+            self.raw = RawTimeInfo(time_expr.expr)
+            self.parse_raw()
+        elif isinstance(time_expr, str):
+            self.raw = RawTimeInfo(preprocess(time_expr))
+            self.parse_raw()
+        elif isinstance(time_expr, dict):
+            self.load_dict(time_expr)
+        else:
+            abort('Invalid time_expr type')
+
+    @property
+    def fuzzy_year(self):
+        return self.year is None and self.month is not None
+
+    @property
+    def fuzzy_month(self):
+        return self.month is None and self.day is not None
+
+    @property
+    def fuzzy_day(self):
+        return self.day is None and self.hour is not None
+
+    @property
+    def fuzzy_week(self):
+        return self.day is None and self.weekday is not None
+
+    @property
+    def fuzzy_apm(self):
+        return self.ampm is None and self.hour is not None and self.hour <= 12
+
+    def parse_raw(self):
         self.fill_year(self.raw)
         self.fill_month(self.raw)
         self.fill_day(self.raw)
+        self.fill_ampm(self.raw)
         self.fill_hour(self.raw)
         self.fill_minute(self.raw)
         self.fill_second(self.raw)
-        self.fill_apm(self.raw)
         self.validate()
+
+    def load_dict(self, info):
+        self.baseline = datetime.strptime("%Y-%m-%d %H:%M:%S", info['baseline'])
+        self.year = info['year']
+        self.month = info['month']
+        self.day = info['day']
+        self.hour = info['hour']
+        self.minute = info['minute']
+        self.second = info['second']
+        self.weekday = info['weekday']
+
+    def dump_to_dict(self):
+        return {
+            'baseline': self.baseline.strftime('%Y-%m-%d %H:%M:%S'),
+            'year': self.year,
+            'month': self.month,
+            'day': self.day,
+            'hour': self.hour,
+            'minute': self.minute,
+            'second': self.second,
+            'weekday': self.weekday,
+        }
+
+    def update(self, info: 'TimePoint'):
+        """
+
+        :param info:
+        :return:
+
+        >>> baseline = datetime(2000, 1, 1)
+        >>> t0 = TimePoint("明天早上", baseline)
+        >>> t1 = TimePoint("7点", baseline)
+        >>> t0.get_datetime_str()
+        '2000-01-02 08:00:00'
+        >>> t0.update(t1)
+        >>> t0.get_datetime_str()
+        '2000-01-02 07:00:00'
+        """
+        for key in ['year', 'month', 'day', 'hour', 'minute', 'second', 'weekday', 'ampm', 'baseline']:
+            new_value = getattr(info, key)
+            if new_value is not None:
+                setattr(self, key, new_value)
 
     def fill_year(self, info: RawTimeInfo):
         """
@@ -689,7 +755,7 @@ class TimePoint:
             return
 
         if cnt > 1:
-            abort('invalid year info')
+            abort('Invalid year info')
 
         if info.year is not None:
             self.year = info.year
@@ -750,12 +816,10 @@ class TimePoint:
             return
 
         if cnt > 1:
-            abort('invalid month info')
+            abort('Invalid month info')
 
         if info.month is not None:
             self.month = info.month
-            if self.year is None:
-                self.fuzzy_year = True
         else:
             delta = None
             if info.this_month:
@@ -820,7 +884,7 @@ class TimePoint:
         >>> t = TimePoint("这周下周周末")
         Traceback (most recent call last):
             ...
-        ParseTimeError: only one week modifier allowed
+        ParseTimeError: Only one week modifier allowed
         """
         cnt = count_true(
             info.day is not None or info.weekday is not None,
@@ -838,12 +902,10 @@ class TimePoint:
             return
 
         if cnt > 1:
-            abort('invalid day info')
+            abort('Invalid day info')
 
         if info.day is not None:
             self.day = info.day
-            if self.month is None:
-                self.fuzzy_month = True
         elif info.weekday is not None:
             valid = at_most_one(
                 info.this_week,
@@ -853,10 +915,9 @@ class TimePoint:
                 info.prev_prev_week,
             )
             if not valid:
-                abort('only one week modifier allowed')
+                abort('Only one week modifier allowed')
 
             self.weekday = info.weekday
-            week = None
 
             if info.this_week:
                 week = 0
@@ -868,12 +929,11 @@ class TimePoint:
                 week = -2
             elif info.next_next_week:
                 week = 2
-
-            if week is None:
-                self.fuzzy_week = True
             else:
-                delta_days = weekday_offset(self.baseline.weekday(), info.weekday, week)
-                self.set_date(self.baseline + timedelta(days=delta_days))
+                return
+
+            delta_days = weekday_offset(self.baseline.weekday(), info.weekday, week)
+            self.set_date(self.baseline + timedelta(days=delta_days))
 
         elif info.today:
             self.set_date(self.baseline)
@@ -896,6 +956,25 @@ class TimePoint:
         else:
             assert unreachable
 
+    def fill_ampm(self, info: RawTimeInfo):
+        cnt = count_true(
+            info.midnight,
+            info.morning,
+            info.noon,
+            info.afternoon,
+            info.night
+        )
+        if cnt > 1:
+            abort('Too many am/pm qualifiers')
+
+        self.ampm = {
+            info.midnight: 'midnight',
+            info.morning: 'morning',
+            info.noon: 'noon',
+            info.afternoon: 'afternoon',
+            info.night: 'night'
+        }.get(True)
+
     def fill_hour(self, info: RawTimeInfo):
         """
 
@@ -907,35 +986,35 @@ class TimePoint:
         (None, None, None, 5, None)
 
         >>> t = TimePoint("下午五点")
-        >>> t.year, t.month, t.day, t.hour, t.minute
+        >>> t.year, t.month, t.day, t.computed_hour(), t.minute
         (None, None, None, 17, None)
 
         >>> t = TimePoint("晚上五点")
-        >>> t.fuzzy_day, t.fuzzy_apm, t.hour, t.minute
+        >>> t.fuzzy_day, t.fuzzy_apm, t.computed_hour(), t.minute
         (True, False, 17, None)
 
         >>> t = TimePoint("中午1点半")
-        >>> t.hour, t.minute
+        >>> t.computed_hour(), t.minute
         (13, 30)
 
         >>> t = TimePoint("中午12点半")
-        >>> t.hour, t.minute
+        >>> t.computed_hour(), t.minute
         (12, 30)
 
         >>> t = TimePoint("晚上12点半")
-        >>> t.hour, t.minute
+        >>> t.computed_hour(), t.minute
         (0, 30)
 
         >>> t = TimePoint("晚上11点半")
-        >>> t.hour, t.minute
+        >>> t.computed_hour(), t.minute
         (23, 30)
 
         >>> t = TimePoint("晚上1点")
-        >>> t.hour, t.minute
+        >>> t.computed_hour(), t.minute
         (1, None)
 
         >>> t = TimePoint("一个小时后", baseline=datetime.strptime("1999-12-31 23:59:59", "%Y-%m-%d %H:%M:%S"))
-        >>> t.year, t.month, t.day, t.hour, t.minute, t.second
+        >>> t.year, t.month, t.day, t.computed_hour(), t.minute, t.second
         (2000, 1, 1, 0, 59, 59)
         """
         cnt = count_true(
@@ -946,38 +1025,10 @@ class TimePoint:
         if cnt == 0:
             return
         if cnt > 1:
-            abort('invalid hour info')
+            abort('Invalid hour info')
 
         if info.hour is not None:
-            cnt = count_true(
-                info.early_morning,
-                info.morning,
-                info.noon,
-                info.afternoon,
-                info.night
-            )
-            if cnt > 1:
-                abort('too many am/pm qualifiers')
             self.hour = info.hour
-            if self.day is None and self.weekday is None:
-                self.fuzzy_day = True
-            if self.hour <= 12:
-                if cnt == 0:
-                    self.fuzzy_apm = True
-                if info.early_morning:
-                    if self.hour >= 10:
-                        self.hour += 12
-                elif info.morning:
-                    pass
-                elif info.noon:
-                    if self.hour < 5:
-                        self.hour += 12
-                elif info.afternoon:
-                    self.hour += 12
-                elif info.night:
-                    if self.hour > 4:
-                        self.hour += 12
-            self.hour %= 24
         elif info.hours_after is not None:
             self.set_datetime(self.baseline + timedelta(hours=info.hours_after))
         elif info.hours_before is not None:
@@ -1013,11 +1064,11 @@ class TimePoint:
             return
 
         if cnt > 1:
-            abort('invalid minute')
+            abort('Invalid minute')
 
         if info.minute is not None:
             if self.hour is None:
-                abort('standalone minute means nothing')
+                abort('Standalone minute means nothing')
             self.minute = info.minute
         elif info.minutes_after is not None:
             self.set_datetime(self.baseline + timedelta(minutes=info.minutes_after))
@@ -1030,27 +1081,12 @@ class TimePoint:
         if info.second is not None:
             self.second = info.second
 
-    def fill_apm(self, info: RawTimeInfo):
-        if all([
-            self.year is None,
-            self.month is None,
-            self.day is None,
-            self.hour is None,
-            self.minute is None,
-            self.second is None,
-            self.weekday is None,
-        ]):
-            if info.early_morning:
-                self.set_date(self.baseline + timedelta(days=1))
-            elif any([info.morning, info.noon, info.afternoon, info.night]):
-                self.set_date(self.baseline)
-
     def validate(self):
         """
         >>> t = TimePoint("明年五点")
         Traceback (most recent call last):
             ...
-        ParseTimeError: time expression must not has a gap
+        ParseTimeError: Time expression must not has a gap
         """
 
         # 时间阶梯必须连续, 中间不能有空洞，如："下个月五点"是错误的
@@ -1061,7 +1097,47 @@ class TimePoint:
             if data[i:i+2] == [False, True]:
                 cnt += 1
         if cnt > 1:
-            abort('time expression must not has a gap')
+            abort('Time expression must not has a gap')
+
+    def computed_hour(self):
+        if self.hour is None:
+            return None
+        if self.hour > 12 or self.ampm is None:
+            return self.hour
+
+        hour = self.hour
+        if self.ampm == 'midnight':
+            if hour >= 10:
+                hour += 12
+        elif self.ampm == 'noon':
+            if hour < 5:
+                hour += 12
+        elif self.ampm == 'afternoon':
+            hour += 12
+        elif self.ampm == 'night':
+            if hour > 4:
+                hour += 12
+        elif self.ampm == 'morning':
+            pass
+        else:
+            pass
+        hour %= 24
+        return hour
+
+    def fill_apm(self, info: RawTimeInfo):
+        if all([
+            self.year is None,
+            self.month is None,
+            self.day is None,
+            self.hour is None,
+            self.minute is None,
+            self.second is None,
+            self.weekday is None,
+        ]):
+            if info.midnight:
+                self.set_date(self.baseline + timedelta(days=1))
+            elif any([info.morning, info.noon, info.afternoon, info.night]):
+                self.set_date(self.baseline)
 
     def get_datetime_str(self):
         return self.get_datetime().strftime("%Y-%m-%d %H:%M:%S")
@@ -1109,32 +1185,40 @@ class TimePoint:
             _, nearest = min([(abs(d), i) for i, d in enumerate(delta)])
             return points[nearest]
 
-        day = self.day or self.baseline.day
+        year = self.year
+        month = self.month or 1
+        day = self.day or 1
+        hour = self.computed_hour() or 8
+        minute = self.minute or 0
+        second = self.second or 0
+
+        day_ = day or self.baseline.day
+
         if self.fuzzy_year:
             points = [
-                datetime(year=self.baseline.year-1, month=self.month, day=day),
-                datetime(year=self.baseline.year, month=self.month, day=day),
-                datetime(year=self.baseline.year+1, month=self.month, day=day),
+                datetime(year=self.baseline.year-1, month=self.month, day=day_),
+                datetime(year=self.baseline.year, month=self.month, day=day_),
+                datetime(year=self.baseline.year+1, month=self.month, day=day_),
             ]
             nearest = get_nearest(points)
-            self.year = nearest.year
+            year = nearest.year
             if prefer_future and nearest < self.baseline:
-                self.year += 1
+                year += 1
 
         elif self.fuzzy_month:
             month = self.baseline.month
             points = [
-                datetime(year=self.baseline.year, month=month-1, day=day),
-                datetime(year=self.baseline.year, month=month, day=day),
-                datetime(year=self.baseline.year, month=month+1, day=day),
+                datetime(year=self.baseline.year, month=month-1, day=day_),
+                datetime(year=self.baseline.year, month=month, day=day_),
+                datetime(year=self.baseline.year, month=month+1, day=day_),
             ]
             nearest = get_nearest(points)
 
             if prefer_future and nearest < self.baseline:
                 nearest = add_months(nearest, 1)
 
-            self.year = nearest.year
-            self.month = nearest.month
+            year = nearest.year
+            month = nearest.month
         elif self.fuzzy_week:
             today = self.baseline.weekday()
             delta = self.weekday - today
@@ -1148,31 +1232,22 @@ class TimePoint:
                 elif self.weekday == 0:
                     delta += 7
             point = self.baseline + timedelta(days=delta)
-            self.year = point.year
-            self.month = point.month
-            self.day = point.day
+            year = point.year
+            month = point.month
+            day = point.day
         elif self.fuzzy_day:
             # 没说上下午的情况下，如果时间和当前时间靠近，则倾向于就近的时间
             if self.fuzzy_apm:
-                if self.hour < 12:
-                    if self.hour + 12 - self.baseline.hour < 6:
-                        self.hour += 12
+                if hour + 12 - self.baseline.hour < 6:
+                    hour += 12
 
-            delta = self.hour - self.baseline.hour
+            delta = hour - self.baseline.hour
             if prefer_future and delta < 0:
                 delta += 24
             point = self.baseline + timedelta(hours=delta)
-            self.year = point.year
-            self.month = point.month
-            self.day = point.day
-            self.hour = point.hour
-
-        year = self.year
-        month = self.month or 1
-        day = self.day or 1
-        hour = self.hour or 8
-        minute = self.minute or 0
-        second = self.second or 0
+            year = point.year
+            month = point.month
+            day = point.day
 
         return datetime(year, month, day, hour, minute, second)
 
