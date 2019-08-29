@@ -681,7 +681,7 @@ class TimePoint:
         self.validate()
 
     def load_dict(self, info):
-        self.baseline = datetime.strptime("%Y-%m-%d %H:%M:%S", info['baseline'])
+        self.baseline = datetime.strptime(info['baseline'], "%Y-%m-%d %H:%M:%S")
         self.year = info['year']
         self.month = info['month']
         self.day = info['day']
