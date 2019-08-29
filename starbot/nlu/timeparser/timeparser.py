@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, date
 
 from typing import Text, Optional, NoReturn, Union
 from starbot.nlu.timeparser.numberify import numberify, WEEK_PREFIX
-from starbot.nlu.timeparser.pattern import patterns
+from starbot.nlu.timeparser.pattern import strict_patterns as patterns
 
 
 logger = logging.getLogger(__name__)
