@@ -21,8 +21,7 @@ class SomethingEatHandler(BaseHandler):
         products = db_orm_query(Product, "吃的")
         dispatcher.utter_message("我们这里有：")
         for food in products:
-            dispatcher.utter_message("{}，单价是 {}".format(food.Name, food.Price))
-        dispatcher.utter_message("请问您需要什么？")
+            dispatcher.utter_message("{}，单价是{}元".format(food.Name, food.Price))
         return []
 
     def continue_form(self):
