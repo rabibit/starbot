@@ -1139,8 +1139,8 @@ class TimePoint:
             elif any([info.morning, info.noon, info.afternoon, info.night]):
                 self.set_date(self.baseline)
 
-    def get_datetime_str(self):
-        return self.get_datetime().strftime("%Y-%m-%d %H:%M:%S")
+    def get_datetime_str(self, prefer_future=False):
+        return self.get_datetime(prefer_future).strftime("%Y-%m-%d %H:%M:%S")
 
     def get_datetime(self, prefer_future=False):
         """
@@ -1170,6 +1170,9 @@ class TimePoint:
 
         >>> TimePoint("两点钟", baseline=datetime(year=2000, month=1, day=1, hour=11)).get_datetime_str()
         '2000-01-01 14:00:00'
+
+        >>> TimePoint("上午9点", baseline=datetime(year=2000, month=1, day=1, hour=11)).get_datetime_str(True)
+        '2000-01-02 09:00:00'
 
         """
         if not at_most_one(
