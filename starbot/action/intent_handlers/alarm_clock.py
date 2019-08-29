@@ -69,21 +69,20 @@ def time_to_human_words(tp: TimePoint):
 
     """
     time = tp.get_datetime(True)
-    words = ''
-    if not tp.fuzzy_day:
-        words += time_to_day_words(time)
-        if tp.hour is not None:
-            hour = time.hour
-            words += hour_to_apm_words(hour)
-            if hour > 12:
-                hour -= 12
-            words += f'{hour}点'
-            if time.minute is None or time.minute == 0:
-                words += '钟'
-            else:
-                words += f'{time.minute}分'
-        elif tp.ampm:
-            words += apm_to_words(tp.ampm)
+    logger.info(time.strftime('time_to_human_words: time is %Y-%m-%d %H:%M:%S'))
+    words = time_to_day_words(time)
+    if tp.hour is not None:
+        hour = time.hour
+        words += hour_to_apm_words(hour)
+        if hour > 12:
+            hour -= 12
+        words += f'{hour}点'
+        if time.minute is None or time.minute == 0:
+            words += '钟'
+        else:
+            words += f'{time.minute}分'
+    elif tp.ampm:
+        words += apm_to_words(tp.ampm)
     return words
 
 
