@@ -1,14 +1,14 @@
 import re
-from datetime import datetime, timedelta
+import logging
+import calendar
+from datetime import datetime, timedelta, date
 
 from typing import Text, Optional, NoReturn, Union
+from starbot.nlu.timeparser.numberify import numberify, WEEK_PREFIX
+from starbot.nlu.timeparser.pattern import patterns
 
-if __name__ == '__main__':
-    from numberify import numberify, WEEK_PREFIX
-    from pattern import patterns
-else:
-    from starbot.nlu.timeparser.numberify import numberify, WEEK_PREFIX
-    from starbot.nlu.timeparser.pattern import patterns
+
+logger = logging.getLogger(__name__)
 
 
 unreachable = False
@@ -44,9 +44,12 @@ def get_time_expressions(text):
     return [TimeExpression(t) for t in tokens]
 
 
-def parse_all_time(text):
+def extract_times(text):
     for token in get_time_expressions(text):
-        yield TimePoint(token)
+        try:
+            yield TimePoint(token)
+        except ParseTimeError as e:
+            logger.warning(f'Parse time token {token.expr} failed: {e}')
 
 
 def parse_number_with_regex(text, pattern, range=None):
@@ -424,7 +427,7 @@ class RawTimeInfo:
     morning: bool = Appearing('早(上|晨|间)|晨间|今早|明早|上午')
     noon: bool = Appearing('中午|午间')
     afternoon: bool = Appearing('下午|午后')
-    night: bool = Appearing('前晚|晚上|夜间|夜里|今晚|明晚|半夜')
+    night: bool = Appearing('昨晚|前晚|晚上|夜间|夜里|今晚|明晚|半夜')
 
     def __init__(self, expr: Text):
         """
@@ -575,6 +578,14 @@ def at_most_one(*seq) -> bool:
     return count_true(*seq) <= 1
 
 
+def add_months(sourcedate, months):
+    month = sourcedate.month - 1 + months
+    year = sourcedate.year + month // 12
+    month = month % 12 + 1
+    day = min(sourcedate.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
 class TimeExpression:
     def __init__(self, expr: str) -> None:
         self.expr = expr
@@ -636,15 +647,16 @@ class TimePoint:
             time_expr = preprocess(time_expr)
         self.raw = RawTimeInfo(time_expr)
         self.baseline = baseline or datetime.now()
-        self.adjust_year(self.raw)
-        self.adjust_month(self.raw)
-        self.adjust_day(self.raw)
-        self.adjust_hour(self.raw)
-        self.adjust_minute(self.raw)
-        self.adjust_second(self.raw)
+        self.fill_year(self.raw)
+        self.fill_month(self.raw)
+        self.fill_day(self.raw)
+        self.fill_hour(self.raw)
+        self.fill_minute(self.raw)
+        self.fill_second(self.raw)
+        self.fill_apm(self.raw)
         self.validate()
 
-    def adjust_year(self, info: RawTimeInfo):
+    def fill_year(self, info: RawTimeInfo):
         """
 
         :param info:
@@ -699,7 +711,7 @@ class TimePoint:
         else:
             assert unreachable
 
-    def adjust_month(self, info: RawTimeInfo):
+    def fill_month(self, info: RawTimeInfo):
         """
 
         :param info:
@@ -744,38 +756,27 @@ class TimePoint:
             self.month = info.month
             if self.year is None:
                 self.fuzzy_year = True
-        elif info.this_month:
-            self.year = self.baseline.year
-            self.month = self.baseline.month
-        elif info.prev_month:
-            self.year = self.baseline.year
-            self.month = self.baseline.month - 1
-        elif info.prev_prev_month:
-            self.year = self.baseline.year
-            self.month = self.baseline.month - 2
-        elif info.next_month:
-            self.year = self.baseline.year
-            self.month = self.baseline.month + 1
-        elif info.next_next_month:
-            self.year = self.baseline.year
-            self.month = self.baseline.month + 2
-        elif info.months_before is not None:
-            self.set_date(self.baseline + timedelta(days=info.months_before*30))
-        elif info.months_after is not None:
-            self.set_date(self.baseline + timedelta(days=info.months_after*30))
         else:
-            assert unreachable
+            if info.this_month:
+                delta = 0
+            elif info.prev_month:
+                delta = -1
+            elif info.prev_prev_month:
+                delta = -2
+            elif info.next_month:
+                delta = 1
+            elif info.next_next_month:
+                delta = 2
+            elif info.months_before is not None:
+                delta = -info.months_before
+            elif info.months_after is not None:
+                delta = info.months_after
+            else:
+                assert unreachable
+                delta = 0
+            self.set_date(add_months(self.baseline, delta))
 
-        if self.month > 12:
-            self.month -= 12
-            if self.year is not None:
-                self.year += 1
-        if self.month < 1:
-            self.month += 12
-            if self.year is not None:
-                self.year -= 1
-
-    def adjust_day(self, info: RawTimeInfo):
+    def fill_day(self, info: RawTimeInfo):
         """
 
         :param info:
@@ -888,7 +889,7 @@ class TimePoint:
         else:
             assert unreachable
 
-    def adjust_hour(self, info: RawTimeInfo):
+    def fill_hour(self, info: RawTimeInfo):
         """
 
         :param info:
@@ -949,13 +950,13 @@ class TimePoint:
                 info.night
             )
             if cnt > 1:
-                abort('invalid fuzzy time')
-            if cnt == 0:
-                self.fuzzy_apm = True
+                abort('too many am/pm qualifiers')
             self.hour = info.hour
-            if self.day is None:
+            if self.day is None and self.weekday is None:
                 self.fuzzy_day = True
             if self.hour <= 12:
+                if cnt == 0:
+                    self.fuzzy_apm = True
                 if info.early_morning:
                     if self.hour >= 10:
                         self.hour += 12
@@ -977,7 +978,7 @@ class TimePoint:
         else:
             assert unreachable
 
-    def adjust_minute(self, info: RawTimeInfo):
+    def fill_minute(self, info: RawTimeInfo):
         """
 
         :param info:
@@ -1018,9 +1019,24 @@ class TimePoint:
         else:
             assert unreachable
 
-    def adjust_second(self, info: RawTimeInfo):
+    def fill_second(self, info: RawTimeInfo):
         if info.second is not None:
             self.second = info.second
+
+    def fill_apm(self, info: RawTimeInfo):
+        if all([
+            self.year is None,
+            self.month is None,
+            self.day is None,
+            self.hour is None,
+            self.minute is None,
+            self.second is None,
+            self.weekday is None,
+        ]):
+            if info.early_morning:
+                self.set_date(self.baseline + timedelta(days=1))
+            elif any([info.morning, info.noon, info.afternoon, info.night]):
+                self.set_date(self.baseline)
 
     def validate(self):
         """
@@ -1043,7 +1059,7 @@ class TimePoint:
     def get_datetime_str(self):
         return self.get_datetime().strftime("%Y-%m-%d %H:%M:%S")
 
-    def get_datetime(self):
+    def get_datetime(self, prefer_future=False):
         """
         >>> TimePoint("5月", baseline=datetime(year=2000, month=1, day=1)).get_datetime_str()
         '2000-05-01 08:00:00'
@@ -1089,28 +1105,41 @@ class TimePoint:
         day = self.day or self.baseline.day
         if self.fuzzy_year:
             points = [
-                datetime(year=self.baseline.year-1, month=self.month, day=day),
-                datetime(year=self.baseline.year, month=self.month, day=day),
-                datetime(year=self.baseline.year+1, month=self.month, day=day),
+                date(year=self.baseline.year-1, month=self.month, day=day),
+                date(year=self.baseline.year, month=self.month, day=day),
+                date(year=self.baseline.year+1, month=self.month, day=day),
             ]
-            self.year = get_nearest(points).year
+            nearest = get_nearest(points)
+            self.year = nearest.year
+            if prefer_future and nearest < self.baseline:
+                self.year += 1
 
         elif self.fuzzy_month:
             month = self.baseline.month
             points = [
-                datetime(year=self.baseline.year, month=month-1, day=day),
-                datetime(year=self.baseline.year, month=month, day=day),
-                datetime(year=self.baseline.year, month=month+1, day=day),
+                date(year=self.baseline.year, month=month-1, day=day),
+                date(year=self.baseline.year, month=month, day=day),
+                date(year=self.baseline.year, month=month+1, day=day),
             ]
             nearest = get_nearest(points)
+
+            if prefer_future and nearest < self.baseline:
+                nearest = add_months(nearest, 1)
+
             self.year = nearest.year
             self.month = nearest.month
         elif self.fuzzy_week:
             today = self.baseline.weekday()
             delta = self.weekday - today
-            # 周五六日说周一通常指下周一
-            if today in (5, 6, 0) and self.weekday == 1:
-                delta += 7
+            if prefer_future:
+                if delta < 0:
+                    delta += 7
+            else:
+                # 周五六日说周一通常指下周一
+                if today in (5, 6, 0) and self.weekday == 1:
+                    delta += 7
+                elif self.weekday == 0:
+                    delta += 7
             point = self.baseline + timedelta(days=delta)
             self.year = point.year
             self.month = point.month
@@ -1122,9 +1151,8 @@ class TimePoint:
                     if self.hour + 12 - self.baseline.hour < 6:
                         self.hour += 12
 
-            # 倾向于未来的时间
             delta = self.hour - self.baseline.hour
-            if delta < 0:
+            if prefer_future and delta < 0:
                 delta += 24
             point = self.baseline + timedelta(hours=delta)
             self.year = point.year
@@ -1152,8 +1180,26 @@ class TimePoint:
         self.minute = dt.minute
         self.second = dt.second
 
+    def __repr__(self):
+        fuzzies = []
+        for k in dir(self):
+            if k.startswith('fuzzy_'):
+                v = getattr(self, k)
+                if v:
+                    fuzzies.append(k)
+        flags = ','.join(fuzzies)
+        ts = f'{self.year}-{self.month}-{self.day} {self.hour}:{self.minute}:{self.second} {self.weekday}'
+        contents = [ts, self.raw.expr]
+        if flags:
+            contents.insert(1, flags)
+        contents = ' '.join(contents)
+        try:
+            guess = self.get_datetime_str()
+        except ParseTimeError as e:
+            guess = str(e)
+        return f'TimePoint<{guess}|{contents}>'
+
 
 if __name__ == '__main__':
-    # list(parse_all_time("明天上午十点去打球后天去旅行"))
     import doctest
     doctest.testmod()

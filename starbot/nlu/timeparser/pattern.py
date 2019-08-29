@@ -374,7 +374,3 @@ patterns = re.compile(
         |(((\d+)年)?((10)|(11)|(12)|([1-9]))月(\d+))
         |((\d[.\-])?((10)|(11)|(12)|([1-9]))[.\-](\d+))'''
     , re.X)
-
-if __name__ == '__main__':
-    for mach in pattern.finditer('明天上午9点去打球'):
-        print(mach)
