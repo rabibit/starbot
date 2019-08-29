@@ -1,7 +1,7 @@
 import re
 import logging
 import calendar
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 
 from typing import Text, Optional, NoReturn, Union
 from starbot.nlu.timeparser.numberify import numberify, WEEK_PREFIX
@@ -638,7 +638,8 @@ class TimePoint:
         False
         """
 
-        self.baseline = baseline or datetime.now()
+        # TODO: 可配置时区
+        self.baseline = baseline or datetime.now(timezone(timedelta(hours=8)))
         if isinstance(time_expr, TimeExpression):
             self.raw = RawTimeInfo(time_expr.expr)
             self.parse_raw()
