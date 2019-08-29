@@ -689,6 +689,7 @@ class TimePoint:
         self.minute = info['minute']
         self.second = info['second']
         self.weekday = info['weekday']
+        self.ampm = info['ampm']
 
     def dump_to_dict(self):
         return {
@@ -700,6 +701,7 @@ class TimePoint:
             'minute': self.minute,
             'second': self.second,
             'weekday': self.weekday,
+            'ampm': self.ampm,
         }
 
     def update(self, info: 'TimePoint'):
