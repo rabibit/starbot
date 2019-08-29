@@ -757,6 +757,7 @@ class TimePoint:
             if self.year is None:
                 self.fuzzy_year = True
         else:
+            delta = None
             if info.this_month:
                 delta = 0
             elif info.prev_month:
@@ -767,14 +768,20 @@ class TimePoint:
                 delta = 1
             elif info.next_next_month:
                 delta = 2
-            elif info.months_before is not None:
-                delta = -info.months_before
-            elif info.months_after is not None:
-                delta = info.months_after
+
+            if delta is not None:
+                point = add_months(self.baseline, delta)
+                self.year = point.year
+                self.month = point.month
             else:
-                assert unreachable
-                delta = 0
-            self.set_date(add_months(self.baseline, delta))
+                if info.months_before is not None:
+                    delta = -info.months_before
+                elif info.months_after is not None:
+                    delta = info.months_after
+                else:
+                    assert unreachable
+                    delta = 0
+                self.set_date(add_months(self.baseline, delta))
 
     def fill_day(self, info: RawTimeInfo):
         """
@@ -1105,9 +1112,9 @@ class TimePoint:
         day = self.day or self.baseline.day
         if self.fuzzy_year:
             points = [
-                date(year=self.baseline.year-1, month=self.month, day=day),
-                date(year=self.baseline.year, month=self.month, day=day),
-                date(year=self.baseline.year+1, month=self.month, day=day),
+                datetime(year=self.baseline.year-1, month=self.month, day=day),
+                datetime(year=self.baseline.year, month=self.month, day=day),
+                datetime(year=self.baseline.year+1, month=self.month, day=day),
             ]
             nearest = get_nearest(points)
             self.year = nearest.year
@@ -1117,9 +1124,9 @@ class TimePoint:
         elif self.fuzzy_month:
             month = self.baseline.month
             points = [
-                date(year=self.baseline.year, month=month-1, day=day),
-                date(year=self.baseline.year, month=month, day=day),
-                date(year=self.baseline.year, month=month+1, day=day),
+                datetime(year=self.baseline.year, month=month-1, day=day),
+                datetime(year=self.baseline.year, month=month, day=day),
+                datetime(year=self.baseline.year, month=month+1, day=day),
             ]
             nearest = get_nearest(points)
 
