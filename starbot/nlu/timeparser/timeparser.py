@@ -1189,7 +1189,7 @@ class TimePoint:
             _, nearest = min([(abs(d), i) for i, d in enumerate(delta)])
             return points[nearest]
 
-        year = self.year
+        year = self.year or self.baseline.year
         month = self.month or 1
         day = self.day or 1
         hour = self.computed_hour() or 8
