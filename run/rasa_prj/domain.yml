@@ -40,15 +40,11 @@ slots:
     type: text
     auto_fill: false
 
-  guest_name:
+  person:
     type: text
     auto_fill: false
 
-  guest_phone_number:
-    type: text
-    auto_fill: false
-
-  checkin_time:
+  time:
     type: text
     auto_fill: false
 
@@ -56,16 +52,13 @@ slots:
     type: bool
     auto_fill: false
 
-
   thing:
     type: unfeaturized
     auto_fill: false
 
-
   count:
     type: unfeaturized
     auto_fill: false
-
 
   number:
     type: unfeaturized

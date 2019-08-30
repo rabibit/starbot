@@ -115,3 +115,6 @@ class SimpleHandler(BaseHandler):
             logger.info(f'ask_for_price set slot thing is {thing}')
         dispatcher.utter_message(self.responses.get(intent, 'What?'))
         return events
+
+    def continue_form(self):
+        return True

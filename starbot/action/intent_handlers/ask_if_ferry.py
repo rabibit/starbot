@@ -17,6 +17,8 @@ class AskIfFerryHandler(BaseHandler):
                 dispatcher: CollectingDispatcher,
                 tracker: Tracker,
                 domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        dispatcher.utter_template("您好，我们只提供机场的接送服务", tracker)
+        dispatcher.utter_message("您好，我们只提供机场的接送服务")
         return []
 
+    def continue_form(self):
+        return False

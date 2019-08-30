@@ -109,7 +109,7 @@ class SimpleOrderHandler(BaseFormHandler):
             return False
 
         if form.count is None:
-            self.utter_message("请问您需要多少?")
+            self.utter_message("请问您需要多少{}?".format(form.thing))
             return False
 
         if form.number is None:
@@ -120,3 +120,5 @@ class SimpleOrderHandler(BaseFormHandler):
     def commit(self):
         self.utter_message("好的，您要的{}马上为您送过来".format(self.form.thing))
 
+    def continue_form(self):
+        return False

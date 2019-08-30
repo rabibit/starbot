@@ -21,3 +21,5 @@ class ChargerHandler(BaseFormHandler):
     def commit(self):
         self.utter_message('好的, 服务员一会儿给你送过去')
 
+    def continue_form(self):
+        return False

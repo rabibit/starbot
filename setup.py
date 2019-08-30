@@ -14,7 +14,7 @@ VERSION = '0.1.0'
 
 REQUIRED = ["rasa==1.1.4",
             "tensorflow-gpu==1.12",
-            "bert-tensorflow==1.0.1", 'websockets']
+            "bert-tensorflow==1.0.1", 'websockets', 'sqlalchemy']
 
 EXTRAS = {}
 

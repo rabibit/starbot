@@ -127,6 +127,9 @@ class AlarmClockHandler(BaseHandler):
                 return self.service(dispatcher, tracker, [])
         return None
 
+    def continue_form(self):
+        return False
+
     def service(self, dispatcher, tracker, slots):
         time, _ = self.get_time(tracker)
 

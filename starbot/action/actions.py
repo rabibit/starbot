@@ -3,11 +3,22 @@ from rasa_sdk import Action
 
 from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
-from starbot.action.intent_handlers import handlers
+from rasa_sdk.events import AllSlotsReset
+from starbot.action.intent_handlers import intent_to_handlers
 from starbot.action.intent_handlers.handler import is_last_message_user
+from starbot.action.intent_handlers import form_to_handlers
 import random
 
 logger = logging.getLogger(__name__)
+
+
+class MyDispatcher(object):
+    def __init__(self):
+        self.messages: [str] = []
+
+    def utter_message(self, text: str):
+
+        self.messages.append("。。" + text)
 
 
 class ProcessIntentAction(Action):
@@ -19,24 +30,56 @@ class ProcessIntentAction(Action):
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         what_msg = random.choice(['啥', '你说啥', '什么']) + random.choice(['我没听清', ''])
+        my_dispatcher = MyDispatcher()
         if tracker.latest_message:
             if is_last_message_user(tracker):
+                msg = '\n'.join([f'{key}: {val}' for key, val in tracker.latest_message.items()])
+                logger.debug(f'\u001b[32m{msg}\u001b[0m')
                 dispatcher.utter_message(f'/intent is {tracker.latest_message.get("intent")}')
                 dispatcher.utter_message(f'/entities {tracker.latest_message.get("entities")}')
             confidence = tracker.latest_message.get('intent', {}).get('confidence')
             if confidence is not None and confidence < 0.9:
                 dispatcher.utter_message(what_msg)
                 return []
-        for Handler in handlers:
-            handler = Handler()
-            if not handler.match(tracker, domain):
-                continue
-            events = handler.process(dispatcher, tracker, domain)
+        if tracker.latest_message.get('intent', {}).get('name') in intent_to_handlers.keys():
+            handler = intent_to_handlers[tracker.latest_message.get('intent', {}).get('name')]()
+            if handler.continue_form() is False:
+                tracker.slots = {}
+            events = handler.process(my_dispatcher, tracker, domain)
+            logger.debug(f'Handler {handler} processed')
+            if tracker.active_form.get('name') in form_to_handlers.keys() and handler.continue_form():
+                handler = form_to_handlers[tracker.active_form.get('name')]()
+                events += handler.process(my_dispatcher, tracker, domain)
             if events is None:
-                continue
-            msg = '\n'.join([f'{key}: {val}' for key, val in tracker.latest_message.items()])
-            logger.debug(f'Handler {handler} processed \u001b[32m{msg}\u001b[0m')
+                dispatcher.utter_message("".join(my_dispatcher.messages))
+                return []
+            dispatcher.utter_message("".join(my_dispatcher.messages))
             return events
+        elif intent_to_handlers['simple']().match(tracker, domain):
+            handler = intent_to_handlers['simple']()
+            if handler.continue_form() is False:
+                tracker.slots = {}
+            events = handler.process(my_dispatcher, tracker, domain)
+            logger.debug(f'Handler {handler} processed')
+            if tracker.active_form.get('name') in form_to_handlers.keys() and handler.continue_form():
+                handler = form_to_handlers[tracker.active_form.get('name')]()
+                events += handler.process(my_dispatcher, tracker, domain)
+            if events is None:
+                dispatcher.utter_message("".join(my_dispatcher.messages))
+                return []
+            dispatcher.utter_message("".join(my_dispatcher.messages))
+            return events
+        else:
+            for Handler in intent_to_handlers.values():
+                handler = Handler()
+                if not handler.match(tracker, domain):
+                    continue
+                events = handler.process(my_dispatcher, tracker, domain)
+                if events is None:
+                    continue
+                logger.debug(f'Handler {handler} processed')
+                dispatcher.utter_message("".join(my_dispatcher.messages))
+                return events
         dispatcher.utter_message(what_msg)
         return []
 
