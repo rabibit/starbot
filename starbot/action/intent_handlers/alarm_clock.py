@@ -120,10 +120,10 @@ class AlarmClockHandler(BaseHandler):
         if intent in {
             'ask_for_awaking'
         }:
-            self.service(dispatcher, tracker, [Form('alarm_clock')])
+            return self.service(dispatcher, tracker, [Form('alarm_clock')])
         else:
             if tracker.active_form.get('name') == 'alarm_clock':
-                self.service(dispatcher, tracker, [])
+                return self.service(dispatcher, tracker, [])
         return None
 
     def service(self, dispatcher, tracker, slots):
