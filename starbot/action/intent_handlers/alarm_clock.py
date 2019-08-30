@@ -104,9 +104,12 @@ class AlarmClockHandler(BaseHandler):
         if t0 is None:
             return t1, need_update
         else:
+            logger.info('/prev time: {}'.format(t0))
             t0 = TimePoint(t0)
             if t1 is not None:
+                logger.info('/new time: {}'.format(t1))
                 t0.update(t1)
+                logger.info('/merged time: {}'.format(t0))
             return t0, need_update
 
     def process(self,
