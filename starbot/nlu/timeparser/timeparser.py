@@ -696,7 +696,7 @@ class TimePoint:
         for k in self.get_fields():
             v = info.get(k)
             if v is not None:
-                setattr(self, v)
+                setattr(self, k, v)
 
     def dump_to_dict(self):
         rv = {k: getattr(self, k) for k in self.get_fields() if k != 'baseline'}
