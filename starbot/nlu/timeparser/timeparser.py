@@ -299,17 +299,13 @@ def weekday_offset(base, weekday, delta_weeks):
     -6
     >>> weekday_offset(1, 2, 1)
     8
-    >>> weekday_offset(1, 0, 0)
+    >>> weekday_offset(1, 7, 0)
     6
-    >>> weekday_offset(1, 0, -1)
+    >>> weekday_offset(1, 7, -1)
     -1
-    >>> weekday_offset(0, 1, 1)
+    >>> weekday_offset(7, 1, 1)
     1
     """
-    if weekday == 0:
-        weekday = 7
-    if base == 0:
-        base = 7
     return weekday - base + delta_weeks*7
 
 
@@ -382,7 +378,7 @@ class RawTimeInfo:
     quarter: Optional[int] = None
     second: Optional[int] = None
 
-    weekday: Optional[int] = NumberOf(f'(?:{WEEK_PREFIX})[0-6]')
+    weekday: Optional[int] = NumberOf(f'(?:{WEEK_PREFIX})[1-7]')
 
     #
     this_year: bool = Appearing('今年')
@@ -467,10 +463,10 @@ class RawTimeInfo:
         >>> t = RawTimeInfo('这周')
         >>> t.ensure_set_fields_only('this_week')
 
-        >>> t = RawTimeInfo('这个周0')
+        >>> t = RawTimeInfo('这个周7')
         >>> t.ensure_set_fields_only('this_week', 'weekday')
         >>> t.weekday
-        0
+        7
 
         >>> t = RawTimeInfo('上周')
         >>> t.ensure_set_fields_only('prev_week')
@@ -886,11 +882,15 @@ class TimePoint:
         >>> t.fuzzy_week
         True
         >>> t.weekday
-        0
+        7
         >>> t = TimePoint("这周下周周末")
         Traceback (most recent call last):
             ...
         ParseTimeError: Only one week modifier allowed
+
+        >>> t = TimePoint("周一", datetime(2019, 8, 30, 11, 18))
+        >>> t.get_datetime_str(True)
+        '2019-09-02 08:00:00'
         """
         cnt = count_true(
             info.day is not None or info.weekday is not None,
@@ -938,7 +938,7 @@ class TimePoint:
             else:
                 return
 
-            delta_days = weekday_offset(self.baseline.weekday(), info.weekday, week)
+            delta_days = weekday_offset(self.baseline.weekday()+1, info.weekday, week)
             self.set_date(self.baseline + timedelta(days=delta_days))
 
         elif info.today:
@@ -1168,11 +1168,11 @@ class TimePoint:
         >>> TimePoint("27号", baseline=datetime(year=2000, month=4, day=25)).get_datetime_str()
         '2000-04-27 08:00:00'
 
-        >>> TimePoint("周一", baseline=datetime(year=2000, month=1, day=1)).get_datetime_str()  # 2000-01-01 星期5
-        '2000-01-04 08:00:00'
+        >>> TimePoint("周一", baseline=datetime(year=2000, month=1, day=1)).get_datetime_str()  # 2000-01-01 星期6
+        '2000-01-03 08:00:00'
 
         >>> TimePoint("周2", baseline=datetime(year=2000, month=1, day=8)).get_datetime_str()
-        '2000-01-05 08:00:00'
+        '2000-01-04 08:00:00'
 
         >>> TimePoint("两点钟", baseline=datetime(year=2000, month=1, day=1, hour=11)).get_datetime_str()
         '2000-01-01 14:00:00'
@@ -1229,16 +1229,16 @@ class TimePoint:
             year = nearest.year
             month = nearest.month
         elif self.fuzzy_week:
-            today = self.baseline.weekday()
+            today = self.baseline.weekday() + 1
             delta = self.weekday - today
             if prefer_future:
                 if delta < 0:
                     delta += 7
             else:
                 # 周五六日说周一通常指下周一
-                if today in (5, 6, 0) and self.weekday == 1:
+                if today in (5, 6, 7) and self.weekday == 1:
                     delta += 7
-                elif self.weekday == 0:
+                elif self.weekday == 7:
                     delta += 7
             point = self.baseline + timedelta(days=delta)
             year = point.year
