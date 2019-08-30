@@ -650,7 +650,7 @@ class TimePoint:
             self.load_dict(time_expr)
             self.raw = None
         elif time_expr is None:
-            pass
+            self.raw = None
         else:
             abort('Invalid time_expr type')
 
