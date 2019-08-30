@@ -1247,7 +1247,7 @@ class TimePoint:
             today = self.baseline.weekday() + 1
             delta = self.weekday - today
             if prefer_future:
-                if delta < 0:
+                if delta <= 0:
                     delta += 7
             else:
                 # 周五六日说周一通常指下周一
