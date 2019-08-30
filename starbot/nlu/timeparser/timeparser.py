@@ -718,7 +718,22 @@ class TimePoint:
         >>> t0.update(t1)
         >>> t0.get_datetime_str()
         '2000-01-02 07:00:00'
+
+        >>> baseline = datetime(2000, 1, 1)
+        >>> t0 = TimePoint("明天早上", baseline)
+        >>> t1 = TimePoint("周一", baseline)
+        >>> t0.get_datetime_str(True)
+        '2000-01-02 08:00:00'
+        >>> t0.update(t1)
+        >>> t0.get_datetime_str(True)
+        '2000-01-03 08:00:00'
         """
+        if info.day is not None:
+            self.weekday = None
+        if info.weekday is not None:
+            self.year = None
+            self.month = None
+            self.day = None
         for key in self.get_fields():
             new_value = getattr(info, key)
             if new_value is not None:
