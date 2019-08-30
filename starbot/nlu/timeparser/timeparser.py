@@ -609,6 +609,11 @@ class TimePoint:
 
         :param time_expr:
         :param baseline:
+        >>> t = TimePoint('周1早上8点')
+        >>> t.fuzzy_day
+        False
+        >>> t.fuzzy_week
+        True
 
         >>> t = TimePoint("今天下午两点十分")
         >>> t.year == t.baseline.year
@@ -668,7 +673,7 @@ class TimePoint:
 
     @property
     def fuzzy_day(self):
-        return self.day is None and self.hour is not None
+        return self.day is None and self.weekday is None and self.hour is not None
 
     @property
     def fuzzy_week(self):
