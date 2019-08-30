@@ -16,7 +16,8 @@ Base = declarative_base()
 class Product(Base):
     __tablename__ = "products"
 
-    Name = Column(String, primary_key=True)
+    Id = Column(Integer, primary_key=True, autoincrement=True)
+    Name = Column(String)
     Price = Column(Integer)
     # Stock = Column(Integer)
     Keywords = Column(String)
@@ -29,11 +30,34 @@ Base.metadata.create_all()
 Session = sessionmaker(bind=engine)
 
 
-def db_orm_add_all(instances: list):
+def db_orm_add(orm_obj, instance):
+    """
+    :param orm_obj: a spicific object base on ORM Base e.g: Product
+    :param instance: a product e.g: Product(Name='怡宝', Price=2, Keywords='饮料,喝的,水')
+    :return: None
+    """
+
+    ses = Session()
+    ses.add(instance)
+    ses.commit()
+    ses.close()
+
+    return None
+
+
+def db_orm_add_all(orm_obj, instances: list):
+    """
+    :param orm_obj: a spicific object base on ORM Base e.g: Product
+    :param instances: a set of products e.g: [Product(Name='怡宝', Price=2, Keywords='饮料,喝的,水')]
+    :return: None
+    """
+
     ses = Session()
     ses.add_all(instances)
     ses.commit()
     ses.close()
+
+    return None
 
 
 # ses.add(Product(Name='怡宝', Price=2, Keywords='饮料,喝的,水'))
@@ -47,38 +71,68 @@ def db_orm_add_all(instances: list):
 # )
 
 
-def db_orm_add(instance):
-    ses = Session()
-    ses.add(instance)
-    ses.commit()
-    ses.close()
-
-
 def db_orm_query_all(orm_obj) -> list:
+    """
+    :param orm_obj: a spicific object base on ORM Base e.g: Product
+    :return: a list of objects
+    """
+
     ses = Session()
     result = ses.query(orm_obj).all()
     ses.close()
+
     return result
 
 
 def db_orm_query(orm_obj, patterns: str) -> list:
+    """
+    :param orm_obj: a spicific object base on ORM Base e.g: Product
+    :param patterns: the conditions for the query
+    :return: a list of objects
+    """
+
     ses = Session()
     result = ses.query(orm_obj).filter(orm_obj.Keywords.like('%' + patterns + '%'), orm_obj.Delete == 0)
     ses.close()
+
     return result
 
 
 def db_orm_delete(orm_obj, pattern: str) -> None:
+    """
+    :param orm_obj: a spicific object base on ORM Base e.g: Product
+    :param pattern: the  name of the product
+    :return: None
+    """
+
     ses = Session()
     ses.query(orm_obj).filter(orm_obj.Name == pattern).update({"Delete": 1})
     ses.commit()
     ses.close()
 
+    return None
+
+
+def db_orm_modify(orm_obj, pattern: str, keywords: str) -> None:
+    """
+    :param orm_obj: a spicific object base on ORM Base e.g: Product
+    :param pattern: the  name of the product
+    :param keywords: the discription of the product
+    :return: None
+    """
+
+    ses = Session()
+    ses.query(orm_obj).filter(orm_obj.Name == pattern, orm_obj.Delete == 0).update({"Keywords": keywords})
+    ses.commit()
+    ses.close()
+
+    return None
+
 
 if __name__ == '__main__':
-    # db_orm_add(Product(Name='西瓜', Price=12, Keywords="吃的"))
-    # db_orm_delete(Product, "饼干")
-    #rs = db_orm_query_all(Product)
-    rs = db_orm_query(Product, "吃的")
+    db_orm_add(Product, Product(Name='方便面', Price=12, Keywords="吃的"))
+    db_orm_add_all(Product, [Product(Name='饼干', Price=12, Keywords="吃的")])
+    db_orm_delete(Product, 'ddd')
+    rs = db_orm_query_all(Product)
     for product in rs:
-        print(product.Name, product.Price, product.Keywords, product.Delete)
+        print(product.Id, product.Name, product.Price, product.Keywords, product.Delete)
