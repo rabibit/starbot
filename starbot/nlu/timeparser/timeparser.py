@@ -1249,12 +1249,11 @@ class TimePoint:
         elif self.fuzzy_week:
             today = self.baseline.weekday() + 1
             delta = self.weekday - today
-            if prefer_future:
-                if delta <= 0:
+            if delta <= 0:
+                if prefer_future:
                     delta += 7
-            else:
-                # 周五六日说周一通常指下周一
-                if today in (5, 6, 7) and self.weekday == 1:
+                elif today in (5, 6, 7) and self.weekday == 1:
+                    # 周五六日说周一通常指下周一
                     delta += 7
             point = self.baseline + timedelta(days=delta)
             year = point.year
