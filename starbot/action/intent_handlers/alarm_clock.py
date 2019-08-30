@@ -50,7 +50,7 @@ def time_to_day_words(time: datetime):
     today = date.today()
     delta = time.date() - today
     map = dict(enumerate(['前天', '昨天', '今天', '明天', '后天']))
-    return map.get(delta.days+2) or f'{time.month}月{time.day}号'
+    return map.get(delta.days+2) or f'{time.month}月{time.day}浩'
 
 
 def time_to_human_words(tp: TimePoint):
