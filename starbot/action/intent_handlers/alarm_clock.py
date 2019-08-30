@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 def extract_time(text):
     times = list(extract_times(text or ''))
+    logger.info(f'times: {times}')
     if not times:
         return None
-    logger.info(f'times: {times}')
     return reduce(lambda x, y: x + y, times)
 
 
