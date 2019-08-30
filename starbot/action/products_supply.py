@@ -11,4 +11,4 @@ products = [
     Product(Name='可乐', Price=3, Keywords="喝的")
 ]
 
-db_orm_add_all(products)
+db_orm_add_all(Product, products)
