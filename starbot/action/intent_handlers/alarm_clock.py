@@ -120,30 +120,26 @@ class AlarmClockHandler(BaseHandler):
         if intent in {
             'ask_for_awaking'
         }:
-            time, _ = self.get_time(tracker)
-
-            if time is None:
-                dispatcher.utter_message("好的，啥时候提醒您?")
-                return [Form('alarm_clock')]
-            else:
-                if time.hour is None:
-                    dispatcher.utter_message(f"好的，几点钟提醒您?")
-                    return [Form('alarm_clock'), SlotSet('time', time.dump_to_dict())]
-                else:
-                    time_words = time_to_human_words(time)
-                    dispatcher.utter_message(f'{time_words}好的，到时间我会电话给你')
-                    return [Form(None)]
+            self.service(dispatcher, tracker, [Form('alarm_clock')])
         else:
             if tracker.active_form.get('name') == 'alarm_clock':
-                time, _ = self.get_time(tracker)
-                if time and time.hour is not None:
-                    time_words = time_to_human_words(time)
-                    dispatcher.utter_message(f'好的，{time_words}我会电话给你')
-                    return [Form(None)]
-                else:
-                    dispatcher.utter_message("啥时候提醒你?")
-                    return []
+                self.service(dispatcher, tracker, [])
         return None
+
+    def service(self, dispatcher, tracker, slots):
+        time, _ = self.get_time(tracker)
+
+        if time is None:
+            dispatcher.utter_message("好的，啥时候提醒您?")
+            return slots
+        else:
+            if time.hour is None:
+                dispatcher.utter_message(f"好的，几点钟提醒您?")
+                return slots + [SlotSet('time', time.dump_to_dict())]
+            else:
+                time_words = time_to_human_words(time)
+                dispatcher.utter_message(f'{time_words}好的，到时间我会电话给你')
+                return [Form(None)]
 
 
 if __name__ == '__main__':
