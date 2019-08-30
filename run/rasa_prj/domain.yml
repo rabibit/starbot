@@ -32,6 +32,10 @@ slots:
   requested_slot:
     type: unfeaturized
 
+  time:
+    type: unfeaturized
+    auto_fill: false
+
   room_type:
     type: text
     auto_fill: false
