@@ -138,7 +138,7 @@ class AlarmClockHandler(BaseHandler):
                 return slots + [SlotSet('time', time.dump_to_dict())]
             else:
                 time_words = time_to_human_words(time)
-                dispatcher.utter_message(f'{time_words}好的，到时间我会电话给你')
+                dispatcher.utter_message(f'{time_words}是吧，到时间我会电话给你')
                 return [Form(None)]
 
 
