@@ -8,7 +8,7 @@ from starbot.action.db_orm import *
 class SomethingEatHandler(BaseHandler):
     def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
         if self.is_last_message_user(tracker) and self.get_last_user_intent(tracker) in (
-            'ask_for_something_to_eat'
+            'ask_for_something_to_eat', 'is_there_xxx'
         ):
             return True
         else:
@@ -19,6 +19,7 @@ class SomethingEatHandler(BaseHandler):
                 tracker: Tracker,
                 domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         products = db_orm_query(Product, "吃的")
+        products += db_orm_query(Product, "{}".format(self.get_entity(tracker, 'thing')))
         dispatcher.utter_message("我们这里有：")
         for food in products:
             dispatcher.utter_message("{}，单价是{}元".format(food.Name, food.Price))

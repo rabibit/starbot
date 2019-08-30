@@ -22,6 +22,7 @@ intent_to_handlers = {
     'book_room': BookRoomHandler,
     'ask_for_phone_number': AskForPhoneNumberHandler,
     'ask_for_something_to_eat': SomethingEatHandler,
+    'is_there_xxx': SomethingEatHandler,
     'simple': SimpleHandler,
 }
 
