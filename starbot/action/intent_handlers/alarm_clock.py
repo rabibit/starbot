@@ -93,7 +93,7 @@ class AlarmClockHandler(BaseHandler):
 
     def get_time(self, tracker: Tracker):
         need_update = False
-        sentence = tracker.latest_message.text
+        sentence = tracker.latest_message['text']
         t0 = self.get_slot(tracker, 'time')
         t1 = extract_time(sentence)
 
