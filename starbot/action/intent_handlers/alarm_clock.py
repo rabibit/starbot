@@ -1,6 +1,8 @@
 import logging
 
+from functools import reduce
 from datetime import date, datetime
+
 from starbot.action.intent_handlers.handler import BaseHandler
 from typing import Text, Dict, Any, List, Optional
 from rasa_sdk.executor import CollectingDispatcher, Tracker
@@ -14,10 +16,9 @@ logger = logging.getLogger(__name__)
 
 def extract_time(text):
     times = list(extract_times(text or ''))
-    if times:
-        return times[-1]
-    else:
+    if not times:
         return None
+    return reduce(lambda x, y: x + y, times)
 
 
 def hour_to_apm_words(hour):
@@ -92,12 +93,12 @@ class AlarmClockHandler(BaseHandler):
 
     def get_time(self, tracker: Tracker):
         need_update = False
-        alarm_time = self.get_entity(tracker, 'time')
+        sentence = tracker.latest_message.text
         t0 = self.get_slot(tracker, 'time')
-        t1 = extract_time(alarm_time)
+        t1 = extract_time(sentence)
 
         if t1 is not None:
-            logger.info('/parsed {} -> {}'.format(alarm_time, t1))
+            logger.info('/parsed time: {} -> {}'.format(sentence, t1))
             need_update = True
 
         if t0 is None:
