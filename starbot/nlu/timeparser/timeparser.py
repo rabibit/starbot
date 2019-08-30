@@ -1195,6 +1195,9 @@ class TimePoint:
         >>> TimePoint("上午9点", baseline=datetime(year=2000, month=1, day=1, hour=11)).get_datetime_str(True)
         '2000-01-02 09:00:00'
 
+        >>> TimePoint("周天", baseline=datetime(year=2000, month=1, day=1)).get_datetime_str()  # 2000-01-01 星期6
+        '2000-01-02 08:00:00'
+
         """
         if not at_most_one(
                 self.fuzzy_year,
@@ -1252,8 +1255,6 @@ class TimePoint:
             else:
                 # 周五六日说周一通常指下周一
                 if today in (5, 6, 7) and self.weekday == 1:
-                    delta += 7
-                elif self.weekday == 7:
                     delta += 7
             point = self.baseline + timedelta(days=delta)
             year = point.year
