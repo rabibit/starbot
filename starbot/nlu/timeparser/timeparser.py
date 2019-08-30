@@ -3,7 +3,7 @@ import logging
 import calendar
 from datetime import datetime, timedelta, date, timezone
 
-from typing import Text, Optional, NoReturn, Union
+from typing import Text, Optional, NoReturn, Union, Any, Dict
 from starbot.nlu.timeparser.numberify import numberify, WEEK_PREFIX
 from starbot.nlu.timeparser.pattern import strict_patterns as patterns
 
@@ -604,7 +604,7 @@ class TimePoint:
     raw: Optional[RawTimeInfo]
     baseline: datetime
 
-    def __init__(self, time_expr: Union[Text, TimeExpression], baseline: datetime=None):
+    def __init__(self, time_expr: Union[Text, TimeExpression, None]=None, baseline: datetime=None):
         """
 
         :param time_expr:
@@ -649,8 +649,14 @@ class TimePoint:
         elif isinstance(time_expr, dict):
             self.load_dict(time_expr)
             self.raw = None
+        elif time_expr is None:
+            pass
         else:
             abort('Invalid time_expr type')
+
+    def get_fields(self):
+        # return self.__annotations__.keys()
+        return ['year', 'month', 'day', 'hour', 'minute', 'second', 'weekday', 'ampm', 'baseline']
 
     @property
     def fuzzy_year(self):
@@ -682,29 +688,20 @@ class TimePoint:
         self.fill_second(self.raw)
         self.validate()
 
-    def load_dict(self, info):
-        self.baseline = datetime.strptime(info['baseline'], "%Y-%m-%d %H:%M:%S")
-        self.year = info['year']
-        self.month = info['month']
-        self.day = info['day']
-        self.hour = info['hour']
-        self.minute = info['minute']
-        self.second = info['second']
-        self.weekday = info['weekday']
-        self.ampm = info['ampm']
+    def load_dict(self, info: Dict[Text, Any]):
+        info = info.copy()
+        baseline = info.pop('baseline', None)
+        if baseline:
+            self.baseline = datetime.strptime(baseline, "%Y-%m-%d %H:%M:%S")
+        for k in self.get_fields():
+            v = info.get(k)
+            if v is not None:
+                setattr(self, v)
 
     def dump_to_dict(self):
-        return {
-            'baseline': self.baseline.strftime('%Y-%m-%d %H:%M:%S'),
-            'year': self.year,
-            'month': self.month,
-            'day': self.day,
-            'hour': self.hour,
-            'minute': self.minute,
-            'second': self.second,
-            'weekday': self.weekday,
-            'ampm': self.ampm,
-        }
+        rv = {k: getattr(self, k) for k in self.get_fields() if k != 'baseline'}
+        rv['baseline'] = self.baseline.strftime('%Y-%m-%d %H:%M:%S')
+        return rv
 
     def update(self, info: 'TimePoint'):
         """
@@ -721,7 +718,7 @@ class TimePoint:
         >>> t0.get_datetime_str()
         '2000-01-02 07:00:00'
         """
-        for key in ['year', 'month', 'day', 'hour', 'minute', 'second', 'weekday', 'ampm', 'baseline']:
+        for key in self.get_fields():
             new_value = getattr(info, key)
             if new_value is not None:
                 setattr(self, key, new_value)
@@ -1290,6 +1287,25 @@ class TimePoint:
         except ParseTimeError as e:
             guess = str(e)
         return f'TimePoint<{guess}|{contents}>'
+
+    def __add__(self, other):
+        """
+
+        :param other:
+        :return:
+
+        >>> baseline = datetime(2000, 1, 1, 1, 1, 1)
+        >>> t = TimePoint("今天", baseline) + TimePoint("下午") + TimePoint('8点') + TimePoint('明天', baseline)
+        >>> [t.year, t.month, t.day, t.hour, t.minute, t.second, t.ampm]
+        [2000, 1, 2, 8, None, None, 'afternoon']
+        >>> t.get_datetime_str()
+        '2000-01-02 20:00:00'
+        """
+        rv = TimePoint()
+        rv.update(self)
+        rv.update(other)
+        rv.baseline = self.baseline
+        return rv
 
 
 if __name__ == '__main__':
