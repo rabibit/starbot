@@ -7,7 +7,7 @@ from .alarm_clock import AlarmClockHandler
 from .order import SimpleOrderHandler
 from .ask_for_phone_number import AskForPhoneNumberHandler
 from .book_room import BookRoomHandler
-from .something_eat import SomethingEatHandler
+from .is_there_xxx import SomethingEatHandler
 from .handler import BaseHandler
 
 handlers = [
