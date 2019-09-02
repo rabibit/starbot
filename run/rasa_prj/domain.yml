@@ -44,10 +44,6 @@ slots:
     type: text
     auto_fill: false
 
-  time:
-    type: text
-    auto_fill: false
-
   confirmed:
     type: bool
     auto_fill: false

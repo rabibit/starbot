@@ -128,9 +128,7 @@ class BaseHandler:
     def get_entity(self, name: Text) -> Optional[Text]:
         if not self.tracker.latest_message:
             return None
-        for entity in self.tracker.latest_message.get('entities', []):
-            if entity['entity'] == name:
-                return entity['value']
+        return get_entity_from_message(self.tracker.latest_message, name)
 
     def get_slot(self, name: Text) -> Any:
         return self.tracker.slots.get(name)
@@ -163,7 +161,7 @@ class BaseForm:
             slot = self.get_slot(k)
             setattr(self, k, slot)
             if entity is not None:
-                self._entities[k].append(entity)
+                self.put_entity(k, entity)
         for k, v in self._entities.items():
             # TODO: support multiple values slots
             setattr(self, k, v[0])
@@ -174,9 +172,10 @@ class BaseForm:
     def get_entity(self, name: Text) -> Optional[Text]:
         if not self._tracker.latest_message:
             return None
-        for entity in self._tracker.latest_message.get('entities', []):
-            if entity['entity'] == name:
-                return entity['value']
+        return get_entity_from_message(self._tracker.latest_message, name)
+
+    def put_entity(self, name, value):
+        self._entities[name].append(value)
 
     def slot_filling_events(self):
         rv = []
@@ -269,3 +268,10 @@ def get_user_intent(tracker: Tracker):
 
 def is_last_message_user(tracker: Tracker):
     return tracker.events and tracker.events[-1]['event'] == 'user'
+
+
+def get_entity_from_message(message: Dict[Text, Any], name: Text):
+    for entity in message.get('entities', []):
+        if entity['entity'] == name:
+            return entity['value']
+
