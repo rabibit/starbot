@@ -3,10 +3,8 @@ from rasa_sdk import Action
 
 from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
-from rasa_sdk.events import AllSlotsReset
-from starbot.action.intent_handlers import intent_to_handlers
+from starbot.action.intent_handlers import handlers
 from starbot.action.intent_handlers.handler import is_last_message_user
-from starbot.action.intent_handlers import form_to_handlers
 import random
 
 logger = logging.getLogger(__name__)
@@ -41,46 +39,28 @@ class ProcessIntentAction(Action):
             if confidence is not None and confidence < 0.9:
                 dispatcher.utter_message(what_msg)
                 return []
-        if tracker.latest_message.get('intent', {}).get('name') in intent_to_handlers.keys():
-            handler = intent_to_handlers[tracker.latest_message.get('intent', {}).get('name')]()
-            if handler.continue_form() is False:
-                tracker.slots = {}
-            events = handler.process(my_dispatcher, tracker, domain)
-            logger.debug(f'Handler {handler} processed')
-            if tracker.active_form.get('name') in form_to_handlers.keys() and handler.continue_form():
-                handler = form_to_handlers[tracker.active_form.get('name')]()
-                events += handler.process(my_dispatcher, tracker, domain)
-            if events is None:
-                dispatcher.utter_message("".join(my_dispatcher.messages))
-                return []
-            dispatcher.utter_message("".join(my_dispatcher.messages))
-            return events
-        elif intent_to_handlers['simple']().match(tracker, domain):
-            handler = intent_to_handlers['simple']()
-            if handler.continue_form() is False:
-                tracker.slots = {}
-            events = handler.process(my_dispatcher, tracker, domain)
-            logger.debug(f'Handler {handler} processed')
-            if tracker.active_form.get('name') in form_to_handlers.keys() and handler.continue_form():
-                handler = form_to_handlers[tracker.active_form.get('name')]()
-                events += handler.process(my_dispatcher, tracker, domain)
-            if events is None:
-                dispatcher.utter_message("".join(my_dispatcher.messages))
-                return []
-            dispatcher.utter_message("".join(my_dispatcher.messages))
-            return events
-        else:
-            for Handler in intent_to_handlers.values():
-                handler = Handler()
-                if not handler.match(tracker, domain):
+
+            all_handlers = [Handler(my_dispatcher, tracker, domain) for Handler in handlers]
+            events = None
+            for handler in all_handlers:
+                if not handler.match():
                     continue
-                events = handler.process(my_dispatcher, tracker, domain)
+                events = handler.process()
                 if events is None:
                     continue
                 logger.debug(f'Handler {handler} processed')
-                dispatcher.utter_message("".join(my_dispatcher.messages))
-                return events
-        dispatcher.utter_message(what_msg)
+                break
+
+            for handler in all_handlers:
+                handler.recover()
+
+            merged_message = "".join(my_dispatcher.messages)
+            dispatcher.utter_message(merged_message)
+
+            if events is None and not merged_message:
+                dispatcher.utter_message(what_msg)
+
+            return events
         return []
 
 

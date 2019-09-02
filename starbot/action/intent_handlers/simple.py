@@ -1,6 +1,5 @@
 from .handler import BaseHandler
 from typing import Text, Dict, Any, List
-from rasa_sdk.executor import CollectingDispatcher, Tracker
 from rasa_sdk.events import SlotSet
 import logging
 
@@ -100,21 +99,15 @@ class SimpleHandler(BaseHandler):
         'where_to_have_breakfast': '早餐在12楼',
     }
 
-    def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
-        return self.get_last_user_intent(tracker) in self.responses
+    def match(self) -> bool:
+        return self.get_last_user_intent() in self.responses
 
-    def process(self,
-                dispatcher: CollectingDispatcher,
-                tracker: Tracker,
-                domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        intent = self.get_last_user_intent(tracker)
+    def process(self) -> List[Dict[Text, Any]]:
+        intent = self.get_last_user_intent()
         events = []
         if intent == 'ask_for_price':
-            thing = self.get_entity(tracker, 'thing')
+            thing = self.get_entity('thing')
             events.append(SlotSet('thing', thing))
             logger.info(f'ask_for_price set slot thing is {thing}')
-        dispatcher.utter_message(self.responses.get(intent, 'What?'))
+        self.utter_message(self.responses.get(intent, 'What?'))
         return events
-
-    def continue_form(self):
-        return True

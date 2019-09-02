@@ -10,28 +10,17 @@ from .book_room import BookRoomHandler
 from .something_eat import SomethingEatHandler
 from .handler import BaseHandler
 
-
-intent_to_handlers = {
-    'ask_for_wifi_info': WifiHandler,
-    'ask_for_wifi_password': WifiHandler,
-    'bye': ByeHandler,
-    'ask_if_ferry': AskIfFerryHandler,
-    'ask_for_charger': ChargerHandler,
-    'ask_for_awaking': AlarmClockHandler,
-    'order_something': SimpleOrderHandler,
-    'book_room': BookRoomHandler,
-    'ask_for_phone_number': AskForPhoneNumberHandler,
-    'ask_for_something_to_eat': SomethingEatHandler,
-    'is_there_xxx': SomethingEatHandler,
-    'simple': SimpleHandler,
-}
-
-
-form_to_handlers = {
-    'charger': ChargerHandler,
-    'alarm_clock': AlarmClockHandler,
-    'order': SimpleOrderHandler,
-    'book_room': BookRoomHandler,
-    'subject_of_phone_number': AskForPhoneNumberHandler,
-}
-
+handlers = [
+    WifiHandler,
+    WifiHandler,
+    ByeHandler,
+    AskIfFerryHandler,
+    ChargerHandler,
+    AlarmClockHandler,
+    SimpleOrderHandler,
+    BookRoomHandler,
+    AskForPhoneNumberHandler,
+    SomethingEatHandler,
+    SomethingEatHandler,
+    SimpleHandler,
+]

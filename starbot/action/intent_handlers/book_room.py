@@ -45,6 +45,3 @@ class BookRoomHandler(BaseFormHandler):
         self.utter_message("好的，您的订房信息为:姓名[{}]，房间类型[{}]，房间数量[{}]，入住时间[{}]，联系电话[{}]"
                                  .format(self.form.person, self.form.room_type, self.form.count, self.form.date,
                                          self.form.number))
-
-    def continue_form(self):
-        return False

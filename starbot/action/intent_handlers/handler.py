@@ -6,10 +6,16 @@ from rasa_sdk.executor import CollectingDispatcher, Tracker
 
 
 class BaseHandler:
-    def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
+    def __init__(self,
+                 dispatcher: CollectingDispatcher,
+                 tracker: Tracker,
+                 domain: Dict[Text, Any]):
+        self.dispatcher = dispatcher
+        self.tracker = tracker
+        self.domain = domain
+
+    def match(self) -> bool:
         """
-        :param tracker:
-        :param domain:
         :return: True 能处理, False 不能处理
 
         All intents:
@@ -104,10 +110,7 @@ class BaseHandler:
         """
         raise NotImplementedError
 
-    def process(self,
-                dispatcher: CollectingDispatcher,
-                tracker: Tracker,
-                domain: Dict[Text, Any]) -> Optional[List[Dict[Text, Any]]]:
+    def process(self) -> Optional[List[Dict[Text, Any]]]:
         """
         :param dispatcher:
         :param tracker:
@@ -116,34 +119,33 @@ class BaseHandler:
         """
         raise NotImplementedError
 
-    def continue_form(self):
-        raise NotImplementedError
+    def is_last_message_user(self):
+        return is_last_message_user(self.tracker)
 
-    @staticmethod
-    def is_last_message_user(tracker: Tracker):
-        return is_last_message_user(tracker)
+    def get_last_user_intent(self):
+        return get_user_intent(self.tracker)
 
-    @staticmethod
-    def get_last_user_intent(tracker: Tracker):
-        return get_user_intent(tracker)
-
-    @staticmethod
-    def get_entity(tracker: Tracker, name: Text) -> Optional[Text]:
-        if not tracker.latest_message:
+    def get_entity(self, name: Text) -> Optional[Text]:
+        if not self.tracker.latest_message:
             return None
-        for entity in tracker.latest_message.get('entities', []):
+        for entity in self.tracker.latest_message.get('entities', []):
             if entity['entity'] == name:
                 return entity['value']
 
-    @staticmethod
-    def get_slot(tracker: Tracker, name: Text) -> Any:
-        return tracker.slots.get(name)
+    def get_slot(self, name: Text) -> Any:
+        return self.tracker.slots.get(name)
+
+    def utter_message(self, message):
+        self.dispatcher.utter_message(message)
+
+    def recover(self):
+        pass
 
 
 class BaseForm:
     __tag__ = ''
 
-    def __init__(self, tracker: Tracker):
+    def __init__(self, tracker: Tracker, from_slot_only=False):
         if not hasattr(self, '__annotations__'):
             self.__annotations__ = {}
         for k in self.__annotations__:
@@ -151,13 +153,13 @@ class BaseForm:
                 setattr(self, k, None)
         self._entities: Dict[(Text, Any)] = defaultdict(list)
         self._tracker = tracker
-        self._fill()
+        self._fill(from_slot_only)
 
-    def _fill(self):
+    def _fill(self, from_slot_only):
         for k, type_ in self.__annotations__.items():
             if issubclass(type_, List):
                 raise NotImplementedError
-            entity = self.get_entity(k)
+            entity = self.get_entity(k) if not from_slot_only else None
             slot = self.get_slot(k)
             setattr(self, k, slot)
             if entity is not None:
@@ -197,12 +199,13 @@ class BaseFormHandler(BaseHandler):
         __tag__ = ''
 
     form: Form
+    processed = False
 
     @property
     def form_name(self):
         return self.Form.__tag__
 
-    def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
+    def match(self) -> bool:
         return True
 
     def skip(self):
@@ -214,13 +217,7 @@ class BaseFormHandler(BaseHandler):
     def clear_slot(self, name):
         self.set_slot(name, None)
 
-    def process(self,
-                dispatcher: CollectingDispatcher,
-                tracker: Tracker,
-                domain: Dict[Text, Any]) -> Optional[List[Dict[Text, Any]]]:
-        self.dispatcher = dispatcher
-        self.tracker = tracker
-        self.domain = domain
+    def process(self) -> Optional[List[Dict[Text, Any]]]:
         self.events = []
         try:
             events = self._do_process()
@@ -228,10 +225,14 @@ class BaseFormHandler(BaseHandler):
         except SkipThisHandler:
             return None
 
+    def is_active(self):
+        return self.tracker.active_form and self.tracker.active_form.get('name') == self.form_name
+
     def _do_process(self) -> List[Dict[Text, Any]]:
+        self.processed = True
         tracker = self.tracker
         trigger = self.form_trigger(get_user_intent(tracker))
-        if not (trigger or tracker.active_form and tracker.active_form.get('name') == self.form_name):
+        if not (trigger or self.is_active()):
             return self.skip()
         # TODO: 有激活表单但是有些意图可能导致切换表单
         self.form = self.Form(tracker)
@@ -244,8 +245,12 @@ class BaseFormHandler(BaseHandler):
                 events.insert(0, Form(self.form_name))
             return events
 
-    def utter_message(self, message):
-        self.dispatcher.utter_message(message)
+    def recover(self):
+        if self.processed:
+            return
+        if self.is_active():
+            self.form = self.Form(self.tracker, from_slot_only=True)
+            self.validate()
 
     def form_trigger(self, intent: Text):
         raise NotImplementedError

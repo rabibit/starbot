@@ -5,7 +5,6 @@ from datetime import date, datetime
 
 from starbot.action.intent_handlers.handler import BaseHandler
 from typing import Text, Dict, Any, List, Optional
-from rasa_sdk.executor import CollectingDispatcher, Tracker
 from rasa_sdk.events import Form, SlotSet
 
 from starbot.nlu.timeparser.timeparser import extract_times, TimePoint
@@ -89,13 +88,13 @@ def time_to_human_words(tp: TimePoint):
 
 
 class AlarmClockHandler(BaseHandler):
-    def match(self, tracker: Tracker, domain: Dict[Text, Any]) -> bool:
+    def match(self) -> bool:
         return True
 
-    def get_time(self, tracker: Tracker):
+    def get_time(self):
         need_update = False
-        sentence = tracker.latest_message['text']
-        t0 = self.get_slot(tracker, 'time')
+        sentence = self.tracker.latest_message['text']
+        t0 = self.get_slot('time')
         t1 = extract_time(sentence)
 
         if t1 is not None:
@@ -113,36 +112,30 @@ class AlarmClockHandler(BaseHandler):
                 logger.info('/merged time: {}'.format(t0))
             return t0, need_update
 
-    def process(self,
-                dispatcher: CollectingDispatcher,
-                tracker: Tracker,
-                domain: Dict[Text, Any]) -> Optional[List[Dict[Text, Any]]]:
-        intent = self.get_last_user_intent(tracker)
+    def process(self) -> Optional[List[Dict[Text, Any]]]:
+        intent = self.get_last_user_intent()
         if intent in {
             'ask_for_awaking'
         }:
-            return self.service(dispatcher, tracker, [Form('alarm_clock')])
+            return self.service([Form('alarm_clock')])
         else:
-            if tracker.active_form.get('name') == 'alarm_clock':
-                return self.service(dispatcher, tracker, [])
+            if self.tracker.active_form.get('name') == 'alarm_clock':
+                return self.service([])
         return None
 
-    def continue_form(self):
-        return False
-
-    def service(self, dispatcher, tracker, slots):
-        time, _ = self.get_time(tracker)
+    def service(self, slots):
+        time, _ = self.get_time()
 
         if time is None:
-            dispatcher.utter_message("好的，啥时候提醒您?")
+            self.utter_message("好的，啥时候提醒您?")
             return slots
         else:
             if time.hour is None:
-                dispatcher.utter_message(f"好的，几点钟提醒您?")
+                self.utter_message(f"好的，几点钟提醒您?")
                 return slots + [SlotSet('time', time.dump_to_dict())]
             else:
                 time_words = time_to_human_words(time)
-                dispatcher.utter_message(f'{time_words}是吧，到时间我会电话给你')
+                self.utter_message(f'{time_words}是吧，到时间我会电话给你')
                 return [Form(None)]
 
 
