@@ -134,7 +134,7 @@ pattern = re.compile(r"""iPhone
 |奥克斯
 |尼凯恩
 |PPTV
-""", re.X)
+""", re.X | re.I)
 
 
 class BrandExtractor(EntityExtractor):
@@ -151,6 +151,12 @@ class BrandExtractor(EntityExtractor):
         >>> BrandExtractor().process(msg)
         >>> msg.get('entities')
         [{'start': 0, 'end': 2, 'entity': 'brand', 'value': '苹果', 'extractor': 'BrandExtractor'}, {'start': 3, 'end': 5, 'entity': 'brand', 'value': '华为', 'extractor': 'BrandExtractor'}]
+
+        >>> pattern.findall('iPhone的OPPO的')
+        ['iPhone', 'OPPO']
+
+        >>> pattern.findall('iphone的oppo的')
+        ['iphone', 'oppo']
         """
         brands = []
         for m in pattern.finditer(message.text):
