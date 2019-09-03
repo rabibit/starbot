@@ -155,8 +155,6 @@ class BaseForm:
 
     def _fill(self, from_slot_only):
         for k, type_ in self.__annotations__.items():
-            if issubclass(type_, List):
-                raise NotImplementedError
             entity = self.get_entity(k) if not from_slot_only else None
             slot = self.get_slot(k)
             setattr(self, k, slot)
@@ -176,6 +174,7 @@ class BaseForm:
 
     def put_entity(self, name, value):
         self._entities[name] = value
+        setattr(self, name, value)
 
     def slot_filling_events(self):
         rv = []
@@ -213,14 +212,16 @@ class BaseFormHandler(BaseHandler):
     def set_slot(self, name, value):
         self.events.append(SlotSet(name, value))
 
+    def get_slot(self, name):
+        return self.tracker.slots.get(name)
+
     def clear_slot(self, name):
         self.set_slot(name, None)
 
     def process(self) -> Optional[List[Dict[Text, Any]]]:
         self.events = []
         try:
-            events = self._do_process()
-            return self.events + events
+            return self._do_process()
         except SkipThisHandler:
             return None
 
@@ -237,14 +238,14 @@ class BaseFormHandler(BaseHandler):
         self.form = self.Form(tracker)
         if self.validate():
             self.commit()
-            return [AllSlotsReset(), Form(None)]
+            events = self.events + [AllSlotsReset(), Form(None)]
         else:
-            events = self.form.slot_filling_events()
+            events = self.events + self.form.slot_filling_events()
             if trigger:
                 events.insert(0, Form(self.form_name))
                 if not self.is_active():
                     events.insert(0, AllSlotsReset())
-            return events
+        return events
 
     def recover(self):
         if self.processed:
@@ -277,3 +278,10 @@ def get_entity_from_message(message: Dict[Text, Any], name: Text):
         if entity['entity'] == name:
             return entity['value']
 
+
+def get_entities_from_message(message: Dict[Text, Any], name: Text):
+    all_entities = []
+    for entity in message.get('entities', []):
+        if entity['entity'] == name:
+            all_entities.append(entity['value'])
+    return all_entities
