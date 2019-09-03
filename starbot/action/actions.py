@@ -10,6 +10,17 @@ import random
 logger = logging.getLogger(__name__)
 
 
+key_intents = {
+    'ask_for_wifi_info',
+    'ask_for_wifi_password',
+    'ask_for_charger',
+    'ask_for_awaking',
+    'order_something',
+    'ask_for_phone_number',
+    'is_there_xxx',
+}
+
+
 class MyDispatcher(object):
     def __init__(self):
         self.messages: [str] = []
@@ -35,8 +46,9 @@ class ProcessIntentAction(Action):
                 logger.debug(f'\u001b[32m{msg}\u001b[0m')
                 dispatcher.utter_message(f'/intent is {tracker.latest_message.get("intent")}')
                 dispatcher.utter_message(f'/entities {tracker.latest_message.get("entities")}')
+            intent = tracker.latest_message.get('intent', {}).get('name')
             confidence = tracker.latest_message.get('intent', {}).get('confidence')
-            if confidence is not None and confidence < 0.9:
+            if intent in key_intents and confidence is not None and confidence < 0.9:
                 dispatcher.utter_message(what_msg)
                 return []
 
