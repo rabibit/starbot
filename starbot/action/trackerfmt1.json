@@ -3,7 +3,7 @@
     "_paused": false,
     "followup_action": null,
     "latest_message": {
-        "entities": [],
+        "entities": [{"start": 3, "end": 4, "entity": "count", "value": "手", "extractor": "BertEmbedding"}, {"start": 4, "end": 5, "entity": "charger_type", "value": "机", "extractor": "BertEmbedding"}],
         "intent": {
             "confidence": 0.9999810457229614,
             "name": "greet"
