@@ -5,7 +5,7 @@ from datetime import date, datetime
 
 from starbot.action.intent_handlers.handler import BaseHandler
 from typing import Text, Dict, Any, List, Optional
-from rasa_sdk.events import Form, SlotSet
+from rasa_sdk.events import Form, SlotSet, AllSlotsReset
 
 from starbot.nlu.timeparser.timeparser import extract_times, TimePoint
 
@@ -136,7 +136,7 @@ class AlarmClockHandler(BaseHandler):
             else:
                 time_words = time_to_human_words(time)
                 self.utter_message(f'{time_words}是吧，到时间我会电话给你')
-                return [Form(None)]
+                return [Form(None), AllSlotsReset()]
 
 
 if __name__ == '__main__':
