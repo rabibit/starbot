@@ -24,4 +24,4 @@ class ChargerHandler(BaseFormHandler):
         return True
 
     def commit(self):
-        self.utter_message(f'{self.charger_type}的充电器, 是吧, 服务员一会儿给你送过去')
+        self.utter_message(f'{self.charger_type}的充电器, 是吧, 等下服务员给你送过去哈')
