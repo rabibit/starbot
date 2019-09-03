@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import OrderedDict
 from typing import Text, Dict, Any, List, Optional
 
 from rasa_sdk.events import SlotSet, Form, AllSlotsReset
@@ -149,7 +149,7 @@ class BaseForm:
         for k in self.__annotations__:
             if not hasattr(self, k):
                 setattr(self, k, None)
-        self._entities: Dict[(Text, Any)] = defaultdict(list)
+        self._entities: Dict[(Text, Any)] = OrderedDict()
         self._tracker = tracker
         self._fill(from_slot_only)
 
@@ -164,7 +164,7 @@ class BaseForm:
                 self.put_entity(k, entity)
         for k, v in self._entities.items():
             # TODO: support multiple values slots
-            setattr(self, k, v[0])
+            setattr(self, k, v)
 
     def get_slot(self, name) -> Any:
         return self._tracker.slots.get(name)
@@ -175,12 +175,12 @@ class BaseForm:
         return get_entity_from_message(self._tracker.latest_message, name)
 
     def put_entity(self, name, value):
-        self._entities[name].append(value)
+        self._entities[name] = value
 
     def slot_filling_events(self):
         rv = []
         for k, v in self._entities.items():
-            rv.append(SlotSet(k, v[0]))
+            rv.append(SlotSet(k, v))
         return rv
 
 
