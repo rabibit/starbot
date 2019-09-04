@@ -1,5 +1,5 @@
 
-from .handler import BaseFormHandler, BaseForm, get_entity_from_message
+from .handler import BaseFormHandler, BaseForm, get_entity_from_message, get_entities_from_message
 from typing import Text
 
 
@@ -9,6 +9,7 @@ class SimpleOrderHandler(BaseFormHandler):
         thing: str
         count: int
         number: int
+        cart: list
 
     form: Form
 
@@ -25,7 +26,34 @@ class SimpleOrderHandler(BaseFormHandler):
     def validate(self):
         form = self.form
 
-        if form.thing in {'茶叶', '蚊香'}:
+        if self.tracker.latest_message.get('intent', {}).get('name') == 'ok':
+            if not form.cart:
+                self.utter_message("你还没说你需要啥?")
+                return False
+            else:
+                return True
+
+        things = get_entities_from_message(self.tracker.latest_message, 'thing')
+        counts = get_entities_from_message(self.tracker.latest_message, 'count')
+        n_things = len(things)
+        n_counts = len(counts)
+        if n_things == n_counts and n_things >= 1:
+            cart = self.get_slot('cart') or []
+            for thing, count in zip(things, counts):
+                cart.append({'thing': thing, 'count': count})
+            self.set_slot('cart', cart)
+            self.utter_message("请问您还需要什么?")
+            self.clear_slot('thing')
+            self.clear_slot('count')
+            return False
+
+        if (n_things, n_counts) not in ((0, 1), (1, 0)):
+            self.utter_message("你说啥，我没听清?")
+            return False
+
+        # TODO:
+        def normalize(x): return x
+        if normalize(form.thing) in {'茶叶', '蚊香', '吹风'}:
             if form.count is None:
                 form.count = 1
 
@@ -41,10 +69,17 @@ class SimpleOrderHandler(BaseFormHandler):
             self.utter_message("请问您需要多少{}?".format(form.thing))
             return False
 
-        if form.number is None:
-            self.utter_message("请问您的房号是多少?")
-            return False
-        return True
+        cart = self.get_slot('cart') or []
+        cart.append({'thing': form.thing, 'count': form.count})
+        self.set_slot('cart', cart)
+        self.utter_message("请问您还需要什么?")
+        self.clear_slot('thing')
+        self.clear_slot('count')
+        return False
 
     def commit(self):
-        self.utter_message("好的，您要的{}马上为您送过来".format(self.form.thing))
+        cart = self.get_slot('cart') or []
+        things = ''
+        for thing in cart:
+            things += thing['thing']
+        self.utter_message("好的，您要的{}马上为您送过来".format(things))
