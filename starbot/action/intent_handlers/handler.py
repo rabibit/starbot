@@ -112,9 +112,6 @@ class BaseHandler:
 
     def process(self) -> Optional[List[Dict[Text, Any]]]:
         """
-        :param dispatcher:
-        :param tracker:
-        :param domain:
         :return: a list of events
         """
         raise NotImplementedError
