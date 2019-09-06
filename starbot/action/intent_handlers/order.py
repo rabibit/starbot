@@ -44,8 +44,8 @@ class SimpleOrderHandler(BaseFormHandler):
                 products = db_orm_query(Product, thing, thing)
                 if not products:
                     self.utter_message("不好意思，我们这里没有{}".format(thing))
-                    self.clear_slot('thing')
-                    self.clear_slot('count')
+                    form.thing = None
+                    form.count = None
                     continue
                 for product in cart:
                     if product['thing'] == thing:
@@ -55,8 +55,8 @@ class SimpleOrderHandler(BaseFormHandler):
                     cart.append({'thing': thing, 'count': count})
             self.set_slot('cart', cart)
             self.utter_message("请问您还需要什么?")
-            self.clear_slot('thing')
-            self.clear_slot('count')
+            form.thing = None
+            form.count = None
             return False
 
         if (n_things, n_counts) not in ((0, 1), (1, 0)):
@@ -72,7 +72,7 @@ class SimpleOrderHandler(BaseFormHandler):
         if form.thing is None:
             thing = self.find_thing_in_history()
             if thing:
-                self.form.put_entity('thing', thing)
+                form.thing = thing
             else:
                 self.utter_message("请问您需要什么?")
                 return False
@@ -80,8 +80,8 @@ class SimpleOrderHandler(BaseFormHandler):
         products = db_orm_query(Product, form.thing, form.thing)
         if not products:
             self.utter_message("不好意思，我们这里没有{}".format(form.thing))
-            self.clear_slot('thing')
-            self.clear_slot('count')
+            form.thing = None
+            form.count = None
             return False
 
         if form.count is None:
@@ -95,14 +95,15 @@ class SimpleOrderHandler(BaseFormHandler):
                 break
         else:
             cart.append({'thing': form.thing, 'count': form.count})
-        self.set_slot('cart', cart)
+        form.cart = cart
         self.utter_message("请问您还需要什么?")
-        self.clear_slot('thing')
-        self.clear_slot('count')
+        form.thing = None
+        form.count = None
         return False
 
     def commit(self):
-        cart = self.get_slot('cart') or []
+        #cart = self.get_slot('cart') or []
+        cart = self.form.cart or []
         things = ''
         for thing in cart:
             things += thing['thing']
