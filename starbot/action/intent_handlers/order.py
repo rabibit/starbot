@@ -1,6 +1,7 @@
 
 from .handler import BaseFormHandler, BaseForm, get_entity_from_message, get_entities_from_message
 from typing import Text
+from starbot.action.db_orm import *
 
 
 class SimpleOrderHandler(BaseFormHandler):
@@ -40,7 +41,18 @@ class SimpleOrderHandler(BaseFormHandler):
         if n_things == n_counts and n_things >= 1:
             cart = self.get_slot('cart') or []
             for thing, count in zip(things, counts):
-                cart.append({'thing': thing, 'count': count})
+                products = db_orm_query(Product, thing, thing)
+                if not products:
+                    self.utter_message("不好意思，我们这里没有{}".format(thing))
+                    self.clear_slot('thing')
+                    self.clear_slot('count')
+                    continue
+                for product in cart:
+                    if product['thing'] == thing:
+                        product['count'] = count
+                        break
+                else:
+                    cart.append({'thing': thing, 'count': count})
             self.set_slot('cart', cart)
             self.utter_message("请问您还需要什么?")
             self.clear_slot('thing')
@@ -65,12 +77,24 @@ class SimpleOrderHandler(BaseFormHandler):
                 self.utter_message("请问您需要什么?")
                 return False
 
+        products = db_orm_query(Product, form.thing, form.thing)
+        if not products:
+            self.utter_message("不好意思，我们这里没有{}".format(form.thing))
+            self.clear_slot('thing')
+            self.clear_slot('count')
+            return False
+
         if form.count is None:
             self.utter_message("请问您需要多少{}?".format(form.thing))
             return False
 
         cart = self.get_slot('cart') or []
-        cart.append({'thing': form.thing, 'count': form.count})
+        for product in cart:
+            if product['thing'] == form.thing:
+                product['count'] = form.count
+                break
+        else:
+            cart.append({'thing': form.thing, 'count': form.count})
         self.set_slot('cart', cart)
         self.utter_message("请问您还需要什么?")
         self.clear_slot('thing')

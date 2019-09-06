@@ -267,7 +267,7 @@ class BaseFormHandler(BaseHandler):
             self.commit()
             events = self.events + [AllSlotsReset(), Form(None)]
         else:
-            events = self.events + self.form.slot_filling_events()
+            events = self.form.slot_filling_events() + self.events
             if trigger:
                 events.insert(0, Form(self.form_name))
                 if not self.is_active():

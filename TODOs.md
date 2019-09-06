@@ -12,11 +12,11 @@
 
 - [x] 购买多个商品
 - [x] 充电器不识别'华为的'等等
-- [ ] order: 购买多个商品去重
+- [x] order: 购买多个商品去重
 - [ ] order: 确认词支持 "不要了，就这样"
-- [ ] order: thing在form中残留, 导致后续商品错位
-- [ ] order: 查询商品存在
-- [ ] is_there_xxx: 没查到商品说没有
+- [x] order: thing在form中残留, 导致后续商品错位
+- [x] order: 查询商品存在
+- [x] is_there_xxx: 没查到商品说没有
 - [ ] is_there_xxx: 支持非商品信息查询
 
 - [ ] 处理否定，没叫你xxx

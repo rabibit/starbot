@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import sessionmaker
+from operator import or_, and_
 
 
 # eng = create_engine('sqlite:///:memory:')
@@ -84,7 +85,7 @@ def db_orm_query_all(orm_obj) -> list:
     return result
 
 
-def db_orm_query(orm_obj, patterns: str) -> list:
+def db_orm_query(orm_obj, patterns: str, name: str) -> list:
     """
     :param orm_obj: a spicific object base on ORM Base e.g: Product
     :param patterns: the conditions for the query
@@ -92,10 +93,11 @@ def db_orm_query(orm_obj, patterns: str) -> list:
     """
 
     ses = Session()
-    result = ses.query(orm_obj).filter(orm_obj.Keywords.like('%' + patterns + '%'), orm_obj.Delete == 0)
+    result = ses.query(orm_obj).filter(or_(orm_obj.Name == name, and_(orm_obj.Keywords.like('%' + patterns + '%'),
+                                                                      orm_obj.Delete == 0))).limit(5)
     ses.close()
 
-    return result
+    return list(result)
 
 
 def db_orm_delete(orm_obj, pattern: str) -> None:
@@ -134,5 +136,5 @@ if __name__ == '__main__':
     db_orm_add_all(Product, [Product(Name='饼干', Price=12, Keywords="吃的")])
     db_orm_delete(Product, 'ddd')
     rs = db_orm_query_all(Product)
-    for product in rs:
-        print(product.Id, product.Name, product.Price, product.Keywords, product.Delete)
+    for var in rs:
+        print(var.Id, var.Name, var.Price, var.Keywords, var.Delete)

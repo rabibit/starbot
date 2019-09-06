@@ -17,8 +17,11 @@ class SomethingEatHandler(BaseHandler):
         thing = self.get_entity('thing')
         if not thing:
             return None
-        products = db_orm_query(Product, thing)
-        self.utter_message("我们这里有：")
-        for food in products:
-            self.utter_message("{}，{}元".format(food.Name, food.Price))
+        products = db_orm_query(Product, thing, thing)
+        if products:
+            self.utter_message("我们这里有：")
+            for food in products:
+                self.utter_message("{}，{}元".format(food.Name, food.Price))
+        else:
+            self.utter_message("不好意思，我们这里没有")
         return []
