@@ -138,28 +138,59 @@ class BaseHandler:
 
 
 class BaseForm:
+    """
+    >>> class MyForm(BaseForm):
+    ...  a: str = "a"
+    ...  b: str
+    ...
+    >>> f = MyForm(None)
+    >>> f.a
+    'a'
+    >>> f.b = 'b'
+    >>> f.b
+    'b'
+    >>> f.slot_filling_events()
+    [{'event': 'slot', 'timestamp': None, 'name': 'b', 'value': 'b'}]
+    >>> f.a = None
+    >>> sorted(f.slot_filling_events(), key=lambda x: x['name'])
+    [{'event': 'slot', 'timestamp': None, 'name': 'a', 'value': None}, {'event': 'slot', 'timestamp': None, 'name': 'b', 'value': 'b'}]
+    """
+
     __tag__ = ''
 
     def __init__(self, tracker: Tracker, from_slot_only=False):
         if not hasattr(self, '__annotations__'):
             self.__annotations__ = {}
+        self.__attrs__ = {}
+        self.__dirty_attrs__ = set()
+
         for k in self.__annotations__:
-            if not hasattr(self, k):
-                setattr(self, k, None)
-        self._entities: Dict[(Text, Any)] = OrderedDict()
+            self.__attrs__[k] = getattr(type(self), k, None)
+
         self._tracker = tracker
-        self._fill(from_slot_only)
+        if tracker is not None:
+            self._fill(from_slot_only)
+
+    def __getattribute__(self, item):
+        if item == '__annotations__' or item not in self.__annotations__:
+            return super(BaseForm, self).__getattribute__(item)
+        else:
+            return self.__attrs__[item]
+
+    def __setattr__(self, item, value):
+        if item in self.__annotations__:
+            self.__attrs__[item] = value
+            self.__dirty_attrs__.add(item)
+        else:
+            super(BaseForm, self).__setattr__(item, value)
 
     def _fill(self, from_slot_only):
         for k, type_ in self.__annotations__.items():
             entity = self.get_entity(k) if not from_slot_only else None
             slot = self.get_slot(k)
-            setattr(self, k, slot)
+            self.__attrs__[k] = slot
             if entity is not None:
-                self.put_entity(k, entity)
-        for k, v in self._entities.items():
-            # TODO: support multiple values slots
-            setattr(self, k, v)
+                setattr(self, k, entity)
 
     def get_slot(self, name) -> Any:
         return self._tracker.slots.get(name)
@@ -170,13 +201,12 @@ class BaseForm:
         return get_entity_from_message(self._tracker.latest_message, name)
 
     def put_entity(self, name, value):
-        self._entities[name] = value
         setattr(self, name, value)
 
     def slot_filling_events(self):
         rv = []
-        for k, v in self._entities.items():
-            rv.append(SlotSet(k, v))
+        for k in self.__dirty_attrs__:
+            rv.append(SlotSet(k, self.__attrs__[k]))
         return rv
 
 
