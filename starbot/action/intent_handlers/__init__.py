@@ -9,8 +9,10 @@ from .ask_for_phone_number import AskForPhoneNumberHandler
 from .book_room import BookRoomHandler
 from .is_there_xxx import SomethingEatHandler
 from .handler import BaseHandler
+from .quit_form import QuitHandler
 
 handlers = [
+    QuitHandler,
     WifiHandler,
     WifiHandler,
     ByeHandler,

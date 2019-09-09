@@ -30,6 +30,7 @@ pipeline:
     tmp_model_dir: "../output/result_dir"
 
   - name: "starbot.BrandExtractor"
+  - name: "starbot.CommandExtractor"
   - name: "starbot.LiteExtractor"
     max_seq_length: 128
     batch_size: 32
