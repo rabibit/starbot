@@ -10,8 +10,10 @@ from .book_room import BookRoomHandler
 from .is_there_xxx import SomethingEatHandler
 from .handler import BaseHandler
 from .quit_form import QuitHandler
+from .repeat_utter import RepeatHandler
 
 handlers = [
+    RepeatHandler,
     QuitHandler,
     WifiHandler,
     WifiHandler,
