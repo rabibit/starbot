@@ -1,11 +1,11 @@
+import random
 import logging
 from rasa_sdk import Action
 
 from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 from starbot.action.intent_handlers import handlers
-from starbot.action.intent_handlers.handler import is_last_message_user
-import random
+from starbot.action.intent_handlers.handler import Context, is_last_message_user
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,9 @@ class ProcessIntentAction(Action):
                 dispatcher.utter_message(what_msg)
                 return []
 
-            all_handlers = [Handler(my_dispatcher, tracker, domain) for Handler in handlers]
+            context = Context(my_dispatcher, tracker, domain)
+            all_handlers = [Handler(context) for Handler in handlers]
+            context.handlers = all_handlers
             events = None
             for handler in all_handlers:
                 if not handler.match():

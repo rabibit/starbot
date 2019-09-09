@@ -1,11 +1,12 @@
-from collections import OrderedDict
 from typing import Text, Dict, Any, List, Optional
 
 from rasa_sdk.events import SlotSet, Form, AllSlotsReset
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 
 
-class BaseHandler:
+class Context:
+    handlers: List['BaseHandler']
+
     def __init__(self,
                  dispatcher: CollectingDispatcher,
                  tracker: Tracker,
@@ -13,6 +14,23 @@ class BaseHandler:
         self.dispatcher = dispatcher
         self.tracker = tracker
         self.domain = domain
+        self.handlers = []
+
+    def cancel_form(self, force=False):
+        for handler in self.handlers:
+            events = handler.cancel(force)
+            if events:
+                return events
+        else:
+            return None
+
+
+class BaseHandler:
+    def __init__(self, context: Context):
+        self.context = context
+        self.dispatcher = context.dispatcher
+        self.tracker = context.tracker
+        self.domain = context.domain
 
     def match(self) -> bool:
         """
@@ -135,6 +153,10 @@ class BaseHandler:
 
     def recover(self):
         pass
+
+    @staticmethod
+    def cancel(force: bool):
+        return None
 
 
 class BaseForm:
@@ -280,6 +302,10 @@ class BaseFormHandler(BaseHandler):
         if self.is_active():
             self.form = self.Form(self.tracker, from_slot_only=True)
             self.validate()
+
+    def cancel(self, force: bool):
+        self.processed = True
+        return [Form(None), AllSlotsReset()] if self.is_active() else None
 
     def form_trigger(self, intent: Text):
         raise NotImplementedError

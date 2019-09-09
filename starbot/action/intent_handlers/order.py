@@ -119,3 +119,7 @@ class SimpleOrderHandler(BaseFormHandler):
             print(f"count is {count}")
             things += thing['thing']
         self.utter_message("好的，您要的{}马上为您送过来".format(things))
+
+    def cancel(self, force: bool):
+        # TODO: check whether in progress if force = False
+        return super(SimpleOrderHandler, self).cancel(force)

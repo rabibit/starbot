@@ -1,6 +1,6 @@
 
 from .handler import BaseHandler
-from typing import Text, Dict, Any, List
+from typing import Text, Dict, Any, List, Optional
 from starbot.action.db_orm import *
 
 
@@ -13,7 +13,7 @@ class SomethingEatHandler(BaseHandler):
         else:
             return False
 
-    def process(self) -> List[Dict[Text, Any]]:
+    def process(self) -> Optional[List[Dict[Text, Any]]]:
         thing = self.get_entity('thing')
         if not thing:
             return None

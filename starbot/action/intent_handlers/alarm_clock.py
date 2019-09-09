@@ -138,6 +138,9 @@ class AlarmClockHandler(BaseHandler):
                 self.utter_message(f'{time_words}是吧，到时间我会电话给你')
                 return [Form(None), AllSlotsReset()]
 
+    def cancel(self, force):
+        return [Form(None), AllSlotsReset()]
+
 
 if __name__ == '__main__':
     import doctest
