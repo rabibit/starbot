@@ -41,8 +41,11 @@ class SimpleOrderHandler(BaseFormHandler):
         if n_things == n_counts and n_things >= 1:
             cart = self.get_slot('cart') or []
             for thing, count in zip(things, counts):
-                products = db_orm_query(Product, thing, thing)
-                if not products:
+                result = db_orm_query(Inform, form.thing, form.thing)
+                for product in result:
+                    if product.variety == "product":
+                        break
+                else:
                     self.utter_message("不好意思，我们这里没有{}".format(thing))
                     form.thing = None
                     form.count = None
@@ -77,8 +80,11 @@ class SimpleOrderHandler(BaseFormHandler):
                 self.utter_message("请问您需要什么?")
                 return False
 
-        products = db_orm_query(Product, form.thing, form.thing)
-        if not products:
+        result = db_orm_query(Inform, form.thing, form.thing)
+        for product in result:
+            if product.variety == "product":
+                break
+        else:
             self.utter_message("不好意思，我们这里没有{}".format(form.thing))
             form.thing = None
             form.count = None

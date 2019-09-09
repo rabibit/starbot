@@ -17,7 +17,8 @@
 - [x] order: thing在form中残留, 导致后续商品错位
 - [x] order: 查询商品存在
 - [x] is_there_xxx: 没查到商品说没有
-- [ ] is_there_xxx: 支持非商品信息查询
+- [x] is_there_xxx: 支持非商品信息查询
+- [ ] order: 当询问还需要什么时，如果只提取到count，机器人会从历史中去拿thing导致误把count给修改了
 
 - [ ] 处理否定，没叫你xxx
 
