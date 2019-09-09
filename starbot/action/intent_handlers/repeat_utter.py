@@ -18,8 +18,8 @@ class RepeatHandler(BaseHandler):
         if not latest_bot_message:
             self.utter_message('我没说啥呀')
         else:
-            if not latest_bot_message.startswith('我说:'):
-                latest_bot_message = "我说:" + latest_bot_message
+            if not latest_bot_message.startswith('我说，'):
+                latest_bot_message = "我说，" + latest_bot_message
             self.utter_message(latest_bot_message)
 
         return []

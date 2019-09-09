@@ -27,7 +27,7 @@ class MyDispatcher(object):
 
     def utter_message(self, text: str):
 
-        self.messages.append("。。" + text)
+        self.messages.append(text)
 
 
 class ProcessIntentAction(Action):
@@ -68,7 +68,7 @@ class ProcessIntentAction(Action):
             for handler in all_handlers:
                 handler.recover()
 
-            merged_message = "".join(my_dispatcher.messages)
+            merged_message = "。。".join(my_dispatcher.messages)
             dispatcher.utter_message(merged_message)
 
             if events is None and not merged_message:
