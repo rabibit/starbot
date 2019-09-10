@@ -42,7 +42,7 @@ class SimpleOrderHandler(BaseFormHandler):
         if n_things == n_counts and n_things >= 1:
             cart = self.get_slot('cart') or []
             for thing, count in zip(things, counts):
-                result = db_orm_query(Inform, form.thing, form.thing)
+                result = db_orm_query(Inform, thing, thing)
                 for product in result:
                     if product.variety == "product":
                         break
