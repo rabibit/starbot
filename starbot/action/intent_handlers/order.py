@@ -1,7 +1,8 @@
-
+from starbot.nlu.timeparser.numberify import numberify
 from .handler import BaseFormHandler, BaseForm, get_entity_from_message, get_entities_from_message
 from typing import Text
 from starbot.action.db_orm import *
+import re
 
 
 class SimpleOrderHandler(BaseFormHandler):
@@ -111,6 +112,10 @@ class SimpleOrderHandler(BaseFormHandler):
         #cart = self.get_slot('cart') or []
         cart = self.form.cart or []
         things = ''
+        pattern = re.compile("[0-9]+")
         for thing in cart:
+            count = numberify(thing['count'])
+            count = pattern.search(count).group()
+            print(f"count is {count}")
             things += thing['thing']
         self.utter_message("好的，您要的{}马上为您送过来".format(things))
