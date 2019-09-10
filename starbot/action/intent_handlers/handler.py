@@ -215,7 +215,7 @@ class BaseForm:
                 setattr(self, k, entity)
 
     def get_slot(self, name) -> Any:
-        return self._delegate.get_slot(name)
+        return self.slot_decode(name, self._delegate.get_slot(name))
 
     def get_entity(self, name: Text) -> Optional[Text]:
         return self._delegate.get_entity(name)
@@ -226,9 +226,15 @@ class BaseForm:
     def slot_filling_events(self):
         rv = []
         for k in self.__dirty_attrs__:
-            v = self._delegate.slot_encode(k, self.__attrs__[k])
+            v = self.slot_encode(k, self.__attrs__[k])
             rv.append(SlotSet(k, v))
         return rv
+
+    def slot_encode(self, name, value):
+        return value
+
+    def slot_decode(self, name, value):
+        return value
 
 
 class SkipThisHandler(Exception):
@@ -258,16 +264,10 @@ class BaseFormHandler(BaseHandler):
         raise SkipThisHandler()
 
     def set_slot(self, name, value):
-        self.events.append(SlotSet(name, self.slot_encode(name, value)))
+        self.events.append(SlotSet(name, value))
 
     def get_slot(self, name):
-        return self.slot_decode(name, self.tracker.slots.get(name))
-
-    def slot_encode(self, name, value):
-        return value
-
-    def slot_decode(self, name, value):
-        return value
+        return self.tracker.slots.get(name)
 
     def clear_slot(self, name):
         self.set_slot(name, None)

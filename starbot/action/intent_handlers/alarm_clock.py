@@ -90,6 +90,45 @@ class AlarmClockHandler(BaseFormHandler):
     class Form(BaseForm):
         time: TimePoint
 
+        def get_entity(self, name: Text) -> Optional[Any]:
+            if name == 'time':
+                t, need_update = self.get_time()
+                if need_update:
+                    return t
+                else:
+                    return None
+            return super().get_entity(name)
+
+        def slot_decode(self, name, value):
+            if name == 'time' and value is not None:
+                return TimePoint(value)
+            return value
+
+        def slot_encode(self, name, value):
+            if name == 'time' and value is not None:
+                return value.dump_to_dict()
+            return value
+
+        def get_time(self):
+            need_update = False
+            sentence = self._delegate.tracker.latest_message['text']
+            t0 = self.get_slot('time')
+            t1 = extract_time(sentence)
+
+            if t1 is not None:
+                logger.info('/parsed time: {} -> {}'.format(sentence, t1))
+                need_update = True
+
+            if t0 is None:
+                return t1, need_update
+            else:
+                logger.info('/prev time: {}'.format(t0))
+                if t1 is not None:
+                    logger.info('/new time: {}'.format(t1))
+                    t0.update(t1)
+                    logger.info('/merged time: {}'.format(t0))
+                return t0, need_update
+
     form: Form
 
     def form_trigger(self, intent: Text):
@@ -112,45 +151,6 @@ class AlarmClockHandler(BaseFormHandler):
 
     def match(self) -> bool:
         return True
-
-    def get_entity(self, name: Text) -> Optional[Any]:
-        if name == 'time':
-            t, need_update = self.get_time()
-            if need_update:
-                return t
-            else:
-                return None
-        return super(AlarmClockHandler, self).get_entity(name)
-
-    def slot_decode(self, name, value):
-        if name == 'time' and value is not None:
-            return TimePoint(value)
-        return value
-
-    def slot_encode(self, name, value):
-        if name == 'time' and value is not None:
-            return value.dump_to_dict()
-        return value
-
-    def get_time(self):
-        need_update = False
-        sentence = self.tracker.latest_message['text']
-        t0 = self.get_slot('time')
-        t1 = extract_time(sentence)
-
-        if t1 is not None:
-            logger.info('/parsed time: {} -> {}'.format(sentence, t1))
-            need_update = True
-
-        if t0 is None:
-            return t1, need_update
-        else:
-            logger.info('/prev time: {}'.format(t0))
-            if t1 is not None:
-                logger.info('/new time: {}'.format(t1))
-                t0.update(t1)
-                logger.info('/merged time: {}'.format(t0))
-            return t0, need_update
 
 
 if __name__ == '__main__':
