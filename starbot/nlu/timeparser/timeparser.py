@@ -45,6 +45,20 @@ def get_time_expressions(text):
 
 
 def extract_times(text):
+    """
+
+    :param text:
+    :return:
+
+    >>> t = list(extract_times("五分钟之后"))[0]
+    >>> dt = t.get_datetime() - datetime.now()
+    >>> assert abs(dt.total_seconds() - 300) < 1
+
+    >>> t = list(extract_times("半个小时之后"))[0]
+    >>> dt = t.get_datetime() - datetime.now()
+    >>> assert abs(dt.total_seconds() - 1800) < 1
+
+    """
     for token in get_time_expressions(text):
         try:
             yield TimePoint(token)
@@ -1037,6 +1051,10 @@ class TimePoint:
         >>> t = TimePoint("一个小时后", baseline=datetime.strptime("1999-12-31 23:59:59", "%Y-%m-%d %H:%M:%S"))
         >>> t.year, t.month, t.day, t.computed_hour(), t.minute, t.second
         (2000, 1, 1, 0, 59, 59)
+
+        >>> t = TimePoint("一个小时之后", baseline=datetime.strptime("1999-12-31 23:59:59", "%Y-%m-%d %H:%M:%S"))
+        >>> t.year, t.month, t.day, t.computed_hour(), t.minute, t.second
+        (2000, 1, 1, 0, 59, 59)
         """
         cnt = count_true(
             info.hour is not None,
@@ -1048,12 +1066,12 @@ class TimePoint:
         if cnt > 1:
             abort('Invalid hour info')
 
-        if info.hour is not None:
-            self.hour = info.hour
-        elif info.hours_after is not None:
+        if info.hours_after is not None:
             self.set_datetime(self.baseline + timedelta(hours=info.hours_after))
         elif info.hours_before is not None:
             self.set_datetime(self.baseline - timedelta(hours=info.hours_before))
+        elif info.hour is not None:
+            self.hour = info.hour
         else:
             assert unreachable
 
@@ -1075,6 +1093,10 @@ class TimePoint:
         >>> t.hour, t.minute, t.second
         (0, 55, 1)
 
+        >>> t = TimePoint("五分钟之后", baseline=datetime.strptime("01:59:01", "%H:%M:%S"))
+        >>> t.hour, t.minute, t.second
+        (2, 4, 1)
+
         """
         cnt = count_true(
             info.minute is not None,
@@ -1087,14 +1109,14 @@ class TimePoint:
         if cnt > 1:
             abort('Invalid minute')
 
-        if info.minute is not None:
-            if self.hour is None:
-                abort('Standalone minute means nothing')
-            self.minute = info.minute
-        elif info.minutes_after is not None:
+        if info.minutes_after is not None:
             self.set_datetime(self.baseline + timedelta(minutes=info.minutes_after))
         elif info.minutes_before is not None:
             self.set_datetime(self.baseline - timedelta(minutes=info.minutes_before))
+        elif info.minute is not None:
+            if self.hour is None:
+                abort('Standalone minute means nothing')
+            self.minute = info.minute
         else:
             assert unreachable
 
