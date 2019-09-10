@@ -3,9 +3,8 @@ import logging
 from functools import reduce
 from datetime import date, datetime
 
-from starbot.action.intent_handlers.handler import BaseHandler
-from typing import Text, Dict, Any, List, Optional
-from rasa_sdk.events import Form, SlotSet, AllSlotsReset
+from starbot.action.intent_handlers.handler import BaseFormHandler, BaseForm
+from typing import Text, Any, Optional
 
 from starbot.nlu.timeparser.timeparser import extract_times, TimePoint
 
@@ -87,9 +86,51 @@ def time_to_human_words(tp: TimePoint):
     return words
 
 
-class AlarmClockHandler(BaseHandler):
+class AlarmClockHandler(BaseFormHandler):
+    class Form(BaseForm):
+        time: TimePoint
+
+    form: Form
+
+    def form_trigger(self, intent: Text):
+        return intent == 'ask_for_awaking'
+
+    def validate(self):
+        form = self.form
+        if form.time is None:
+            self.utter_message("好的，啥时候提醒您?")
+            return False
+        elif form.time.hour is None:
+            self.utter_message(f"好的，几点钟提醒您?")
+            return False
+        else:
+            return True
+
+    def commit(self):
+        time_words = time_to_human_words(self.form.time)
+        self.utter_message(f'好的，{time_words}，到时间我会叫你的')
+
     def match(self) -> bool:
         return True
+
+    def get_entity(self, name: Text) -> Optional[Any]:
+        if name == 'time':
+            t, need_update = self.get_time()
+            if need_update:
+                return t
+            else:
+                return None
+        return super(AlarmClockHandler, self).get_entity(name)
+
+    def slot_decode(self, name, value):
+        if name == 'time' and value is not None:
+            return TimePoint(value)
+        return value
+
+    def slot_encode(self, name, value):
+        if name == 'time' and value is not None:
+            return value.dump_to_dict()
+        return value
 
     def get_time(self):
         need_update = False
@@ -105,41 +146,11 @@ class AlarmClockHandler(BaseHandler):
             return t1, need_update
         else:
             logger.info('/prev time: {}'.format(t0))
-            t0 = TimePoint(t0)
             if t1 is not None:
                 logger.info('/new time: {}'.format(t1))
                 t0.update(t1)
                 logger.info('/merged time: {}'.format(t0))
             return t0, need_update
-
-    def process(self) -> Optional[List[Dict[Text, Any]]]:
-        intent = self.get_last_user_intent()
-        if intent in {
-            'ask_for_awaking'
-        }:
-            return self.service([Form('alarm_clock')])
-        else:
-            if self.tracker.active_form.get('name') == 'alarm_clock':
-                return self.service([])
-        return None
-
-    def service(self, slots):
-        time, _ = self.get_time()
-
-        if time is None:
-            self.utter_message("好的，啥时候提醒您?")
-            return slots
-        else:
-            if time.hour is None:
-                self.utter_message(f"好的，几点钟提醒您?")
-                return slots + [SlotSet('time', time.dump_to_dict())]
-            else:
-                time_words = time_to_human_words(time)
-                self.utter_message(f'{time_words}是吧，到时间我会电话给你')
-                return [Form(None), AllSlotsReset()]
-
-    def cancel(self, force):
-        return [Form(None), AllSlotsReset()]
 
 
 if __name__ == '__main__':

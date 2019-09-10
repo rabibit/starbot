@@ -180,7 +180,8 @@ class BaseForm:
 
     __tag__ = ''
 
-    def __init__(self, tracker: Tracker, from_slot_only=False):
+    def __init__(self, *, delegate=None, from_slot_only=False):
+        self._delegate = delegate
         if not hasattr(self, '__annotations__'):
             self.__annotations__ = {}
         self.__attrs__ = {}
@@ -189,8 +190,7 @@ class BaseForm:
         for k in self.__annotations__:
             self.__attrs__[k] = getattr(type(self), k, None)
 
-        self._tracker = tracker
-        if tracker is not None:
+        if delegate is not None:
             self._fill(from_slot_only)
 
     def __getattribute__(self, item):
@@ -215,12 +215,10 @@ class BaseForm:
                 setattr(self, k, entity)
 
     def get_slot(self, name) -> Any:
-        return self._tracker.slots.get(name)
+        return self._delegate.get_slot(name)
 
     def get_entity(self, name: Text) -> Optional[Text]:
-        if not self._tracker.latest_message:
-            return None
-        return get_entity_from_message(self._tracker.latest_message, name)
+        return self._delegate.get_entity(name)
 
     def put_entity(self, name, value):
         setattr(self, name, value)
@@ -228,7 +226,8 @@ class BaseForm:
     def slot_filling_events(self):
         rv = []
         for k in self.__dirty_attrs__:
-            rv.append(SlotSet(k, self.__attrs__[k]))
+            v = self._delegate.slot_encode(k, self.__attrs__[k])
+            rv.append(SlotSet(k, v))
         return rv
 
 
@@ -259,10 +258,16 @@ class BaseFormHandler(BaseHandler):
         raise SkipThisHandler()
 
     def set_slot(self, name, value):
-        self.events.append(SlotSet(name, value))
+        self.events.append(SlotSet(name, self.slot_encode(name, value)))
 
     def get_slot(self, name):
-        return self.tracker.slots.get(name)
+        return self.slot_decode(name, self.tracker.slots.get(name))
+
+    def slot_encode(self, name, value):
+        return value
+
+    def slot_decode(self, name, value):
+        return value
 
     def clear_slot(self, name):
         self.set_slot(name, None)
@@ -284,7 +289,7 @@ class BaseFormHandler(BaseHandler):
         if not (trigger or self.is_active()):
             return self.skip()
         # TODO: 有激活表单但是有些意图可能导致切换表单
-        self.form = self.Form(tracker)
+        self.form = self.Form(delegate=self)
         if self.validate():
             self.commit()
             events = self.events + [AllSlotsReset(), Form(None)]
@@ -300,7 +305,7 @@ class BaseFormHandler(BaseHandler):
         if self.processed:
             return
         if self.is_active():
-            self.form = self.Form(self.tracker, from_slot_only=True)
+            self.form = self.Form(delegate=self, from_slot_only=True)
             self.validate()
 
     def cancel(self, force: bool):
