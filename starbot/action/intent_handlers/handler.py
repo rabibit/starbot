@@ -220,9 +220,6 @@ class BaseForm:
     def get_entity(self, name: Text) -> Optional[Text]:
         return self._delegate.get_entity(name)
 
-    def put_entity(self, name, value):
-        setattr(self, name, value)
-
     def slot_filling_events(self):
         rv = []
         for k in self.__dirty_attrs__:
