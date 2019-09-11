@@ -162,7 +162,7 @@ def parse_day(text):
 
     return parse_number_with_regex(
         text,
-        re.compile('((?<!\d))([0-3][0-9]|[1-9])(?=([日号]))|(?<=月)([0-3][0-9]|[1-9])(?!\d)')
+        re.compile(r'((?<!\d))([0-3][0-9]|[1-9])(?=([日号]))|(?<=月)([0-3][0-9]|[1-9])(?!\d)')
     )
 
 
@@ -226,7 +226,7 @@ def parse_minute(text):
 
     """
 
-    pat = re.compile('(?<=\d[点时])半')
+    pat = re.compile(r'(?<=\d[点时])半')
     if pat.search(text):
         return 30
 
@@ -361,7 +361,7 @@ class NumberOfHours(FromPattern):
     """
 
     def __init__(self, key):
-        pat = f'(?:(\d+)|(?:(\d+)个半(?!个))|(?<!个)半)(?=个?(小时|钟头?)[以之]?{key})'
+        pat = rf'(?:(\d+)|(?:(\d+)个半(?!个))|(?<!个)半)(?=个?(小时|钟头?)[以之]?{key})'
         super(NumberOfHours, self).__init__(pat)
 
     def parse(self, expr):
@@ -396,20 +396,20 @@ class RawTimeInfo:
 
     #
     this_year: bool = Appearing('今年')
-    prev_year: bool = Appearing('去年|(?<!\d)年前')
+    prev_year: bool = Appearing(r'去年|(?<!\d)年前')
     prev_prev_year: bool = Appearing('前年')
-    next_year: bool = Appearing('明年|(?<!\d)年后')
+    next_year: bool = Appearing(r'明年|(?<!\d)年后')
     next_next_year: bool = Appearing('后年')
-    years_before: Optional[int] = NumberOf('\d+(?=年[以之]?前)')
-    years_after: Optional[int] = NumberOf('\d+(?=年[以之]?后)')
+    years_before: Optional[int] = NumberOf(r'\d+(?=年[以之]?前)')
+    years_after: Optional[int] = NumberOf(r'\d+(?=年[以之]?后)')
 
     this_month: bool = Appearing('(这个?|本)月')
     prev_month: bool = Appearing('上个?月')
     prev_prev_month: bool = Appearing('上上个?月')
     next_month: bool = Appearing('下个?月')
     next_next_month: bool = Appearing('下下个?月')
-    months_before: Optional[int] = NumberOf('\d+(?=个?月[以之]?前)')
-    months_after: Optional[int] = NumberOf('\d+(?=个?月[以之]?后)')
+    months_before: Optional[int] = NumberOf(r'\d+(?=个?月[以之]?前)')
+    months_after: Optional[int] = NumberOf(r'\d+(?=个?月[以之]?后)')
 
     this_week: bool = Appearing('(?<!上|下)(这|本)个?(周|星期|礼拜)')
     prev_week: bool = Appearing('(?<!上)上个?(周|星期|礼拜)')
@@ -424,14 +424,14 @@ class RawTimeInfo:
     tomorrow: bool = Appearing('明(?!年)')
     after_tomorrow: bool = Appearing('(?<!大)后天')
     after_after_tomorrow: bool = Appearing('大后天')
-    days_before: Optional[int] = NumberOf('\d+(?=天[以之]?前)')
-    days_after: Optional[int] = NumberOf('\d+(?=天[以之]?后)')
+    days_before: Optional[int] = NumberOf(r'\d+(?=天[以之]?前)')
+    days_after: Optional[int] = NumberOf(r'\d+(?=天[以之]?后)')
 
     hours_before: Optional[float] = NumberOfHours('前')
     hours_after: Optional[float] = NumberOfHours('后')
 
-    minutes_before: Optional[int] = NumberOf('\d+(?=分钟[以之]?前)')
-    minutes_after: Optional[int] = NumberOf('\d+(?=分钟[以之]?后)')
+    minutes_before: Optional[int] = NumberOf(r'\d+(?=分钟[以之]?前)')
+    minutes_after: Optional[int] = NumberOf(r'\d+(?=分钟[以之]?后)')
 
     midnight: bool = Appearing('凌晨|半夜')
     morning: bool = Appearing('早(上|晨|间)|晨间|(今|明|清|一)早|上午')
@@ -614,7 +614,7 @@ class TimePoint:
     raw: Optional[RawTimeInfo]
     baseline: datetime
 
-    def __init__(self, time_expr: Union[Text, TimeExpression, None]=None, baseline: datetime=None):
+    def __init__(self, time_expr: Union[Text, TimeExpression, None] = None, baseline: datetime = None):
         """
 
         :param time_expr:
@@ -669,7 +669,8 @@ class TimePoint:
         else:
             abort('Invalid time_expr type')
 
-    def get_fields(self):
+    @staticmethod
+    def get_fields():
         # return self.__annotations__.keys()
         return ['year', 'month', 'day', 'hour', 'minute', 'second', 'weekday', 'ampm', 'baseline']
 
@@ -1230,9 +1231,9 @@ class TimePoint:
             abort(f'Too many fuzzy: {self.get_fuzzies()}')
 
         def get_nearest(points):
-            delta = [p - self.baseline for p in points]
-            _, nearest = min([(abs(d), i) for i, d in enumerate(delta)])
-            return points[nearest]
+            deltas = [p - self.baseline for p in points]
+            _, the_nearest = min([(abs(d), i) for i, d in enumerate(deltas)])
+            return points[the_nearest]
 
         year = self.year or self.baseline.year
         month = self.month or 1
