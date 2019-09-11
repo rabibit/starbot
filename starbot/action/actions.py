@@ -54,6 +54,7 @@ class ProcessIntentAction(Action):
 
             context = Context(my_dispatcher, tracker, domain)
             all_handlers = [Handler(context) for Handler in handlers]
+            all_handlers = sorted(all_handlers, key=lambda x: not x.is_active())
             context.handlers = all_handlers
             events = None
             for handler in all_handlers:

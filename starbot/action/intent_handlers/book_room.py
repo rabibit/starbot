@@ -17,7 +17,7 @@ class BookRoomHandler(BaseFormHandler):
     def form_trigger(self, intent: Text):
         return intent == 'book_room'
 
-    def validate(self):
+    def validate(self, recovering):
         form = self.form
 
         if form.room_type is None:

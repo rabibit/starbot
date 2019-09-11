@@ -25,8 +25,20 @@ class SimpleOrderHandler(BaseFormHandler):
             if thing:
                 return thing
 
-    def validate(self):
+    def validate(self, recovering: bool):
         form = self.form
+
+        if recovering:
+            if form.count is not None and form.thing is None:
+                self.utter_message(f'不好意思, 你刚才说需要{form.count}什么?')
+            elif form.thing is not None and form.count is None:
+                self.utter_message(f'请问你需要多少{form.thing}?')
+            elif form.cart:
+                things = '，'.join([i["count"] + i['thing'] for i in form.cart])
+                self.utter_message(f'您要了{things}，请问你还需要其它吗？')
+            else:
+                self.utter_message("你有什么需要吗?")
+            return False
 
         if self.tracker.latest_message.get('intent', {}).get('name') == 'ok':
             if not form.cart:
@@ -64,6 +76,7 @@ class SimpleOrderHandler(BaseFormHandler):
             return False
 
         if (n_things, n_counts) not in ((0, 1), (1, 0)):
+            self.skip_if_intended()
             self.utter_message("你说啥，我没听清?")
             return False
 
@@ -74,12 +87,11 @@ class SimpleOrderHandler(BaseFormHandler):
                 form.count = 1
 
         if form.thing is None:
-            thing = self.find_thing_in_history()
-            if thing:
-                form.thing = thing
-            else:
-                self.utter_message("请问您需要什么?")
-                return False
+            form.thing = self.find_thing_in_history()
+
+        if form.thing is None:
+            self.utter_message("请问您需要什么?")
+            return False
 
         result = db_orm_query(Inform, form.thing, form.thing)
         for product in result:

@@ -17,7 +17,9 @@ class ChargerHandler(BaseFormHandler):
     def charger_type(self):
         return self.form.charger_type or self.form.brand
 
-    def validate(self):
+    def validate(self, recovering: bool):
+        if not recovering:
+            self.skip_if_no_update_and_intended()
         if self.charger_type is None:
             self.utter_message('什么充电器?')
             return False

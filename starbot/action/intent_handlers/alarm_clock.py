@@ -134,7 +134,9 @@ class AlarmClockHandler(BaseFormHandler):
     def form_trigger(self, intent: Text):
         return intent == 'ask_for_awaking'
 
-    def validate(self):
+    def validate(self, recovering):
+        if not recovering:
+            self.skip_if_no_update_and_intended()
         form = self.form
         if form.time is None:
             self.utter_message("好的，啥时候提醒您?")

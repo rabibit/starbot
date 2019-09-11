@@ -3,6 +3,99 @@ from typing import Text, Dict, Any, List, Optional
 from rasa_sdk.events import SlotSet, Form, AllSlotsReset
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 
+TOP_INTENTS = {
+    "account_issues",
+    "air_conditioner_problem",
+    "ask_for_awaking",
+    "ask_for_changing_room",
+    "ask_for_charger",
+    "ask_for_help",
+    "ask_for_laundry",
+    "ask_for_more_breakfast_ticket",
+    "ask_for_phone_number",
+    "ask_for_price",
+    "ask_for_something_to_eat",
+    "ask_for_traffic_info",
+    "ask_for_wifi_info",
+    "ask_for_wifi_password",
+    "ask_price_for_changing_room",
+    "ask_to_change_thing",
+    "ask_to_clean_room",
+    "ask_to_open_door",
+    "book_room",
+    "breakfast_ticket_not_found",
+    "bye",
+    "can_i_have_invoice",
+    "can_order_meal",
+    "cancel_book_room",
+    "checkout",
+    "confirm_extend_condition",
+    "consultation",
+    "delay_checkin",
+    "greet",
+    "how_far?",
+    "how_much_did_i_spend",
+    "how_much_if_stay_until",
+    "how_to_call",
+    "is_manager_there",
+    "is_my_cloth_ready",
+    "is_my_room_ready",
+    "is_there_any_massage",
+    "is_there_breakfast_now",
+    "is_there_cloth_drier",
+    "is_there_night_snack",
+    "is_there_xxx",
+    "is_there_xxx_around",
+    "is_vip_the_same",
+    "lack_of_thing",
+    "laundry_request",
+    "leave_over_something",
+    "network_problem",
+    "order_something",
+    "other",
+    "other_issue_needs_service",
+    "query_agreement_price",
+    "query_book_record",
+    "query_checkout_time",
+    "query_supper_time",
+    "room_available",
+    "stay_extension",
+    "tv_problem",
+    "urge",
+    "wanna_more",
+    "what_can_you_do",
+    "when_to_have_breakfast",
+    "when_to_have_lunch",
+    "where_is_laundry_room",
+    "where_is_the_wenxiang",
+    "where_is_tv_controller",
+    "where_to_have_breakfast",
+}
+SUB_INTENTS = {
+    "any_other?",
+    "ask_how_to_pay",
+    "ask_if_ferry",
+    "buy_or_borrow",
+    "can_deliver?",
+    "change_info",
+    "complain",
+    "confirm_location",
+    "enha",
+    "fetch_it_myself?",
+    "hmm",
+    "info",
+    "is_breakfast_included",
+    "is_it_free",
+    "is_it_ok",
+    "no",
+    "not_found",
+    "number_of_thing",
+    "ok",
+    "repeat_confirm",
+    "something_like",
+    "this_phone",
+}
+
 
 class Context:
     handlers: List['BaseHandler']
@@ -140,6 +233,9 @@ class BaseHandler:
     def get_last_user_intent(self):
         return get_user_intent(self.tracker)
 
+    def is_top_intent(self):
+        return self.get_last_user_intent() in TOP_INTENTS
+
     def get_entity(self, name: Text) -> Optional[Text]:
         if not self.tracker.latest_message:
             return None
@@ -157,6 +253,9 @@ class BaseHandler:
     @staticmethod
     def cancel(force: bool):
         return None
+
+    def is_active(self):
+        return False
 
 
 class BaseForm:
@@ -201,8 +300,9 @@ class BaseForm:
 
     def __setattr__(self, item, value):
         if item in self.__annotations__:
-            self.__attrs__[item] = value
-            self.__dirty_attrs__.add(item)
+            if (value, self.__attrs__[item]) != (None, None):
+                self.__dirty_attrs__.add(item)
+                self.__attrs__[item] = value
         else:
             super(BaseForm, self).__setattr__(item, value)
 
@@ -226,6 +326,9 @@ class BaseForm:
             v = self.slot_encode(k, self.__attrs__[k])
             rv.append(SlotSet(k, v))
         return rv
+
+    def is_updated(self):
+        return len(self.__dirty_attrs__) > 0
 
     def slot_encode(self, name, value):
         return value
@@ -258,7 +361,16 @@ class BaseFormHandler(BaseHandler):
         return True
 
     def skip(self):
+        self.processed = False
         raise SkipThisHandler()
+
+    def skip_if_no_update_and_intended(self):
+        if not self.form.is_updated():
+            self.skip_if_intended()
+
+    def skip_if_intended(self):
+        if self.is_top_intent() and not self.form_trigger(self.get_last_user_intent()):
+            self.skip()
 
     def set_slot(self, name, value):
         self.events.append(SlotSet(name, value))
@@ -287,7 +399,7 @@ class BaseFormHandler(BaseHandler):
             return self.skip()
         # TODO: 有激活表单但是有些意图可能导致切换表单
         self.form = self.Form(delegate=self)
-        if self.validate():
+        if self.validate(recovering=False):
             self.commit()
             events = self.events + [AllSlotsReset(), Form(None)]
         else:
@@ -303,7 +415,7 @@ class BaseFormHandler(BaseHandler):
             return
         if self.is_active():
             self.form = self.Form(delegate=self, from_slot_only=True)
-            self.validate()
+            self.validate(recovering=True)
 
     def cancel(self, force: bool):
         self.processed = True
@@ -312,7 +424,7 @@ class BaseFormHandler(BaseHandler):
     def form_trigger(self, intent: Text):
         raise NotImplementedError
 
-    def validate(self):
+    def validate(self, recovering: bool):
         raise NotImplementedError
 
     def commit(self):
