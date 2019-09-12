@@ -19,6 +19,7 @@
 - [x] is_there_xxx: 没查到商品说没有
 - [ ] order解析处理数量词
 - [ ] order数量词非法值检测
+- [ ] order数量规范化: 包 -> 一包
 - [x] is_there_xxx: 支持非商品信息查询
 - [ ] order: 当询问还需要什么时，如果只提取到count，机器人会从历史中去拿thing导致误把count给修改了
 - [ ] 否定:修改信息
