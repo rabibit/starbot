@@ -58,6 +58,11 @@ def extract_times(text):
     >>> dt = t.get_datetime() - datetime.now()
     >>> assert abs(dt.total_seconds() - 1800) < 1
 
+    >>> t = list(extract_times("3月一"))[0]
+    >>> [t.month, t.day, t.hour, t.minute]
+    [3, 1, None, None]
+    >>> t.get_datetime().strftime('%m%d')
+    '0301'
     """
     for token in get_time_expressions(text):
         try:
@@ -1231,7 +1236,7 @@ class TimePoint:
             abort(f'Too many fuzzy: {self.get_fuzzies()}')
 
         def get_nearest(points):
-            deltas = [p - self.baseline for p in points]
+            deltas = [p - self.baseline.replace(tzinfo=None) for p in points]
             _, the_nearest = min([(abs(d), i) for i, d in enumerate(deltas)])
             return points[the_nearest]
 
@@ -1352,5 +1357,6 @@ class TimePoint:
 
 
 if __name__ == '__main__':
+    list(extract_times("3月一"))[0].get_datetime()
     import doctest
     doctest.testmod()
