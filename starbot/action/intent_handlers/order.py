@@ -9,11 +9,17 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def count_normalized(cnt):
+    if len(cnt) == 1 and not numberify(cnt).isdigit():
+        return '一' + cnt
+    return cnt
+
+
 class SimpleOrderHandler(BaseFormHandler):
     class Form(BaseForm):
         __tag__ = 'order'
         thing: str
-        count: int
+        count: str
         number: int
         cart: list
 
@@ -58,6 +64,7 @@ class SimpleOrderHandler(BaseFormHandler):
         if n_things == n_counts and n_things >= 1:
             cart = self.get_slot('cart') or []
             for thing, count in zip(things, counts):
+                count = count_normalized(count)
                 result = db_orm_query(Inform, thing, thing)
                 for product in result:
                     if product.variety == "product":
@@ -90,7 +97,7 @@ class SimpleOrderHandler(BaseFormHandler):
         def normalize(x): return x
         if normalize(form.thing) in {'茶叶', '蚊香', '吹风'}:
             if form.count is None:
-                form.count = 1
+                form.count = '一'
 
         if form.thing is None:
             form.thing = self.find_thing_in_history()
@@ -114,12 +121,13 @@ class SimpleOrderHandler(BaseFormHandler):
             return False
 
         cart = self.get_slot('cart') or []
+        count = count_normalized(form.count)
         for product in cart:
             if product['thing'] == form.thing:
-                product['count'] = form.count
+                product['count'] = count
                 break
         else:
-            cart.append({'thing': form.thing, 'count': form.count})
+            cart.append({'thing': form.thing, 'count': count})
         form.cart = cart
         self.utter_message("请问您还需要什么?")
         form.thing = None
