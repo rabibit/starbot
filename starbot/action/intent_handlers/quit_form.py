@@ -1,7 +1,11 @@
 import re
+import logging
 
 from .handler import BaseHandler
 from typing import Text, Dict, Any, List, Optional
+
+
+logger = logging.getLogger(__name__)
 
 
 class QuitHandler(BaseHandler):
@@ -23,8 +27,10 @@ class QuitHandler(BaseHandler):
             events = self.context.cancel_form(force=True)
         else:
             message = self.tracker.latest_message['text']
+            logger.info(f'message={message}, match={self.not_pat.search(message)}')
             if self.not_pat.search(message):
                 events = self.context.cancel_form(force=False)
+                self.abort()
         if events is not None:
             self.utter_message('好的， 还有其它需要吗')
         return events
