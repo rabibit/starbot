@@ -16,7 +16,6 @@ handlers = [
     RepeatHandler,
     QuitHandler,
     WifiHandler,
-    WifiHandler,
     ByeHandler,
     AskIfFerryHandler,
     ChargerHandler,
@@ -24,7 +23,6 @@ handlers = [
     SimpleOrderHandler,
     BookRoomHandler,
     AskForPhoneNumberHandler,
-    SomethingEatHandler,
     SomethingEatHandler,
     SimpleHandler,
 ]

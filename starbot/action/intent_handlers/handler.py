@@ -160,7 +160,20 @@ class Context:
                 events = []
             if events is None:
                 continue
+            events.append(SlotSet('invalid_utter', 0))
             break
+        else:
+            invalid_utter = self.tracker.slots.get('invalid_utter')
+            if not invalid_utter:
+                invalid_utter = 0
+            if invalid_utter + 1 > 2:
+                # invalid_utter = 0
+                # events = [SlotSet('invalid_utter', invalid_utter)]
+                self.dispatcher.utter_message('小智已经尝试多次仍然无法完成您的请求，如果您想退出请说退出或者返回')
+            else:
+                invalid_utter += 1
+                events = [SlotSet('invalid_utter', invalid_utter)]
+                self.tracker.slots['invalid_utter'] = invalid_utter
         has_words = bool(self.dispatcher.messages)
         # TODO: O(n) optimization
         for handler in self.handlers:
@@ -435,7 +448,7 @@ class BaseFormHandler(BaseHandler):
             self.skip_if_intended()
 
     def skip_if_intended(self):
-        if self.is_top_intent() and not self.form_trigger(self.get_last_user_intent()):
+        if not self.form_trigger(self.get_last_user_intent()):
             self.skip()
 
     def set_slot(self, name, value):
