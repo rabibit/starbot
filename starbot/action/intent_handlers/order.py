@@ -73,6 +73,7 @@ class SimpleOrderHandler(BaseFormHandler):
                         break
                 else:
                     cart.append({'thing': thing, 'count': count})
+                self.utter_message(f'{count}{thing}')
             self.set_slot('cart', cart)
             self.utter_message("请问您还需要什么?")
             form.thing = None

@@ -162,8 +162,6 @@ class Context:
                 continue
             break
         has_words = bool(self.dispatcher.messages)
-        self.tracker.active_form.get('name')
-
         # TODO: O(n) optimization
         for handler in self.handlers:
             if not handler.is_active():
