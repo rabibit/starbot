@@ -170,7 +170,7 @@ class Context:
             if invalid_utter + 1 > 1:
                 # invalid_utter = 0
                 # events = [SlotSet('invalid_utter', invalid_utter)]
-                if self.tracker.active_form is not None:
+                if self.tracker.active_form:
                     self.dispatcher.utter_message('不好意思，我还是没听清楚，如果不想继续，你可以说，返回')
             else:
                 invalid_utter += 1
