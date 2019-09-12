@@ -64,6 +64,9 @@ slots:
     type: unfeaturized
     auto_fill: false
 
+  invalid_utter:
+    type: unfeaturized
+    auto_fill: false
 
 templates:
   utter_default:
