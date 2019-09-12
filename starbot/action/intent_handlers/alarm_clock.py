@@ -139,10 +139,10 @@ class AlarmClockHandler(BaseFormHandler):
             self.skip_if_no_update_and_intended()
         form = self.form
         if form.time is None:
-            self.utter_message("好的，啥时候提醒您?")
+            self.utter_message("嗯，啥时候提醒您?")
             return False
         elif form.time.hour is None:
-            self.utter_message(f"好的，几点钟提醒您?")
+            self.utter_message(f"嗯，几点钟提醒您?")
             return False
         else:
             return True
