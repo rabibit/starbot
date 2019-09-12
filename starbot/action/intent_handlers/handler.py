@@ -1,7 +1,21 @@
+import random
+import logging
 from typing import Text, Dict, Any, List, Optional
 
 from rasa_sdk.events import SlotSet, Form, AllSlotsReset
 from rasa_sdk.executor import CollectingDispatcher, Tracker
+
+
+logger = logging.getLogger(__name__)
+
+
+class SkipThisHandler(Exception):
+    pass
+
+
+class Abort(Exception):
+    pass
+
 
 TOP_INTENTS = {
     "account_issues",
@@ -97,6 +111,10 @@ SUB_INTENTS = {
 }
 
 
+def say_what():
+    return random.choice(['啥', '你说啥', '什么']) + random.choice(['我没听清', ''])
+
+
 class Context:
     handlers: List['BaseHandler']
 
@@ -111,11 +129,58 @@ class Context:
 
     def cancel_form(self, force=False):
         for handler in self.handlers:
-            events = handler.cancel(force)
-            if events:
+            # TODO: O(n) optimization
+            if not handler.is_active():
+                continue
+            try:
+                events = handler.cancel(force)
+                logger.info(f"[cancel ] canceled: {handler}")
+            except Abort:
+                logger.info(f'[cancel ] aborted : {handler}')
+                return None
+            if events is not None:
                 return events
         else:
             return None
+
+    def process(self):
+        events = None
+        for handler in self.handlers:
+            if not handler.match():
+                logger.info(f'[process] ignored : {handler}')
+                continue
+            try:
+                events = handler.process()
+                if events is None:
+                    logger.info(f'[process] pass    : {handler} events: {events}')
+                else:
+                    logger.info(f'[process] accepted: {handler} events: {events}')
+            except Abort:
+                logger.info(f'[process] aborted : {handler}')
+                events = []
+            if events is None:
+                continue
+            break
+        has_words = bool(self.dispatcher.messages)
+        self.tracker.active_form.get('name')
+
+        # TODO: O(n) optimization
+        for handler in self.handlers:
+            if not handler.is_active():
+                continue
+            try:
+                handler.recover()
+                logger.info(f'[recover] recovered: {handler}')
+            except Abort:
+                logger.info(f'[recover] aborted  : {handler}')
+                break
+
+        messages = []
+        if events is None and not has_words:
+            messages.append(say_what())
+        messages.extend(self.dispatcher.messages)
+        merged_message = "。。".join(messages)
+        return merged_message, events
 
 
 class BaseHandler:
@@ -257,6 +322,13 @@ class BaseHandler:
     def is_active(self):
         return False
 
+    def abort(self):
+        # self.processed = False
+        raise Abort()
+
+    def __repr__(self):
+        return type(self).__name__
+
 
 class BaseForm:
     """
@@ -335,10 +407,6 @@ class BaseForm:
 
     def slot_decode(self, name, value):
         return value
-
-
-class SkipThisHandler(Exception):
-    pass
 
 
 class BaseFormHandler(BaseHandler):

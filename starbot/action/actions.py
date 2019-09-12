@@ -5,7 +5,7 @@ from rasa_sdk import Action
 from typing import Text, Dict, Any, List
 from rasa_sdk.executor import CollectingDispatcher, Tracker
 from starbot.action.intent_handlers import handlers
-from starbot.action.intent_handlers.handler import Context, is_last_message_user
+from starbot.action.intent_handlers.handler import Context, is_last_message_user, say_what
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,6 @@ class ProcessIntentAction(Action):
             dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        what_msg = random.choice(['啥', '你说啥', '什么']) + random.choice(['我没听清', ''])
         my_dispatcher = MyDispatcher()
         if tracker.latest_message:
             if is_last_message_user(tracker):
@@ -49,32 +48,15 @@ class ProcessIntentAction(Action):
             intent = tracker.latest_message.get('intent', {}).get('name')
             confidence = tracker.latest_message.get('intent', {}).get('confidence')
             if intent in key_intents and confidence is not None and confidence < 0.9:
-                dispatcher.utter_message(what_msg)
+                dispatcher.utter_message(say_what())
                 return []
 
             context = Context(my_dispatcher, tracker, domain)
             all_handlers = [Handler(context) for Handler in handlers]
-            all_handlers = sorted(all_handlers, key=lambda x: not x.is_active())
-            context.handlers = all_handlers
-            events = None
-            for handler in all_handlers:
-                if not handler.match():
-                    continue
-                events = handler.process()
-                if events is None:
-                    continue
-                logger.debug(f'Handler {handler} processed')
-                break
-
-            for handler in all_handlers:
-                handler.recover()
-
-            merged_message = "。。".join(my_dispatcher.messages)
-            dispatcher.utter_message(merged_message)
-
-            if events is None and not merged_message:
-                dispatcher.utter_message(what_msg)
-
+            context.handlers = sorted(all_handlers, key=lambda x: not x.is_active())
+            message, events = context.process()
+            logger.info(f'events={events}, merged_message={message}')
+            dispatcher.utter_message(message)
             return events
         return []
 

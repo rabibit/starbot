@@ -3,6 +3,10 @@ from .handler import BaseFormHandler, BaseForm, get_entity_from_message, get_ent
 from typing import Text
 from starbot.action.db_orm import *
 import re
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class SimpleOrderHandler(BaseFormHandler):
@@ -76,8 +80,9 @@ class SimpleOrderHandler(BaseFormHandler):
             return False
 
         if (n_things, n_counts) not in ((0, 1), (1, 0)):
-            self.skip_if_intended()
-            self.utter_message("你说啥，我没听清?")
+            self.skip()
+            # self.skip_if_intended()
+            # self.utter_message("你说啥，我没听清?")
             return False
 
         # TODO:
@@ -133,5 +138,10 @@ class SimpleOrderHandler(BaseFormHandler):
         self.utter_message("好的，您要的{}马上为您送过来".format(things))
 
     def cancel(self, force: bool):
-        # TODO: check whether in progress if force = False
-        return super(SimpleOrderHandler, self).cancel(force)
+        logger.info(f"canceling order force={force} cart={self.form.cart}")
+        if not force and self.form.cart:
+            self.utter_message("不想要了你可以说，返回")
+            self.abort()
+            return []
+        else:
+            return super(SimpleOrderHandler, self).cancel(force)
