@@ -166,10 +166,10 @@ class Context:
             invalid_utter = self.tracker.slots.get('invalid_utter')
             if not invalid_utter:
                 invalid_utter = 0
-            if invalid_utter + 1 > 2:
+            if invalid_utter + 1 > 1:
                 # invalid_utter = 0
                 # events = [SlotSet('invalid_utter', invalid_utter)]
-                self.dispatcher.utter_message('小智已经尝试多次仍然无法完成您的请求，如果您想退出请说退出或者返回')
+                self.dispatcher.utter_message('不好意思，我还是没听清楚，如果不想继续，你可以说，返回')
             else:
                 invalid_utter += 1
                 events = [SlotSet('invalid_utter', invalid_utter)]
