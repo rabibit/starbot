@@ -145,6 +145,7 @@ class Context:
 
     def process(self):
         events = None
+        no_events = False
         for handler in self.handlers:
             if not handler.match():
                 logger.info(f'[process] ignored : {handler}')
@@ -173,7 +174,7 @@ class Context:
             else:
                 invalid_utter += 1
                 events = [SlotSet('invalid_utter', invalid_utter)]
-                self.tracker.slots['invalid_utter'] = invalid_utter
+            no_events = True
         has_words = bool(self.dispatcher.messages)
         # TODO: O(n) optimization
         for handler in self.handlers:
@@ -187,7 +188,7 @@ class Context:
                 break
 
         messages = []
-        if events is None and not has_words:
+        if no_events and not has_words:
             messages.append(say_what())
         messages.extend(self.dispatcher.messages)
         merged_message = "。。".join(messages)
