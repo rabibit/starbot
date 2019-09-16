@@ -136,6 +136,7 @@ class Context:
         self.slots = self.tracker.slots.copy()
         self.active_form = tracker.active_form and tracker.active_form.get('name')
         self.messages: [Message] = []
+        self.recoverable = True
 
     def cancel_form(self, force=False):
         for handler in self.handlers:
@@ -182,16 +183,17 @@ class Context:
                 self.set_slot('invalid_utter', invalid_utter)
             no_events = True
         has_words = bool(self.messages)
-        # TODO: O(n) optimization
-        for handler in self.handlers:
-            if not handler.is_active():
-                continue
-            try:
-                handler.recover()
-                logger.info(f'[recover] recovered: {handler}')
-            except Abort:
-                logger.info(f'[recover] aborted  : {handler}')
-                break
+        if self.recoverable:
+            # TODO: O(n) optimization
+            for handler in self.handlers:
+                if not handler.is_active():
+                    continue
+                try:
+                    handler.recover()
+                    logger.info(f'[recover] recovered: {handler}')
+                except Abort:
+                    logger.info(f'[recover] aborted  : {handler}')
+                    break
 
         messages = []
         prompt = None

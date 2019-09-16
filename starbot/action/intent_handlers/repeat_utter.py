@@ -23,3 +23,7 @@ class RepeatHandler(BaseHandler):
             if not latest_bot_message.startswith('我说，'):
                 latest_bot_message = "我说，" + latest_bot_message
             self.utter_message(latest_bot_message, prompt)
+
+        self.context.recoverable = False
+
+        return []
