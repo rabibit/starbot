@@ -12,6 +12,5 @@ class AskIfFerryHandler(BaseHandler):
         else:
             return False
 
-    def process(self) -> List[Dict[Text, Any]]:
+    def process(self):
         self.utter_message("您好，我们只提供机场的接送服务")
-        return []

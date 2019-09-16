@@ -88,7 +88,9 @@ def time_to_human_words(tp: TimePoint):
 
 class AlarmClockHandler(BaseFormHandler):
     class Form(BaseForm):
+        __tag__ = 'alarm_clock'
         time: TimePoint
+        caller: str
 
         def get_entity(self, name: Text) -> Optional[Any]:
             if name == 'time':
@@ -149,7 +151,8 @@ class AlarmClockHandler(BaseFormHandler):
 
     def commit(self):
         time_words = time_to_human_words(self.form.time)
-        self.utter_message(f'好的，{time_words}，到时间我会叫你的')
+        # self.utter_message(f'好的，{time_words}，到时间我会叫你的')
+        self.utter_message(f'好的，{time_words}，到时间我会打电话给{self.get_slot("caller")}')
 
     def match(self) -> bool:
         return True

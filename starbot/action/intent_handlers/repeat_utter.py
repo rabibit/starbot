@@ -7,7 +7,7 @@ class RepeatHandler(BaseHandler):
         commands = set(self.tracker.latest_message.get('commands') or [])
         return 'what?' in commands
 
-    def process(self) -> List[Dict[Text, Any]]:
+    def process(self):
         latest_bot_message = None
 
         for event in self.tracker.events[::-1]:
@@ -21,5 +21,3 @@ class RepeatHandler(BaseHandler):
             if not latest_bot_message.startswith('我说，'):
                 latest_bot_message = "我说，" + latest_bot_message
             self.utter_message(latest_bot_message)
-
-        return []

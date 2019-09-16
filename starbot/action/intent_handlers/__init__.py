@@ -11,6 +11,8 @@ from .is_there_xxx import SomethingEatHandler
 from .handler import BaseHandler
 from .quit_form import QuitHandler
 from .repeat_utter import RepeatHandler
+from .greet import GreetHandler
+
 
 handlers = [
     RepeatHandler,
@@ -24,5 +26,6 @@ handlers = [
     BookRoomHandler,
     AskForPhoneNumberHandler,
     SomethingEatHandler,
+    GreetHandler,
     SimpleHandler,
 ]

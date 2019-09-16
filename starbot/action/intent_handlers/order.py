@@ -62,7 +62,7 @@ class SimpleOrderHandler(BaseFormHandler):
         n_things = len(things)
         n_counts = len(counts)
         if n_things == n_counts and n_things >= 1:
-            cart = self.get_slot('cart') or []
+            cart = self.context.get_slot('cart') or []
             for thing, count in zip(things, counts):
                 count = count_normalized(count)
                 result = db_orm_query(Inform, thing, thing)
@@ -81,7 +81,7 @@ class SimpleOrderHandler(BaseFormHandler):
                 else:
                     cart.append({'thing': thing, 'count': count})
                 self.utter_message(f'{count}{thing}')
-            self.set_slot('cart', cart)
+            self.context.set_slot('cart', cart)
             self.utter_message("请问您还需要什么?")
             form.thing = None
             form.count = None
@@ -91,7 +91,7 @@ class SimpleOrderHandler(BaseFormHandler):
             self.skip()
             # self.skip_if_intended()
             # self.utter_message("你说啥，我没听清?")
-            return False
+            return
 
         # TODO:
         def normalize(x): return x
@@ -120,7 +120,7 @@ class SimpleOrderHandler(BaseFormHandler):
             self.utter_message("请问您需要多少{}?".format(form.thing))
             return False
 
-        cart = self.get_slot('cart') or []
+        cart = self.context.get_slot('cart') or []
         count = count_normalized(form.count)
         for product in cart:
             if product['thing'] == form.thing:
@@ -135,7 +135,6 @@ class SimpleOrderHandler(BaseFormHandler):
         return False
 
     def commit(self):
-        #cart = self.get_slot('cart') or []
         cart = self.form.cart or []
         things = ''
         pattern = re.compile("[0-9]+")
@@ -151,6 +150,5 @@ class SimpleOrderHandler(BaseFormHandler):
         if not force and self.form.cart:
             self.utter_message("不想要了你可以说，返回")
             self.abort()
-            return []
         else:
-            return super(SimpleOrderHandler, self).cancel(force)
+            super(SimpleOrderHandler, self).cancel(force)
