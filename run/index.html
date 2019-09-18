@@ -3,6 +3,10 @@
 
 <div id="webchat"></div>
 <script src="https://storage.googleapis.com/mrbot-cdn/webchat-0.5.3.js"></script>
+<script
+  src="https://code.jquery.com/jquery-3.4.1.min.js"
+  integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+  crossorigin="anonymous"></script>
 <script>
   WebChat.default.init({
     selector: "#webchat",
@@ -28,6 +32,18 @@
       storage: "local"
     }
   })
+
+  $(function(){
+      $(".message-text").click(function(e){
+          $("input.new-message").val($(this).text());
+      });
+      $("form.sender").submit(function(e){
+        $(".message-text").click(function(e){
+            $("input.new-message").val($(this).text());
+        });
+      });
+  });
 </script>
+
 </body>
 </html>
