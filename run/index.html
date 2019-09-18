@@ -34,16 +34,46 @@
   })
 
   $(function(){
-      function rebind() {
-        $(".message-text").click(function(e){
-          $("input.new-message").val($(this).text());
-          $("input.new-message").focus();
-        });
-      }
-      rebind();
-      $("form.sender").submit(function(e){
-        rebind();
+    $("<div id='history-container' style='margin-bottom: 20px'></div>").insertAfter("form.sender");
+    function bind_event(buttons) {
+      buttons.unbind('click');
+      buttons.unbind('dblclick');
+      buttons.click(function(){
+        $("input.new-message").val($(this).text());
+        $("input.new-message").focus();
       });
+      buttons.dblclick(function(){
+        $("input.new-message").val($(this).text());
+        $("button.send").click();
+        $("input.new-message").focus();
+      });
+    }
+
+    function rebind() {
+      var buttons = $(".client>.message-text");
+      bind_event(buttons);
+      buttons = $(buttons.clone().get().reverse());
+      var new_buttons = [];
+      buttons = buttons.map(function(){
+        var text = $(this).text();
+        if (new_buttons.includes(text)) {
+            return null;
+        } else {
+            new_buttons.push(text);
+            return this;
+        }
+      }).slice(0, 8);
+      bind_event(buttons);
+      buttons.addClass("client");
+      buttons.css("display", "inline");
+      $("#history-container").html(buttons);
+    }
+
+    rebind();
+
+    $("form.sender").submit(function(e){
+      rebind();
+    });
   });
 </script>
 
