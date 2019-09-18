@@ -34,13 +34,15 @@
   })
 
   $(function(){
-      $(".message-text").click(function(e){
-          $("input.new-message").val($(this).text());
-      });
-      $("form.sender").submit(function(e){
+      function rebind() {
         $(".message-text").click(function(e){
-            $("input.new-message").val($(this).text());
+          $("input.new-message").val($(this).text());
+          $("input.new-message").focus();
         });
+      }
+      rebind();
+      $("form.sender").submit(function(e){
+        rebind();
       });
   });
 </script>
