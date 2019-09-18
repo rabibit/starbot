@@ -20,7 +20,7 @@ class Inform(Base):
     """
     :param id: id number
     :param name: the name of the object
-    :param variety: the type of the object(only support such keys: product, position, service)
+    :param variety: the type of the object(only support such keys: product, position, service, alarm_clock)
     :param price: the price of the product 
     :param keywords: the description of the object
     :param service: the description of the service
@@ -37,6 +37,7 @@ class Inform(Base):
     service = Column(String)
     position = Column(String)
     contact = Column(String)
+    alarm_clock = Column(String)
     delete = Column(Integer, default=0)
 
 
@@ -115,6 +116,47 @@ def db_orm_delete(orm_obj, pattern: str) -> None:
 
     ses = Session()
     ses.query(orm_obj).filter(orm_obj.name == pattern).update({"delete": 1})
+    ses.commit()
+    ses.close()
+
+    return None
+
+
+def db_orm_alarm_query(orm_obj, name: str = '', patterns: str = '') -> list:
+    """
+    :param orm_obj: a spicific object base on ORM Base e.g: Inform
+    :param patterns: the conditions for the query
+    :param name: the name of the object
+    :return: a list of objects
+    """
+
+    ses = Session()
+    if patterns:
+        result = ses.query(orm_obj).filter(orm_obj.name == name, orm_obj.alarm_clock.like('%' + patterns + '%'),
+                                           orm_obj.variety == 'alarm_clock')
+    else:
+        result = ses.query(orm_obj).filter(orm_obj.name == name, orm_obj.variety == 'alarm_clock')
+    ses.close()
+
+    return list(result)
+
+
+def db_orm_alarm_cancel(orm_obj, name: str = '', patterns: str = ''):
+    """
+    :param orm_obj: a spicific object base on ORM Base e.g: Inform
+    :param patterns: the conditions for the query
+    :param name: the name of the object
+    :return: a list of objects
+    """
+
+    ses = Session()
+    if patterns:
+        result = ses.query(orm_obj).filter(orm_obj.name == name, orm_obj.alarm_clock.like('%' + patterns + '%'),
+                                           orm_obj.variety == 'alarm_clock')
+    else:
+        result = ses.query(orm_obj).filter(orm_obj.name == name, orm_obj.variety == 'alarm_clock')
+    for instance in result:
+        ses.delete(instance)
     ses.commit()
     ses.close()
 

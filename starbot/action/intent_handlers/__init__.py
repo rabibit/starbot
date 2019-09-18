@@ -12,6 +12,8 @@ from .handler import BaseHandler
 from .quit_form import QuitHandler
 from .repeat_utter import RepeatHandler
 from .greet import GreetHandler
+from .alarm_query import AlarmQueryHandler
+from .alarm_cancel import AlarmCancelHandler
 
 
 handlers = [
@@ -27,5 +29,7 @@ handlers = [
     AskForPhoneNumberHandler,
     SomethingEatHandler,
     GreetHandler,
+    AlarmQueryHandler,
+    AlarmCancelHandler,
     SimpleHandler,
 ]
