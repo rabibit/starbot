@@ -34,7 +34,7 @@
   })
 
   $(function(){
-    $("<div id='history-container' style='margin-bottom: 20px'></div>").insertAfter("form.sender");
+    $("<div id='history-container'></div>").insertAfter("form.sender");
     function bind_event(buttons) {
       buttons.unbind('click');
       buttons.unbind('dblclick');
@@ -65,7 +65,7 @@
       }).slice(0, 8);
       bind_event(buttons);
       buttons.addClass("client");
-      buttons.css("display", "inline");
+      buttons.css("display", "inline-block");
       $("#history-container").html(buttons);
     }
 
