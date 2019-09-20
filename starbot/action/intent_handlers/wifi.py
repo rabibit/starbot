@@ -12,6 +12,5 @@ class WifiHandler(BaseHandler):
         else:
             return False
 
-    def process(self) -> List[Dict[Text, Any]]:
+    def process(self):
         self.utter_message("Wifi名称是俊美的拼音全拼，密码是8个8")
-        return []

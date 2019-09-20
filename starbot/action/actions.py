@@ -53,7 +53,8 @@ class ProcessIntentAction(Action):
 
             context = Context(my_dispatcher, tracker, domain)
             all_handlers = [Handler(context) for Handler in handlers]
-            context.handlers = sorted(all_handlers, key=lambda x: not x.is_active())
+            # context.handlers = sorted(all_handlers, key=lambda x: not x.is_active())
+            context.handlers = all_handlers
             message, events = context.process()
             logger.info(f'events={events}, merged_message={message}')
             dispatcher.utter_message(message)

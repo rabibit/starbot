@@ -7,6 +7,7 @@ from starbot.action.intent_handlers.handler import BaseFormHandler, BaseForm
 from typing import Text, Any, Optional
 
 from starbot.nlu.timeparser.timeparser import extract_times, TimePoint
+from starbot.action.db_orm import *
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +28,7 @@ def hour_to_apm_words(hour):
         return '早上'
     elif hour < 12:
         return '上午'
-    elif hour < 1:
+    elif hour < 13:
         return '中午'
     elif hour < 18:
         return '下午'
@@ -88,7 +89,9 @@ def time_to_human_words(tp: TimePoint):
 
 class AlarmClockHandler(BaseFormHandler):
     class Form(BaseForm):
+        __tag__ = 'alarm_clock'
         time: TimePoint
+        caller: str
 
         def get_entity(self, name: Text) -> Optional[Any]:
             if name == 'time':
@@ -149,7 +152,16 @@ class AlarmClockHandler(BaseFormHandler):
 
     def commit(self):
         time_words = time_to_human_words(self.form.time)
-        self.utter_message(f'好的，{time_words}，到时间我会叫你的')
+        caller = self.get_slot('caller')
+        alarms = db_orm_alarm_query(Inform, caller, time_words)
+        count = 0
+        for alarm in alarms:
+            count += 1
+        if count > 0:
+            self.utter_message('闹钟已存在')
+        else:
+            self.utter_message(f'好的，{time_words}，到时间我会叫你的')
+            db_orm_add(Inform(name=caller, variety='alarm_clock', alarm_clock=time_words))
 
     def match(self) -> bool:
         return True

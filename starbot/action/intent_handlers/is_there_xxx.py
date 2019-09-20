@@ -16,7 +16,8 @@ class SomethingEatHandler(BaseHandler):
     def process(self) -> Optional[List[Dict[Text, Any]]]:
         thing = self.get_entity('thing')
         if not thing:
-            return None
+            self.skip()
+            return
         result = db_orm_query(Inform, thing, thing)
         product = False
         products = []
@@ -51,4 +52,3 @@ class SomethingEatHandler(BaseHandler):
                     self.utter_message("{}，{}".format(pos.name, pos.position))
         else:
             self.utter_message("不好意思，我们这里没有")
-        return []

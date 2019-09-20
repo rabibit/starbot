@@ -102,12 +102,9 @@ class SimpleHandler(BaseHandler):
     def match(self) -> bool:
         return self.get_last_user_intent() in self.responses
 
-    def process(self) -> List[Dict[Text, Any]]:
+    def process(self):
         intent = self.get_last_user_intent()
-        events = []
-        if intent == 'ask_for_price':
-            thing = self.get_entity('thing')
-            events.append(SlotSet('thing', thing))
-            logger.info(f'ask_for_price set slot thing is {thing}')
+        if intent not in self.responses:
+            self.skip()
+            return
         self.utter_message(self.responses.get(intent, 'What?'))
-        return events

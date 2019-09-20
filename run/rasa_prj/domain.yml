@@ -68,6 +68,14 @@ slots:
     type: unfeaturized
     auto_fill: false
 
+  caller:
+    type: unfeaturized
+    auto_fill: false
+
+  charger_type:
+    type: unfeaturized
+    auto_fill: false
+
 templates:
   utter_default:
     - text: "你说啥"

@@ -126,6 +126,9 @@ class Context:
         self.tracker = tracker
         self.domain = domain
         self.handlers = []
+        self.events = []
+        self.slots = self.tracker.slots.copy()
+        self.active_form = tracker.active_form and tracker.active_form.get('name')
 
     def cancel_form(self, force=False):
         for handler in self.handlers:
@@ -133,48 +136,43 @@ class Context:
             if not handler.is_active():
                 continue
             try:
-                events = handler.cancel(force)
+                handler.cancel(force)
                 logger.info(f"[cancel ] canceled: {handler}")
             except Abort:
                 logger.info(f'[cancel ] aborted : {handler}')
-                return None
-            if events is not None:
-                return events
+                return False
+            return True
         else:
-            return None
+            return False
 
     def process(self):
-        events = None
         no_events = False
         for handler in self.handlers:
             if not handler.match():
                 logger.info(f'[process] ignored : {handler}')
                 continue
             try:
-                events = handler.process()
-                if events is None:
-                    logger.info(f'[process] pass    : {handler} events: {events}')
-                else:
-                    logger.info(f'[process] accepted: {handler} events: {events}')
+                handler.process()
+            except SkipThisHandler:
+                logger.info(f'[process] skipped : {handler}')
+                continue
             except Abort:
                 logger.info(f'[process] aborted : {handler}')
-                events = []
-            if events is None:
-                continue
-            events.append(SlotSet('invalid_utter', 0))
+            else:
+                logger.info(f'[process] accepted: {handler}')
+            self.set_slot('invalid_utter', 0)
             break
         else:
-            invalid_utter = self.tracker.slots.get('invalid_utter')
+            invalid_utter = self.get_slot('invalid_utter')
             if not invalid_utter:
                 invalid_utter = 0
             if invalid_utter + 1 > 1:
                 # invalid_utter = 0
-                # events = [SlotSet('invalid_utter', invalid_utter)]
                 if self.tracker.active_form:
                     self.dispatcher.utter_message('不好意思，我还是没听清楚，如果不想继续，你可以说，返回')
             else:
                 invalid_utter += 1
-                events = [SlotSet('invalid_utter', invalid_utter)]
+                self.set_slot('invalid_utter', invalid_utter)
             no_events = True
         has_words = bool(self.dispatcher.messages)
         # TODO: O(n) optimization
@@ -193,15 +191,34 @@ class Context:
             messages.append(say_what())
         messages.extend(self.dispatcher.messages)
         merged_message = "。。".join(messages)
-        return merged_message, events
+        return merged_message, self.events
+
+    def set_slot(self, name, value):
+        self.slots[name] = value
+        self.events.append(SlotSet(name, value))
+
+    def reset_slots(self):
+        caller = self.get_slot('caller')
+        self.slots = {}
+        self.events.append(AllSlotsReset())
+        self.set_slot('caller', caller)
+
+    def get_slot(self, name: Text) -> Any:
+        return self.slots.get(name)
 
 
 class BaseHandler:
+    context: Context
+
     def __init__(self, context: Context):
         self.context = context
         self.dispatcher = context.dispatcher
         self.tracker = context.tracker
         self.domain = context.domain
+
+    def activate_form(self, name):
+        self.context.active_form = name
+        self.context.events.append(Form(name))
 
     def match(self) -> bool:
         """
@@ -319,8 +336,8 @@ class BaseHandler:
             return None
         return get_entity_from_message(self.tracker.latest_message, name)
 
-    def get_slot(self, name: Text) -> Any:
-        return self.tracker.slots.get(name)
+    def utter_one_of(self, *messages):
+        self.utter_message(random.choice(messages))
 
     def utter_message(self, message):
         self.dispatcher.utter_message(message)
@@ -341,6 +358,18 @@ class BaseHandler:
 
     def __repr__(self):
         return type(self).__name__
+
+    def skip(self):
+        raise SkipThisHandler()
+
+    def set_slot(self, name, value):
+        return self.context.set_slot(name, value)
+
+    def get_slot(self, name):
+        return self.context.get_slot(name)
+
+    def clear_slot(self, name):
+        self.context.set_slot(name, None)
 
 
 class BaseForm:
@@ -368,6 +397,7 @@ class BaseForm:
         self._delegate = delegate
         if not hasattr(self, '__annotations__'):
             self.__annotations__ = {}
+
         self.__attrs__ = {}
         self.__dirty_attrs__ = set()
 
@@ -421,6 +451,11 @@ class BaseForm:
     def slot_decode(self, name, value):
         return value
 
+    def sync(self, context: Context):
+        for k in self.__dirty_attrs__:
+            v = self.slot_encode(k, self.__attrs__[k])
+            context.set_slot(k, v)
+
 
 class BaseFormHandler(BaseHandler):
     events: List[Any]
@@ -443,7 +478,7 @@ class BaseFormHandler(BaseHandler):
 
     def skip(self):
         self.processed = False
-        raise SkipThisHandler()
+        super().skip()
 
     def skip_if_no_update_and_intended(self):
         if not self.form.is_updated():
@@ -453,43 +488,31 @@ class BaseFormHandler(BaseHandler):
         if not self.form_trigger(self.get_last_user_intent()):
             self.skip()
 
-    def set_slot(self, name, value):
-        self.events.append(SlotSet(name, value))
-
-    def get_slot(self, name):
-        return self.tracker.slots.get(name)
-
-    def clear_slot(self, name):
-        self.set_slot(name, None)
-
-    def process(self) -> Optional[List[Dict[Text, Any]]]:
-        self.events = []
-        try:
-            return self._do_process()
-        except SkipThisHandler:
-            return None
+    def process(self):
+        self._do_process()
 
     def is_active(self):
-        return self.tracker.active_form and self.tracker.active_form.get('name') == self.form_name
+        return self.context.active_form == self.form_name
 
-    def _do_process(self) -> List[Dict[Text, Any]]:
+    def _do_process(self):
         self.processed = True
         tracker = self.tracker
         trigger = self.form_trigger(get_user_intent(tracker))
         if not (trigger or self.is_active()):
-            return self.skip()
+            self.skip()
+            return
         # TODO: 有激活表单但是有些意图可能导致切换表单
         self.form = self.Form(delegate=self)
+        if trigger and not self.is_active():  # 切换到该表单前清理所有slots
+            self.context.reset_slots()
         if self.validate(recovering=False):
             self.commit()
-            events = self.events + [AllSlotsReset(), Form(None)]
+            self.context.reset_slots()
+            self.activate_form(None)
         else:
-            events = self.form.slot_filling_events() + self.events
+            self.form.sync(self.context)
             if trigger:
-                events.insert(0, Form(self.form_name))
-                if not self.is_active():
-                    events.insert(0, AllSlotsReset())
-        return events
+                self.activate_form(self.form_name)
 
     def recover(self):
         if self.processed:
@@ -500,7 +523,9 @@ class BaseFormHandler(BaseHandler):
 
     def cancel(self, force: bool):
         self.processed = True
-        return [Form(None), AllSlotsReset()] if self.is_active() else None
+        if self.is_active():
+            self.activate_form(None)
+            self.context.reset_slots()
 
     def form_trigger(self, intent: Text):
         raise NotImplementedError

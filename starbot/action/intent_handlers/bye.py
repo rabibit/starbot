@@ -12,6 +12,5 @@ class ByeHandler(BaseHandler):
         else:
             return False
 
-    def process(self) -> List[Dict[Text, Any]]:
+    def process(self):
         self.utter_message("再见")
-        return []
