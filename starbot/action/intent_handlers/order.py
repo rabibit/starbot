@@ -65,15 +65,32 @@ class SimpleOrderHandler(BaseFormHandler):
             cart = self.context.get_slot('cart') or []
             for thing, count in zip(things, counts):
                 count = count_normalized(count)
-                result = db_orm_query(Inform, thing, thing)
-                for product in result:
-                    if product.variety == "product":
-                        break
-                else:
-                    self.utter_message("不好意思，我们这里没有{}".format(thing))
-                    form.thing = None
-                    form.count = None
-                    continue
+                result = db_orm_query(Inform, name=thing)
+                product = False
+                for rt in result:
+                    if rt.variety == 'product':
+                        product = True
+                if not product:
+                    result = db_orm_query(Inform, thing, thing)
+                    product = False
+                    products = []
+                    for rt in result:
+                        if rt.variety == 'product':
+                            product = True
+                            products.append(rt)
+                    if product:
+                        self.utter_message("我们这里有：")
+                        for food in products:
+                            self.utter_message("{}".format(food.name))
+                        self.utter_message("请问您要哪一种")
+                        form.thing = None
+                        form.count = None
+                        return False
+                    else:
+                        self.utter_message("不好意思，我们这里没有{}".format(thing))
+                        form.thing = None
+                        form.count = None
+                        return False
                 for product in cart:
                     if product['thing'] == thing:
                         product['count'] = count
@@ -106,15 +123,32 @@ class SimpleOrderHandler(BaseFormHandler):
             self.utter_message("请问您需要什么?")
             return False
 
-        result = db_orm_query(Inform, form.thing, form.thing)
-        for product in result:
-            if product.variety == "product":
-                break
-        else:
-            self.utter_message("不好意思，我们这里没有{}".format(form.thing))
-            form.thing = None
-            form.count = None
-            return False
+        result = db_orm_query(Inform, name=form.thing)
+        product = False
+        for rt in result:
+            if rt.variety == 'product':
+                product = True
+        if not product:
+            result = db_orm_query(Inform, form.thing, form.thing)
+            product = False
+            products = []
+            for rt in result:
+                if rt.variety == 'product':
+                    product = True
+                    products.append(rt)
+            if product:
+                self.utter_message("我们这里有：")
+                for food in products:
+                    self.utter_message("{}".format(food.name))
+                self.utter_message("请问您要哪一种")
+                form.thing = None
+                form.count = None
+                return False
+            else:
+                self.utter_message("不好意思，我们这里没有{}".format(form.thing))
+                form.thing = None
+                form.count = None
+                return False
 
         if form.count is None:
             self.utter_message("请问您需要多少{}?".format(form.thing))
