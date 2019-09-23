@@ -38,6 +38,8 @@ class SimpleOrderHandler(BaseFormHandler):
     def validate(self, recovering: bool):
         form = self.form
 
+        gpt2out = self.tracker.latest_message.get('gpt2out')
+        print(f'gpt2out is {gpt2out}')
         if recovering:
             if form.count is not None and form.thing is None:
                 self.utter_message(f'不好意思, 你刚才说需要{form.count}什么?')
