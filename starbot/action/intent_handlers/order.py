@@ -1,5 +1,8 @@
 from starbot.nlu.timeparser.numberify import numberify
-from .handler import BaseFormHandler, BaseForm, get_entity_from_message, get_entities_from_message
+from starbot.action.intent_handlers.handler import (BaseFormHandler,
+                                                    BaseForm,
+                                                    get_entity_from_message,
+                                                    get_entities_from_message)
 from typing import Text
 from starbot.action.db_orm import *
 import re
@@ -13,6 +16,28 @@ def count_normalized(cnt):
     if len(cnt) == 1 and not numberify(cnt).isdigit():
         return '一' + cnt
     return cnt
+
+
+def get_number_from_count(count):
+    """
+
+    :param count:
+    :return:
+
+    examples:
+    ---------
+    >>> get_number_from_count('一张')
+    1
+    >>> get_number_from_count('两个')
+    2
+    >>> get_number_from_count('放肆')
+    """
+    pattern = re.compile("[0-9]+")
+    count = numberify(count)
+    match = pattern.search(count)
+    if match:
+        return int(match.group())
+    return None
 
 
 class SimpleOrderHandler(BaseFormHandler):
@@ -34,6 +59,19 @@ class SimpleOrderHandler(BaseFormHandler):
             thing = get_entity_from_message(event['parse_data'], 'thing')
             if thing:
                 return thing
+
+    def check_count(self, count, thing):
+        if count is None:
+            self.utter_message(f'请问你需要多少{thing}?')
+            return False
+        elif len(count) == 2 and count[0] == '几':
+            self.utter_message(f'请问你具体需要{count}{thing}?')
+            return False
+        elif get_number_from_count(count) is None:
+            self.utter_message(f'请问你需要多少{thing}?')
+            return False
+        else:
+            return True
 
     def validate(self, recovering: bool):
         form = self.form
@@ -63,6 +101,7 @@ class SimpleOrderHandler(BaseFormHandler):
         n_counts = len(counts)
         if n_things == n_counts and n_things >= 1:
             cart = self.context.get_slot('cart') or []
+            fuzzy_thing = False
             for thing, count in zip(things, counts):
                 count = count_normalized(count)
                 result = db_orm_query(Inform, name=thing)
@@ -91,6 +130,9 @@ class SimpleOrderHandler(BaseFormHandler):
                         form.thing = None
                         form.count = None
                         return False
+                if not self.check_count(count, thing):
+                    fuzzy_thing = thing
+                    continue
                 for product in cart:
                     if product['thing'] == thing:
                         product['count'] = count
@@ -99,8 +141,11 @@ class SimpleOrderHandler(BaseFormHandler):
                     cart.append({'thing': thing, 'count': count})
                 self.utter_message(f'{count}{thing}')
             self.context.set_slot('cart', cart)
-            self.utter_message("请问您还需要什么?")
-            form.thing = None
+            if fuzzy_thing:
+                form.thing = fuzzy_thing
+            else:
+                self.utter_message("请问您还需要什么?")
+                form.thing = None
             form.count = None
             return False
 
@@ -150,8 +195,7 @@ class SimpleOrderHandler(BaseFormHandler):
                 form.count = None
                 return False
 
-        if form.count is None:
-            self.utter_message("请问您需要多少{}?".format(form.thing))
+        if not self.check_count(form.count, form.thing):
             return False
 
         cart = self.context.get_slot('cart') or []
@@ -163,7 +207,7 @@ class SimpleOrderHandler(BaseFormHandler):
         else:
             cart.append({'thing': form.thing, 'count': count})
         form.cart = cart
-        self.utter_message("请问您还需要什么?")
+        self.utter_message(f"{form.count}{form.thing}，请问您还需要什么?")
         form.thing = None
         form.count = None
         return False
@@ -171,11 +215,7 @@ class SimpleOrderHandler(BaseFormHandler):
     def commit(self):
         cart = self.form.cart or []
         things = ''
-        pattern = re.compile("[0-9]+")
         for thing in cart:
-            count = numberify(thing['count'])
-            count = pattern.search(count).group()
-            print(f"count is {count}")
             things += thing['thing']
         self.utter_message("好的，您要的{}马上为您送过来".format(things))
 
