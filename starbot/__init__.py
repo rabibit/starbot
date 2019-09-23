@@ -6,4 +6,3 @@ from starbot.nlu.pipelines.command_extractor import CommandExtractor
 from starbot.nlu.pipelines.charfreqclassifier import CharFreqClassifier
 from starbot.nlu.pipelines.clear_embedding import ClearEmbedding
 from starbot.nlu.pipelines.bert_embedding.bert_embedding import BertEmbedding
-from starbot.nlu.pipelines.gpt2_extractor.gpt2_extractor import Gpt2Extractor

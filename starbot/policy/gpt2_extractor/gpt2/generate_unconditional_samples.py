@@ -6,7 +6,9 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from starbot.nlu.pipelines.gpt2_extractor.gpt2 import model, sample, encoder
+from starbot.policy.gpt2_extractor.gpt2 import model, sample
+from starbot.policy.gpt2_extractor.gpt2 import encoder
+
 
 def sample_model(
     model_name='117M',

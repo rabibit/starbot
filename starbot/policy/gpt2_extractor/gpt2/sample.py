@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from starbot.nlu.pipelines.gpt2_extractor.gpt2 import model
+from starbot.policy.gpt2_extractor.gpt2 import model
 
 
 def top_k_logits(logits, k):

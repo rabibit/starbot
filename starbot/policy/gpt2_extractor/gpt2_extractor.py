@@ -1,15 +1,12 @@
 
-from rasa.nlu.extractors import EntityExtractor
-from rasa.nlu.training_data import Message
-
 import json
 import os
 import numpy as np
 import tensorflow as tf
 
-from starbot.nlu.pipelines.gpt2_extractor.gpt2 import model, sample, encoder
-from rasa.nlu.model import Metadata
-from typing import Dict, Text, Any, Optional, List
+from starbot.policy.gpt2_extractor.gpt2 import model, sample
+from starbot.policy.gpt2_extractor.gpt2 import encoder
+from typing import Text, Optional
 
 
 def model_init(
@@ -20,7 +17,7 @@ def model_init(
     batch_size=1,
     length=20,
     temperature=1,
-    top_k=0,
+    top_k=1,
     top_p=0.0
 ):
     """
@@ -77,54 +74,41 @@ def model_init(
         return graph, sess, output, enc, context
 
 
-class Gpt2Extractor(EntityExtractor):
-    provides = ['entities']
+class Gpt2Extractor(object):
 
     @classmethod
     def load(cls,
-             meta: Dict[Text, Any],
              model_dir: Optional[Text] = None,
-             model_metadata: Optional[Metadata] = None,
-             cached_component: Optional['Gpt2Extractor'] = None,
-             **kwargs: Any
              ) -> 'Gpt2Extractor':
 
-        if cached_component:
-            return cached_component
-        else:
-            slf = cls(meta)
-            graph, sess, output, enc, context = model_init(os.path.join(model_dir, 'models'))
-            slf.graph = graph
-            slf.sess = sess
-            slf.output = output
-            slf.enc = enc
-            slf.context = context
-            return slf
+        slf = cls()
+        graph, sess, output, enc, context = model_init(os.path.join(model_dir, 'models'))
+        slf.graph = graph
+        slf.sess = sess
+        slf.output = output
+        slf.enc = enc
+        slf.context = context
+        return slf
 
-    def process(self, message: Message, **kwargs) -> None:
+    def process(self, prompt: [str], message: str) -> None:
+        prompt = ','.join(prompt)
+        raw_text = f"""[百事可乐,可口可乐,雪碧]|那就雪碧吧=雪碧
+[可口可乐,雪碧,百事可乐]|可口可乐啦=可口可乐
+[百事可乐,可口可乐,雪碧]|百事就好了=百事
+[芬达,百事可乐,七喜,可口可乐,雪碧]|就七喜吧=七喜
+[雪碧,百事可乐,可口可乐]|百事可乐=百事可乐
+[雪碧,百事可乐,可口可乐]|雪碧吧=雪碧
+[百事可乐,可口可乐,雪碧]|我要百事可乐=百事可乐
+[百事可乐,可口可乐,雪碧]|那就来一瓶可口可乐吧=可口可乐
+[百事可乐,可口可乐,雪碧]|那就来一瓶百事=百事
+[百事可乐,可口可乐,雪碧]|那就来两瓶可口可乐吧=可口可乐
+[统一方便面,康师傅方便面,巧面馆]|巧面馆=巧面馆
+[统一方便面,康师傅方便面,巧面馆]|我要康师傅=康师傅方便面
+[软云,玉溪,软中华,硬中华,骄子,真龙]|来一包玉溪=玉溪
+[软云,玉溪,软中华,硬中华,骄子,真龙]|软中华=软中华
+[软云,玉溪,软中华,硬中华,骄子,真龙]|我要软中华=软中华
+[{prompt}]|{message}="""
         batch_size = 1
-        prompt = """百事可乐
-可口可乐
-雪碧
-那就雪碧吧：雪碧
-百事可乐
-可口可乐
-雪碧
-可口可乐啦：可口可乐
-百事可乐
-可口可乐
-雪碧
-百事就好了：百事
-百事可乐
-可口可乐
-雪碧
-百事可乐：百事可乐
-我要百事可乐：百事可乐
-百事可乐
-可口可乐
-统一方便面
-"""
-        raw_text = ''.join([prompt, message.text, '：'])
         text = None
         print(f'raw_text: {raw_text}')
         context_tokens = self.enc.encode(raw_text)
@@ -137,12 +121,7 @@ class Gpt2Extractor(EntityExtractor):
             generated += 1
             text = self.enc.decode(out[i])
 
-        if text:
-            message.set("gpt2out", text, add_to_output=True)
-
-    def persist(self, file_name: Text, model_dir: Text) -> Optional[Dict[Text, Any]]:
-        os.system(f"cp -r ../gpt2/* {model_dir}")
-        return None
+        return text
 
 
 if __name__ == '__main__':

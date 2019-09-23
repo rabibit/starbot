@@ -22,6 +22,7 @@ class SimpleOrderHandler(BaseFormHandler):
         count: str
         number: int
         cart: list
+        gpt2prompt: list
 
     form: Form
 
@@ -81,12 +82,7 @@ class SimpleOrderHandler(BaseFormHandler):
                             product = True
                             products.append(rt)
                     if product:
-                        self.utter_message("我们这里有：")
-                        for food in products:
-                            self.utter_message("{}".format(food.name))
-                        self.utter_message("请问您要哪一种")
-                        form.thing = None
-                        form.count = None
+                        self.prompt_for_chosing(products, form)
                         return False
                     else:
                         self.utter_message("不好意思，我们这里没有{}".format(thing))
@@ -139,12 +135,7 @@ class SimpleOrderHandler(BaseFormHandler):
                     product = True
                     products.append(rt)
             if product:
-                self.utter_message("我们这里有：")
-                for food in products:
-                    self.utter_message("{}".format(food.name))
-                self.utter_message("请问您要哪一种")
-                form.thing = None
-                form.count = None
+                self.prompt_for_chosing(products, form)
                 return False
             else:
                 self.utter_message("不好意思，我们这里没有{}".format(form.thing))
@@ -188,3 +179,12 @@ class SimpleOrderHandler(BaseFormHandler):
             self.abort()
         else:
             super(SimpleOrderHandler, self).cancel(force)
+
+    def prompt_for_chosing(self, products, form):
+        self.utter_message("我们这里有：")
+        for food in products:
+            self.utter_message("{}".format(food.name))
+        self.utter_message("请问您要哪一种")
+        form.gpt2prompt = [food.name for food in products]
+        form.thing = None
+        form.count = None
