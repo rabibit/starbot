@@ -58,6 +58,7 @@ class Config:
     # other
     dry_run = 0
     allow_interrupt = 1
+    do_embedding = 0
 
     def __init__(self, config_dict):
         self.__dict__ = config_dict
@@ -290,14 +291,16 @@ class BertEmbedding(EntityExtractor):
             except KeyboardInterrupt:
                 if not self.config.allow_interrupt:
                     raise
-
+        if not self.config.do_embedding:
+            return
         with tempfile.TemporaryDirectory() as tempdir:
             meta = self.persist('', tempdir)
             predictor = BertEmbedding.load(meta, tempdir)
 
             for example in training_data.training_examples:
                 ir, ner, emb = predictor._predict(example.text)
-                example.set('bert_embedding', emb)
+                if self.config.do_embedding:
+                    example.set('bert_embedding', emb)
 
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
