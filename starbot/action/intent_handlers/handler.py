@@ -469,6 +469,10 @@ class BaseFormHandler(BaseHandler):
     form: Form
     processed = False
 
+    def __init__(self, context: Context):
+        super().__init__(context)
+        self.form = self.Form(delegate=self)
+
     @property
     def form_name(self):
         return self.Form.__tag__
@@ -501,8 +505,6 @@ class BaseFormHandler(BaseHandler):
         if not (trigger or self.is_active()):
             self.skip()
             return
-        # TODO: 有激活表单但是有些意图可能导致切换表单
-        self.form = self.Form(delegate=self)
         if trigger and not self.is_active():  # 切换到该表单前清理所有slots
             self.context.reset_slots()
         if self.validate(recovering=False):
@@ -543,7 +545,8 @@ def get_user_intent(tracker: Tracker):
 
 
 def is_last_message_user(tracker: Tracker):
-    return tracker.events and tracker.events[-1]['event'] == 'user'
+    # return tracker.events and tracker.events[-1]['event'] == 'user'
+    return True
 
 
 def get_entity_from_message(message: Dict[Text, Any], name: Text):

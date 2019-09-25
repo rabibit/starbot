@@ -54,7 +54,7 @@ class DirectAction(Policy):
         if tracker.events and isinstance(message, UserUttered):
             index = domain.index_for_action('action_process_intent')
             result[index] = 1.0
-            prompt = tracker.slots.get('gpt2prompt').value
+            prompt = tracker.get_slot('gpt2prompt')
             if prompt:
                 gpt2out = self.gpt2_extractor.process(prompt, message.text)
                 message.parse_data['gpt2out'] = gpt2out

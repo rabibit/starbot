@@ -74,6 +74,41 @@ def model_init(
         return graph, sess, output, enc, context
 
 
+def prepare_guide_words(items):
+    def yield_item():
+        while True:
+            for item in items:
+                yield item
+    item_gen = yield_item()
+
+    def one(fmt):
+        rnd_items = items.copy()
+        item = next(item_gen)
+        words = fmt.format(item)
+        yield f'[{",".join(rnd_items)}]|{words}={item}'
+    prefix = '''[可口可乐,雪碧,百事可乐]|可口可乐啦=可口可乐
+[六个核桃,可口可乐,雪碧]|核桃就好了=六个核桃
+[芬达,百事可乐,七喜,可口可乐,雪碧]|就七喜吧=七喜
+[雪碧,百事可乐,可口可乐]|百事可乐=百事可乐
+[雪碧,百事可乐,可口可乐]|百事=百事可乐
+[雪碧,百事可乐,可口可乐]|雪碧吧=雪碧
+[百事可乐,可口可乐,雪碧]|我要百事可乐=百事可乐
+'''
+    return prefix + '\n'.join([s for fmt in [
+        "那就{}吧",
+        "那就来一瓶{}吧",
+        "{}",
+        "就{}",
+        "就{}啦",
+        "{0}{0}",
+        "{}啦",
+    ] for s in one(fmt)])
+
+
+def preprocess(items, utter):
+    return prepare_guide_words(items) + f'\n[{",".join(items)}]|{utter}='
+
+
 class Gpt2Extractor(object):
 
     @classmethod
@@ -91,23 +126,7 @@ class Gpt2Extractor(object):
         return slf
 
     def process(self, prompt: [str], message: str) -> None:
-        prompt = ','.join(prompt)
-        raw_text = f"""[百事可乐,可口可乐,雪碧]|那就雪碧吧=雪碧
-[可口可乐,雪碧,百事可乐]|可口可乐啦=可口可乐
-[百事可乐,可口可乐,雪碧]|百事就好了=百事
-[芬达,百事可乐,七喜,可口可乐,雪碧]|就七喜吧=七喜
-[雪碧,百事可乐,可口可乐]|百事可乐=百事可乐
-[雪碧,百事可乐,可口可乐]|雪碧吧=雪碧
-[百事可乐,可口可乐,雪碧]|我要百事可乐=百事可乐
-[百事可乐,可口可乐,雪碧]|那就来一瓶可口可乐吧=可口可乐
-[百事可乐,可口可乐,雪碧]|那就来一瓶百事=百事
-[百事可乐,可口可乐,雪碧]|那就来两瓶可口可乐吧=可口可乐
-[统一方便面,康师傅方便面,巧面馆]|巧面馆=巧面馆
-[统一方便面,康师傅方便面,巧面馆]|我要康师傅=康师傅方便面
-[软云,玉溪,软中华,硬中华,骄子,真龙]|来一包玉溪=玉溪
-[软云,玉溪,软中华,硬中华,骄子,真龙]|软中华=软中华
-[软云,玉溪,软中华,硬中华,骄子,真龙]|我要软中华=软中华
-[{prompt}]|{message}="""
+        raw_text = preprocess(prompt, message)
         batch_size = 1
         text = None
         print(f'raw_text: {raw_text}')

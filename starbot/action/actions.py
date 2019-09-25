@@ -45,6 +45,8 @@ class ProcessIntentAction(Action):
                 logger.debug(f'\u001b[32m{msg}\u001b[0m')
                 dispatcher.utter_message(f'/intent is {tracker.latest_message.get("intent")}')
                 dispatcher.utter_message(f'/entities {tracker.latest_message.get("entities")}')
+            else:
+                logger.debug(f'last event is {tracker.events[-1]}')
             intent = tracker.latest_message.get('intent', {}).get('name')
             confidence = tracker.latest_message.get('intent', {}).get('confidence')
             if intent in key_intents and confidence is not None and confidence < 0.9:
