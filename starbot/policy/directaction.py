@@ -65,7 +65,9 @@ class DirectAction(Policy):
             if prompt:
                 gpt2out = self.gpt2_extractor.process(prompt, message.text)
                 logger.info(f'gpt2out:{Fg.red}{gpt2out}{reset}')
-                message.parse_data['gpt2out'] = gpt2out.splitlines(keepends=False)[0]
+                gpt2out = gpt2out.splitlines(keepends=False)[0]
+                if len(self.get_common_substr(gpt2out, message.text)) >= 2:
+                    message.parse_data['gpt2out'] = gpt2out
         return result
 
     @staticmethod
@@ -94,4 +96,27 @@ class DirectAction(Policy):
         slf.gpt2_extractor = Gpt2Extractor.load(path)
         return slf
 
+    '''
+    求两个字符串的最长公共子串
+    思想：建立一个二维数组，保存连续位相同与否的状态
+    '''
+    @staticmethod
+    def get_common_substr(str1, str2):
+        lstr1 = len(str1)
+        lstr2 = len(str2)
+        record = [[0 for i in range(lstr2 + 1)] for j in range(lstr1 + 1)]  # 多一位
+        max_num = 0  # 最长匹配长度
+        p = 0  # 匹配的起始位
+
+        for i in range(lstr1):
+            for j in range(lstr2):
+                if str1[i] == str2[j]:
+                    # 相同则累加
+                    record[i + 1][j + 1] = record[i][j] + 1
+                    if record[i + 1][j + 1] > max_num:
+                        # 获取最大匹配长度
+                        max_num = record[i + 1][j + 1]
+                        # 记录最大匹配长度的终止位置
+                        p = i + 1
+        return str1[p - max_num:p]
 
