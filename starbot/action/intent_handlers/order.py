@@ -183,8 +183,7 @@ class SimpleOrderHandler(BaseFormHandler):
     def prompt_for_chosing(self, products, form):
         self.utter_message("我们这里有：")
         for food in products:
-            self.utter_message("{}".format(food.name))
+            self.utter_message("{}".format(food.name), prompt=[food.name for food in products])
         self.utter_message("请问您要哪一种")
-        form.gpt2prompt = [food.name for food in products]
         form.thing = None
         form.count = None

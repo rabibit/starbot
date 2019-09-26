@@ -21,15 +21,6 @@ key_intents = {
 }
 
 
-class MyDispatcher(object):
-    def __init__(self):
-        self.messages: [str] = []
-
-    def utter_message(self, text: str):
-
-        self.messages.append(text)
-
-
 class ProcessIntentAction(Action):
     def name(self):
         return "action_process_intent"
@@ -38,7 +29,6 @@ class ProcessIntentAction(Action):
             dispatcher: CollectingDispatcher,
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        my_dispatcher = MyDispatcher()
         if tracker.latest_message:
             if is_last_message_user(tracker):
                 msg = '\n'.join([f'{key}: {val}' for key, val in tracker.latest_message.items()])
@@ -53,14 +43,11 @@ class ProcessIntentAction(Action):
                 dispatcher.utter_message(say_what())
                 return []
 
-            context = Context(my_dispatcher, tracker, domain)
+            context = Context(dispatcher, tracker, domain)
             all_handlers = [Handler(context) for Handler in handlers]
             # context.handlers = sorted(all_handlers, key=lambda x: not x.is_active())
             context.handlers = all_handlers
-            message, events = context.process()
-            logger.info(f'events={events}, merged_message={message}')
-            dispatcher.utter_message(message)
-            return events
+            return context.process()
         return []
 
 

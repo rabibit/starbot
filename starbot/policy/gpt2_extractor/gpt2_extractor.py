@@ -89,19 +89,21 @@ def prepare_guide_words(items):
     prefix = '''[可口可乐,雪碧,百事可乐]|可口可乐啦=可口可乐
 [六个核桃,可口可乐,雪碧]|核桃就好了=六个核桃
 [芬达,百事可乐,七喜,可口可乐,雪碧]|就七喜吧=七喜
-[雪碧,百事可乐,可口可乐]|百事可乐=百事可乐
-[雪碧,百事可乐,可口可乐]|百事=百事可乐
-[雪碧,百事可乐,可口可乐]|雪碧吧=雪碧
-[百事可乐,可口可乐,雪碧]|我要百事可乐=百事可乐
+[王老吉,橙汁,汇源,百岁山]|百岁山=百岁山
+[美年达,依云,苏打水,青岛啤酒]|青岛=青岛啤酒
+[娃哈哈,北冰洋,酸梅汤]|北冰洋吧=北冰洋
+[农夫果园,果粒橙,纯果乐]|我要农夫=农夫果园
+[巴黎水,椰汁,豆奶,花生奶]|那就椰汁=椰汁
 '''
     return prefix + '\n'.join([s for fmt in [
         "那就{}吧",
         "那就来一瓶{}吧",
-        "{}",
         "就{}",
         "就{}啦",
         "{0}{0}",
         "{}啦",
+        "{}",
+        "{}",
     ] for s in one(fmt)])
 
 
@@ -111,25 +113,24 @@ def preprocess(items, utter):
 
 class Gpt2Extractor(object):
 
+    def __init__(self, graph: tf.Graph, sess: tf.Session, output, enc, context):
+        self.graph = graph
+        self.sess = sess
+        self.output = output
+        self.enc = enc
+        self.context = context
+
     @classmethod
     def load(cls,
              model_dir: Optional[Text] = None,
              ) -> 'Gpt2Extractor':
-
-        slf = cls()
         graph, sess, output, enc, context = model_init(os.path.join(model_dir, 'models'))
-        slf.graph = graph
-        slf.sess = sess
-        slf.output = output
-        slf.enc = enc
-        slf.context = context
-        return slf
+        return cls(graph, sess, output, enc, context)
 
-    def process(self, prompt: [str], message: str) -> None:
+    def process(self, prompt: [str], message: str) -> str:
         raw_text = preprocess(prompt, message)
         batch_size = 1
         text = None
-        print(f'raw_text: {raw_text}')
         context_tokens = self.enc.encode(raw_text)
         generated = 0
         with self.graph.as_default(), self.sess.as_default():
@@ -141,7 +142,3 @@ class Gpt2Extractor(object):
             text = self.enc.decode(out[i])
 
         return text
-
-
-if __name__ == '__main__':
-    print('hello world')
