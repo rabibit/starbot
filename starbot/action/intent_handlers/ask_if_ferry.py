@@ -1,6 +1,5 @@
 
 from .handler import BaseHandler
-from typing import Text, Dict, Any, List
 
 
 class AskIfFerryHandler(BaseHandler):
