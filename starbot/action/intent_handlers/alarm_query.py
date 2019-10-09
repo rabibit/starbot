@@ -7,7 +7,7 @@ class AlarmQueryHandler(BaseHandler):
         return self.get_last_user_intent() == 'alarm_query'
 
     def process(self):
-        caller = self.get_entity('caller')
+        caller = self.get_slot('caller')
         alarms = db_orm_alarm_query(Inform, caller)
         count = 0
         messages = ''

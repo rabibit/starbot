@@ -153,15 +153,15 @@ class AlarmClockHandler(BaseFormHandler):
     def commit(self):
         time_words = time_to_human_words(self.form.time)
         caller = self.get_slot('caller')
-        alarms = db_orm_alarm_query(Inform, caller, time_words)
+        alarms = db_orm_alarm_query(Inform, caller, self.form.time.get_datetime_str())
         count = 0
-        for alarm in alarms:
+        for _ in alarms:
             count += 1
         if count > 0:
             self.utter_message('闹钟已存在')
         else:
             self.utter_message(f'好的，{time_words}，到时间我会叫你的')
-            db_orm_add(Inform(name=caller, variety='alarm_clock', alarm_clock=time_words))
+            db_orm_add(Inform(name=caller, variety='alarm_clock', alarm_clock=self.form.time.get_datetime_str()))
 
     def match(self) -> bool:
         return True
