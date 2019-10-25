@@ -21,7 +21,10 @@ class ChargerHandler(BaseFormHandler):
         if not recovering:
             self.skip_if_no_update_and_intended()
         if self.charger_type is None:
-            self.utter_message('什么充电器?')
+            if recovering:
+                self.utter_message('嗯，你要什么充电器呢?')
+            else:
+                self.utter_message('什么充电器?')
             return False
         return True
 

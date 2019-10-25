@@ -115,6 +115,12 @@ def say_what():
     return random.choice(['啥', '你说啥', '什么']) + random.choice(['我没听清', ''])
 
 
+class Message:
+    def __init__(self, text: str, prompt: [str]) -> None:
+        self.text = text
+        self.prompt = prompt
+
+
 class Context:
     handlers: List['BaseHandler']
 
@@ -129,6 +135,8 @@ class Context:
         self.events = []
         self.slots = self.tracker.slots.copy()
         self.active_form = tracker.active_form and tracker.active_form.get('name')
+        self.messages: [Message] = []
+        self.recoverable = True
 
     def cancel_form(self, force=False):
         for handler in self.handlers:
@@ -169,29 +177,40 @@ class Context:
             if invalid_utter + 1 > 1:
                 # invalid_utter = 0
                 if self.tracker.active_form:
-                    self.dispatcher.utter_message('不好意思，我还是没听清楚，如果不想继续，你可以说，返回')
+                    self.utter_message('不好意思，我还是没听清楚，如果不想继续，你可以说，返回')
             else:
                 invalid_utter += 1
                 self.set_slot('invalid_utter', invalid_utter)
             no_events = True
-        has_words = bool(self.dispatcher.messages)
-        # TODO: O(n) optimization
-        for handler in self.handlers:
-            if not handler.is_active():
-                continue
-            try:
-                handler.recover()
-                logger.info(f'[recover] recovered: {handler}')
-            except Abort:
-                logger.info(f'[recover] aborted  : {handler}')
-                break
+        has_words = bool(self.messages)
+        if self.recoverable:
+            # TODO: O(n) optimization
+            for handler in self.handlers:
+                if not handler.is_active():
+                    continue
+                try:
+                    handler.recover()
+                    logger.info(f'[recover] recovered: {handler}')
+                except Abort:
+                    logger.info(f'[recover] aborted  : {handler}')
+                    break
 
         messages = []
+        prompt = None
         if no_events and not has_words:
-            messages.append(say_what())
-        messages.extend(self.dispatcher.messages)
-        merged_message = "。。".join(messages)
-        return merged_message, self.events
+            messages.append(Message(say_what(), None))
+        messages.extend(self.messages)
+        for m in messages[::-1]:
+            if m.prompt:
+                prompt = m.prompt
+                break
+        merged_message = "。。".join([m.text for m in messages])
+        logger.info(f'events={self.events}, merged_message={merged_message}, prompt={prompt}')
+        if prompt:
+            self.dispatcher.utter_message(merged_message, prompt=prompt)
+        else:
+            self.dispatcher.utter_message(merged_message)
+        return self.events
 
     def set_slot(self, name, value):
         self.slots[name] = value
@@ -205,6 +224,9 @@ class Context:
 
     def get_slot(self, name: Text) -> Any:
         return self.slots.get(name)
+
+    def utter_message(self, message: str, prompt: [str] = None):
+        self.messages.append(Message(message, prompt))
 
 
 class BaseHandler:
@@ -339,8 +361,8 @@ class BaseHandler:
     def utter_one_of(self, *messages):
         self.utter_message(random.choice(messages))
 
-    def utter_message(self, message):
-        self.dispatcher.utter_message(message)
+    def utter_message(self, message, prompt=None):
+        self.context.utter_message(message, prompt)
 
     def recover(self):
         pass
@@ -469,6 +491,10 @@ class BaseFormHandler(BaseHandler):
     form: Form
     processed = False
 
+    def __init__(self, context: Context):
+        super().__init__(context)
+        self.form = self.Form(delegate=self)
+
     @property
     def form_name(self):
         return self.Form.__tag__
@@ -501,8 +527,6 @@ class BaseFormHandler(BaseHandler):
         if not (trigger or self.is_active()):
             self.skip()
             return
-        # TODO: 有激活表单但是有些意图可能导致切换表单
-        self.form = self.Form(delegate=self)
         if trigger and not self.is_active():  # 切换到该表单前清理所有slots
             self.context.reset_slots()
         if self.validate(recovering=False):
@@ -543,7 +567,8 @@ def get_user_intent(tracker: Tracker):
 
 
 def is_last_message_user(tracker: Tracker):
-    return tracker.events and tracker.events[-1]['event'] == 'user'
+    # return tracker.events and tracker.events[-1]['event'] == 'user'
+    return True
 
 
 def get_entity_from_message(message: Dict[Text, Any], name: Text):

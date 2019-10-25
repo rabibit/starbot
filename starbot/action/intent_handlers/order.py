@@ -47,6 +47,7 @@ class SimpleOrderHandler(BaseFormHandler):
         count: str
         number: int
         cart: list
+        gpt2prompt: list
 
     form: Form
 
@@ -76,6 +77,16 @@ class SimpleOrderHandler(BaseFormHandler):
     def validate(self, recovering: bool):
         form = self.form
 
+        gpt2out = self.tracker.latest_message.get('gpt2out')
+        from_gpt2out = False
+        print(f'gpt2out is {gpt2out}')
+        if gpt2out:
+            result = db_orm_query(Inform, name=gpt2out)
+            for rt in result:
+                if rt.variety == 'product':
+                    form.thing = gpt2out
+                    from_gpt2out = True
+                    break
         if recovering:
             if form.count is not None and form.thing is None:
                 self.utter_message(f'不好意思, 你刚才说需要{form.count}什么?')
@@ -103,6 +114,9 @@ class SimpleOrderHandler(BaseFormHandler):
             cart = self.context.get_slot('cart') or []
             fuzzy_thing = False
             for thing, count in zip(things, counts):
+                if len(thing) == 1 and thing != '水':
+                    self.skip()
+                    return
                 count = count_normalized(count)
                 result = db_orm_query(Inform, name=thing)
                 product = False
@@ -118,13 +132,11 @@ class SimpleOrderHandler(BaseFormHandler):
                             product = True
                             products.append(rt)
                     if product:
-                        self.utter_message("我们这里有：")
-                        for food in products:
-                            self.utter_message("{}".format(food.name))
-                        self.utter_message("请问您要哪一种")
-                        form.thing = None
-                        form.count = None
-                        return False
+                        if len(products) == 1:
+                            thing = thing + '(' + products[0].name + ')'
+                        else:
+                            self.prompt_for_chosing(products, form)
+                            return False
                     else:
                         self.utter_message("不好意思，我们这里没有{}".format(thing))
                         form.thing = None
@@ -149,7 +161,7 @@ class SimpleOrderHandler(BaseFormHandler):
             form.count = None
             return False
 
-        if (n_things, n_counts) not in ((0, 1), (1, 0)):
+        if (n_things, n_counts) not in ((0, 1), (1, 0)) and not from_gpt2out:
             self.skip()
             # self.skip_if_intended()
             # self.utter_message("你说啥，我没听清?")
@@ -182,13 +194,11 @@ class SimpleOrderHandler(BaseFormHandler):
                     product = True
                     products.append(rt)
             if product:
-                self.utter_message("我们这里有：")
-                for food in products:
-                    self.utter_message("{}".format(food.name))
-                self.utter_message("请问您要哪一种")
-                form.thing = None
-                form.count = None
-                return False
+                if len(products) == 1:
+                    form.thing = form.thing + '(' + products[0].name + ')'
+                else:
+                    self.prompt_for_chosing(products, form)
+                    return False
             else:
                 self.utter_message("不好意思，我们这里没有{}".format(form.thing))
                 form.thing = None
@@ -226,3 +236,11 @@ class SimpleOrderHandler(BaseFormHandler):
             self.abort()
         else:
             super(SimpleOrderHandler, self).cancel(force)
+
+    def prompt_for_chosing(self, products, form):
+        self.utter_message("我们这里有：")
+        for food in products:
+            self.utter_message("{}".format(food.name), prompt=[food.name for food in products])
+        self.utter_message("请问您要哪一种")
+        form.thing = None
+        #form.count = None

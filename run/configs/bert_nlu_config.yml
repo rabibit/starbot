@@ -40,4 +40,5 @@ pipeline:
     batch_size: 32
     epochs: 10
   - name: "starbot.ClearEmbedding"
+  - name: "starbot.Gpt2Extractor"
 #  - name: "starbot.CharFreqClassifier"
