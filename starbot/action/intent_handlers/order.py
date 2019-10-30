@@ -99,7 +99,7 @@ class SimpleOrderHandler(BaseFormHandler):
                 self.utter_message("你有什么需要吗?")
             return False
 
-        if self.tracker.latest_message.get('intent', {}).get('name') == 'ok':
+        if self.tracker.latest_message.get('intent', {}).get('name') in {'ok', 'no'}:
             if not form.cart:
                 self.utter_message("你还没说你需要啥?")
                 return False
