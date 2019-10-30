@@ -11,7 +11,7 @@ class SimpleHandler(BaseHandler):
     responses = {
         'account_issues': '没问题，可以直接挂在房帐上面',
         'air_conditioner_problem': '好的，我马上叫人过来帮您看看，很抱歉给您带来不便',
-        'any_other?': '不好意思，只有这些了',
+        'any_other?': '不好意思，只有这些',
         # 'ask_for_awaking': '您的闹钟已经设定',
         'ask_for_changing_room': '您好，申请换房需要您亲自到前台办理，谢谢',
         # 'ask_for_charger': '好的，稍后让服务员给您送到房间',
