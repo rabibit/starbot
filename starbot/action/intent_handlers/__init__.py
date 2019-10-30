@@ -14,10 +14,12 @@ from .repeat_utter import RepeatHandler
 from .greet import GreetHandler
 from .alarm_query import AlarmQueryHandler
 from .alarm_cancel import AlarmCancelHandler
+from .thanks import ThanksHandler
 
 
 handlers = [
     RepeatHandler,
+    ThanksHandler,
     QuitHandler,
     WifiHandler,
     ByeHandler,
