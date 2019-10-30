@@ -441,6 +441,7 @@ class BertEmbedding(EntityExtractor):
             print("{:<32}:{:.3f} {}".format(l, p, bar))
 
         entities = mark_message_with_labels(message_text, ner_labels[1:])
+        entities = merge_entities(entities)
         ir = {
             'name': ir_label,
             'confidence': 0 if result['ir_is_ood'] > 0.6 else result['ir_prob'][0][ir[0]].item()
@@ -492,3 +493,45 @@ def to_one_hot(vector, one_hot_size):
     one_hot[np.arange(squeezed_vector.size), squeezed_vector] = 1
 
     return one_hot
+
+
+def merge_entities(entities: []) -> list:
+    
+    """
+    
+    :param entities: 
+    :return: 
+    
+    >>> merge_entities([])
+    []
+    >>> merge_entities([{'start': 0, 'end': 2, 'entity': 'goods', 'value': '百事'}])
+    [{'start': 0, 'end': 2, 'entity': 'goods', 'value': '百事'}]
+    >>> merge_entities([{'start': 0, 'end': 2, 'entity': 'goods', 'value': '百事'},
+    ... {'start': 2, 'end': 4, 'entity': 'goods', 'value': '可乐'}])
+    [{'start': 0, 'end': 4, 'entity': 'goods', 'value': '百事可乐'}]
+    >>> merge_entities([{'start': 0, 'end': 2, 'entity': 'goods', 'value': '百事'},
+    ... {'start': 3, 'end': 5, 'entity': 'goods', 'value': '可乐'}])
+    [{'start': 0, 'end': 2, 'entity': 'goods', 'value': '百事'}, {'start': 3, 'end': 5, 'entity': 'goods', 'value': '可乐'}]
+    >>> merge_entities([{'start': 0, 'end': 2, 'entity': 'goods', 'value': '百事'},
+    ... {'start': 2, 'end': 4, 'entity': 'goods', 'value': '可乐'},
+    ... {'start': 4, 'end': 6, 'entity': 'goods', 'value': '好喝'}])
+    [{'start': 0, 'end': 4, 'entity': 'goods', 'value': '百事可乐好喝'}]
+    """
+    if not entities:
+        return []
+    result = []
+    entities_merged = entities[0]
+    for entity in entities[1:]:
+        if entities_merged['entity'] == entity['entity'] and entities_merged['end'] == entity['start']:
+            entities_merged = {
+                "start": entities_merged['start'],
+                "end": entity['end'],
+                "entity": entities_merged['entity'],
+                "value": entities_merged['value'] + entity['value'],
+            }
+        else:
+            result.append(entities_merged)
+            entities_merged = entity
+    result.append(entities_merged)
+    return result
+
