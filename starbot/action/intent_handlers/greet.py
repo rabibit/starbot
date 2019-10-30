@@ -14,6 +14,8 @@ class GreetHandler(BaseHandler):
                 "你好, 有什么可以帮你的呢",
             )
         else:
+            import time
+            time.sleep(3)
             self.utter_message("你好, 我是小智")
             self.set_slot('caller', caller)
 
