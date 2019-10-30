@@ -347,6 +347,8 @@
 - 你好我想要[衣架](thing)
 - 帮我送[个](count)[快餐垫](thing)上来
 - 你好，能帮我送[几瓶](count)[矿泉水](thing)上来吗
+- 我要[方便面](thing)
+- 我想要[一瓶](count)[矿泉水]
 
 ## intent: not_found
 - 好像找过没有诶
