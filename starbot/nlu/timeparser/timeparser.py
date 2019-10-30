@@ -1257,7 +1257,7 @@ class TimePoint:
             ]
             nearest = get_nearest(points)
             year = nearest.year
-            if prefer_future and nearest < self.baseline:
+            if prefer_future and nearest < self.baseline.replace(tzinfo=None):
                 year += 1
 
         elif self.fuzzy_month:
@@ -1269,7 +1269,7 @@ class TimePoint:
             ]
             nearest = get_nearest(points)
 
-            if prefer_future and nearest < self.baseline:
+            if prefer_future and nearest < self.baseline.replace(tzinfo=None):
                 nearest = add_months(nearest, 1)
 
             year = nearest.year
