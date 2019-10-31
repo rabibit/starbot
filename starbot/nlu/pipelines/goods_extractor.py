@@ -33,6 +33,7 @@ pattern = re.compile(r"""(百事|可口)(可乐)?
 |美年达
 |农夫果园
 |果粒橙
+|统一方便面
 |纯果乐
 |(百威|青岛)啤酒
 |纯生
@@ -71,7 +72,7 @@ class GoodsExtractor(EntityExtractor):
             })
         if brands:
             entities = message.get('entities') or []
-            entities += brands
+            entities = merge_entities_goods(entities, brands)
             message.set("entities", entities, add_to_output=True)
 
 

@@ -41,4 +41,5 @@ pipeline:
     epochs: 10
   - name: "starbot.ClearEmbedding"
   - name: "starbot.Gpt2Extractor"
+  - name: "starbot.GoodsExtractor"
 #  - name: "starbot.CharFreqClassifier"
