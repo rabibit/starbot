@@ -75,6 +75,37 @@ class GoodsExtractor(EntityExtractor):
             message.set("entities", entities, add_to_output=True)
 
 
+def merge_entities_goods(entities: list, goods: list) -> list:
+    """
+
+    :param entities: got from network
+    :param goods: got form  regex
+    :return: entities modified by goods
+    >>> merge_entities_goods([], [])
+    []
+    >>> merge_entities_goods([], [{'start': 4, 'end': 6, 'entity': 'goods', 'value': '可乐'}])
+    [{'start': 4, 'end': 6, 'entity': 'thing', 'value': '可乐'}]
+    >>> merge_entities_goods([{'start': 0, 'end': 2, 'entity': 'goods', 'value': '百事'},
+    ... {'start': 2, 'end': 4, 'entity': 'goods', 'value': '可乐'},
+    ... {'start': 4, 'end': 6, 'entity': 'goods', 'value': '好喝'}],
+    ... [{'start': 1, 'end': 5, 'entity': 'goods', 'value': '事可乐好'}])
+    [{'start': 1, 'end': 5, 'entity': 'thing', 'value': '事可乐好'}]
+    """
+
+    result = entities.copy()
+    for good in goods:
+        for entity in entities:
+            if good['start'] <= entity['start'] <= good['end'] or good['start'] <= entity['end'] <= good['end']:
+                result.remove(entity)
+        result.append({
+            "start": good['start'],
+            "end": good['end'],
+            "entity": 'thing',
+            "value": good['value']
+        })
+    return result
+
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
