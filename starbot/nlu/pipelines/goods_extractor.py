@@ -11,7 +11,6 @@ pattern = re.compile(r"""(百事|可口)(可乐)?
 |矿泉水
 |雀巢(咖啡)?
 |咖啡
-|康师傅
 |巴黎水
 |椰汁
 |豆奶
@@ -34,6 +33,8 @@ pattern = re.compile(r"""(百事|可口)(可乐)?
 |农夫果园
 |果粒橙
 |统一方便面
+|康师傅方便面
+|康师傅
 |纯果乐
 |(百威|青岛)啤酒
 |纯生
@@ -65,6 +66,10 @@ class GoodsExtractor(EntityExtractor):
         >>> msg.get('entities')
         [{'start': 0, 'end': 5, 'entity': 'thing', 'value': '统一方便面'}]
 
+        >>> msg = Message('康师傅方便面')
+        >>> GoodsExtractor().process(msg)
+        >>> msg.get('entities')
+        [{'start': 0, 'end': 6, 'entity': 'thing', 'value': '康师傅方便面'}]
         """
         brands = []
         for m in pattern.finditer(message.text):
@@ -103,6 +108,9 @@ def merge_entities_goods(entities: list, goods: list) -> list:
     ... [{'start': 0, 'end': 5, 'entity': 'goods', 'value': '统一方便面'}])
     [{'start': 0, 'end': 5, 'entity': 'thing', 'value': '统一方便面'}]
 
+    >>> merge_entities_goods([{'start': 0, 'end': 4, 'entity': 'thing', 'value': '康师傅'}],
+    ... [{'start': 0, 'end': 6, 'entity': 'goods', 'value': '康师傅方便面'}])
+    [{'start': 0, 'end': 6, 'entity': 'thing', 'value': '康师傅方便面'}]
     """
 
     result = entities.copy()
