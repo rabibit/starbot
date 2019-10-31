@@ -53,12 +53,17 @@ class GoodsExtractor(EntityExtractor):
         >>> msg = Message('百事可乐吧')
         >>> GoodsExtractor().process(msg)
         >>> msg.get('entities')
-        [{'start': 0, 'end': 4, 'entity': 'goods', 'value': '百事可乐', 'extractor': 'GoodsExtractor'}]
+        [{'start': 0, 'end': 4, 'entity': 'thing', 'value': '百事可乐'}]
 
         >>> msg = Message('百事吧')
         >>> GoodsExtractor().process(msg)
         >>> msg.get('entities')
-        [{'start': 0, 'end': 2, 'entity': 'goods', 'value': '百事', 'extractor': 'GoodsExtractor'}]
+        [{'start': 0, 'end': 2, 'entity': 'thing', 'value': '百事'}]
+
+        >>> msg = Message('统一方便面')
+        >>> GoodsExtractor().process(msg)
+        >>> msg.get('entities')
+        [{'start': 0, 'end': 5, 'entity': 'thing', 'value': '统一方便面'}]
 
         """
         brands = []
@@ -84,13 +89,20 @@ def merge_entities_goods(entities: list, goods: list) -> list:
     :return: entities modified by goods
     >>> merge_entities_goods([], [])
     []
+
     >>> merge_entities_goods([], [{'start': 4, 'end': 6, 'entity': 'goods', 'value': '可乐'}])
     [{'start': 4, 'end': 6, 'entity': 'thing', 'value': '可乐'}]
+
     >>> merge_entities_goods([{'start': 0, 'end': 2, 'entity': 'goods', 'value': '百事'},
     ... {'start': 2, 'end': 4, 'entity': 'goods', 'value': '可乐'},
     ... {'start': 4, 'end': 6, 'entity': 'goods', 'value': '好喝'}],
     ... [{'start': 1, 'end': 5, 'entity': 'goods', 'value': '事可乐好'}])
     [{'start': 1, 'end': 5, 'entity': 'thing', 'value': '事可乐好'}]
+
+    >>> merge_entities_goods([{'start': 2, 'end': 5, 'entity': 'thing', 'value': '方便面'}],
+    ... [{'start': 0, 'end': 5, 'entity': 'goods', 'value': '统一方便面'}])
+    [{'start': 0, 'end': 5, 'entity': 'thing', 'value': '统一方便面'}]
+
     """
 
     result = entities.copy()

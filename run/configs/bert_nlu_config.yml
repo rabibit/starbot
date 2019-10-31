@@ -31,6 +31,7 @@ pipeline:
 
   - name: "starbot.BrandExtractor"
   - name: "starbot.CommandExtractor"
+  - name: "starbot.GoodsExtractor"
   - name: "starbot.LiteExtractor"
     max_seq_length: 128
     batch_size: 32
@@ -40,6 +41,4 @@ pipeline:
     batch_size: 32
     epochs: 10
   - name: "starbot.ClearEmbedding"
-  - name: "starbot.Gpt2Extractor"
-  - name: "starbot.GoodsExtractor"
 #  - name: "starbot.CharFreqClassifier"
