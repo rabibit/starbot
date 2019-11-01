@@ -60,7 +60,7 @@ class WebSocketInput(InputChannel):
             if isinstance(data, str):
                 data = json.loads(data)
                 sid = data['sid']
-                content = data['content']
+                content = data['content'].rstrip('，。')
                 logger.info(f"user say: {content}")
                 output_channel = WebSocketOutput(ws)
                 message = UserMessage(content, output_channel,
