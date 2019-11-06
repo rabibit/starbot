@@ -34,6 +34,6 @@ class QuitHandler(BaseHandler):
             logger.info(f'message={message}, match={self.not_pat.search(message)}')
             if self.not_pat.search(message):
                 self.context.cancel_form(force=False)
-                self.utter_message('好的， 还有其它需要吗')
+                self.utter_message('好的， 还有什么可以帮您的呢')
                 self.abort()
         self.skip()

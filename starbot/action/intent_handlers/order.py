@@ -99,7 +99,7 @@ class SimpleOrderHandler(BaseFormHandler):
                 self.utter_message("你有什么需要吗?")
             return False
 
-        if self.tracker.latest_message.get('intent', {}).get('name') in {'ok', 'no'}:
+        if not gpt2out and self.tracker.latest_message.get('intent', {}).get('name') in {'ok', 'no'}:
             if not form.cart:
                 self.utter_message("你还没说你需要啥?")
                 return False
@@ -137,6 +137,9 @@ class SimpleOrderHandler(BaseFormHandler):
                             thing_complement = thing + '(' + products[0].name + ')'
                         else:
                             self.prompt_for_chosing(products, form)
+                            form.count = count
+                            if cart:
+                                self.context.set_slot('cart', cart)
                             return False
                     else:
                         self.utter_message("不好意思，我们这里没有{}".format(thing))
@@ -226,8 +229,14 @@ class SimpleOrderHandler(BaseFormHandler):
     def commit(self):
         cart = self.form.cart or []
         things = ''
-        for thing in cart:
-            things += thing['thing']
+        if cart:
+            cart = [item['thing'] for item in cart]
+            last = cart[-1]
+            start = '，'.join(cart[:-1])
+            if start:
+                things = '和'.join([start, last])
+            else:
+                things = last
         self.utter_message("好的，您要的{}马上为您送过来".format(things))
 
     def cancel(self, force: bool):

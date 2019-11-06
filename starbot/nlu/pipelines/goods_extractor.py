@@ -2,9 +2,9 @@ import re
 
 from rasa.nlu.extractors import EntityExtractor
 from rasa.nlu.training_data import Message
+from starbot.action.db_orm import *
 
-
-pattern = re.compile(r"""(百事|可口)(可乐)?
+reg_str = r"""(百事|可口)(可乐)?
 |可乐
 |农夫山泉
 |怡宝
@@ -38,7 +38,14 @@ pattern = re.compile(r"""(百事|可口)(可乐)?
 |纯果乐
 |(百威|青岛)啤酒
 |纯生
-""", re.X | re.I)
+"""
+
+result = db_orm_query_all(Inform)
+for rt in result:
+    if rt.variety == 'product':
+        reg_str = reg_str + rt.name
+
+pattern = re.compile(reg_str, re.X | re.I)
 
 
 class GoodsExtractor(EntityExtractor):
@@ -83,6 +90,7 @@ class GoodsExtractor(EntityExtractor):
         if brands:
             entities = message.get('entities') or []
             entities = merge_entities_goods(entities, brands)
+            entities.sort(key=lambda x: x['start'])
             message.set("entities", entities, add_to_output=True)
 
 
