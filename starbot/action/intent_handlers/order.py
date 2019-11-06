@@ -110,6 +110,7 @@ class SimpleOrderHandler(BaseFormHandler):
         counts = get_entities_from_message(self.tracker.latest_message, 'count')
         n_things = len(things)
         n_counts = len(counts)
+        thing_complement = None
         if n_things == n_counts and n_things >= 1:
             cart = self.context.get_slot('cart') or []
             fuzzy_thing = False
@@ -133,7 +134,7 @@ class SimpleOrderHandler(BaseFormHandler):
                             products.append(rt)
                     if product:
                         if len(products) == 1:
-                            thing = thing + '(' + products[0].name + ')'
+                            thing_complement = thing + '(' + products[0].name + ')'
                         else:
                             self.prompt_for_chosing(products, form)
                             return False
@@ -150,7 +151,7 @@ class SimpleOrderHandler(BaseFormHandler):
                         product['count'] = count
                         break
                 else:
-                    cart.append({'thing': thing, 'count': count})
+                    cart.append({'thing': thing_complement if thing_complement else thing, 'count': count})
                 self.utter_message(f'{count}{thing}')
             self.context.set_slot('cart', cart)
             if fuzzy_thing:
@@ -195,7 +196,7 @@ class SimpleOrderHandler(BaseFormHandler):
                     products.append(rt)
             if product:
                 if len(products) == 1:
-                    form.thing = form.thing + '(' + products[0].name + ')'
+                    thing_complement = form.thing + '(' + products[0].name + ')'
                 else:
                     self.prompt_for_chosing(products, form)
                     return False
@@ -215,7 +216,7 @@ class SimpleOrderHandler(BaseFormHandler):
                 product['count'] = count
                 break
         else:
-            cart.append({'thing': form.thing, 'count': count})
+            cart.append({'thing': thing_complement if thing_complement else form.thing, 'count': count})
         form.cart = cart
         self.utter_message(f"{form.count}{form.thing}，请问您还需要什么?")
         form.thing = None
