@@ -59,6 +59,22 @@ def config_tf_log():
     # This fixes that tensorflow 1.14 don't emit logs
     tf.get_logger().addHandler(logging.StreamHandler(sys.stdout))
 
+def patch_rasa_for_tf2():
+    import tensorflow as tf
+    import sys
+    tf.logging = tf.compat.v1.logging
+    tf.ConfigProto = None
+
+    sys.modules['rasa.core.policies.embedding_policy'] = type(sys)("embedding_policy")
+    sys.modules['rasa.core.policies.embedding_policy'].EmbeddingPolicy = None
+    sys.modules['rasa.core.policies.keras_policy'] = type(sys)("embedding_policy")
+    sys.modules['rasa.core.policies.keras_policy'].KerasPolicy = None
+
+    class EmbeddingIntentClassifier:
+        name = "EmbeddingIntentClassifier"
+
+    sys.modules['rasa.nlu.classifiers.embedding_intent_classifier'] = type(sys)("")
+    sys.modules['rasa.nlu.classifiers.embedding_intent_classifier'].EmbeddingIntentClassifier = EmbeddingIntentClassifier
 
 def main():
     args = parser.parse_args()
@@ -92,6 +108,7 @@ def main():
         sys.argv.append(args.module)
 
     patch_rasa()
+    patch_rasa_for_tf2()
     config_tf_log()
     main()
 
