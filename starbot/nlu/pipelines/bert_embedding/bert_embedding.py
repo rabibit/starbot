@@ -3,20 +3,18 @@ import shutil
 import logging
 import tempfile
 import threading
+import collections
 import tensorflow as tf
 from queue import Queue
 from pathlib import Path
 import numpy as np
 
-from bert import modeling
-from bert.tokenization import load_vocab
 from rasa.nlu.extractors import EntityExtractor
 from starbot.nlu.pipelines.bert_embedding.model import BertForIntentAndNer
 from starbot.nlu.pipelines.bert_embedding.dataset import create_dataset, mark_message_with_labels, LabelMap
 
 # for type hint
 from typing import Any, List, Optional, Text, Dict
-from tensorflow.contrib import tpu
 from rasa.nlu.model import Metadata
 from rasa.nlu.components import Component
 from rasa.nlu.config import RasaNLUModelConfig
@@ -24,6 +22,17 @@ from rasa.nlu.training_data import Message, TrainingData
 from starbot.nlu.pipelines.bert_embedding.dataset import Dataset, Sentence
 
 logger = logging.getLogger(__name__)
+
+
+def load_vocab(vocab_file):
+    """Loads a vocabulary file into a dictionary."""
+    vocab = collections.OrderedDict()
+    with open(vocab_file, "r", encoding="utf-8") as reader:
+        tokens = reader.readlines()
+    for index, token in enumerate(tokens):
+        token = token.rstrip('\n')
+        vocab[token] = index
+    return vocab
 
 
 class Config:
@@ -64,78 +73,14 @@ class Config:
         self.__dict__ = config_dict
 
 
-class PredictServer(threading.Thread):
-    estimator: tpu.TPUEstimator
-    rq: Queue
-    STOP = 0
-
-    def __init__(self, estimator: tpu.TPUEstimator):
-        super().__init__()
-        self.rq = Queue()
-        self.sessions = {}  # TODO: 添加GC机制
-        self.estimator = estimator
-        self.setDaemon(True)
-        self._sn = 0
-
-    def next_sn(self):
-        self._sn += 1
-        return str(self._sn)
-
-    def predict(self, msg):
-        sn = self.next_sn()
-        msg['sn'] = sn
-        response = Queue()
-        self.sessions[sn] = response
-        self.rq.put(msg)
-        return response.get()
-
-    def stop(self):
-        self.rq.put(self.STOP)
-
-    def _predict_input_fn_builder(self):
-        def gen():
-            while True:
-                sample = self.rq.get()
-                if sample is self.STOP:
-                    break
-                yield sample
-
-        def input_fn(params):
-            return tf.data.Dataset.from_generator(gen,
-                                                  output_types={
-                                                      'input_ids': tf.int32,
-                                                      'input_mask': tf.int32,
-                                                      'sn': tf.string
-                                                  },
-                                                  output_shapes={
-                                                      'input_ids': (None, None),
-                                                      'input_mask': (None, None),
-                                                      'sn': (),
-                                                  })
-        return input_fn
-
-    def run(self):
-        input_fn = self._predict_input_fn_builder()
-        for pred in self.estimator.predict(input_fn=input_fn, yield_single_examples=False):
-            sn = pred['sn']
-            if isinstance(sn, bytes):
-                sn = sn.decode()
-            q = self.sessions.pop(sn, None)
-            if q:
-                q.put(pred)
-            else:
-                logger.error('sn missing: {}'.format(sn))
-
-
 class BertEmbedding(EntityExtractor):
     provides = ["entities", "bert_embedding"]
     ner_labels: LabelMap
     intent_labels: LabelMap
-    predictor: PredictServer
+    predictor: BertForIntentAndNer
     num_ner_labels: int
     num_intent_labels: int
     vocab: Dict[str, int]
-    estimator: tpu.TPUEstimator
     MODEL_DIR = "bert_ner"
     MODEL_NAME = "model.ckpt"
     CONFIG_NAME = "config.json"
@@ -200,9 +145,8 @@ class BertEmbedding(EntityExtractor):
             self.ner_labels = LabelMap.load(Path(base_dir)/'ner_labels.json')
             self.intent_labels = LabelMap.load(Path(base_dir)/'intent_labels.json')
         self.vocab = load_vocab(self.config.vocab_file)
-        self.predictor = PredictServer(self.estimator)
-        self.predictor.start()
-        # TODO: predictor线程销毁时机?
+        self.predictor = BertForIntentAndNer(len(self.intent_labels), len(self.ner_labels))
+        self.predictor.load_weights(str(base_dir/'saved_model_weights'))
 
     def train(self,
               training_data: TrainingData,
@@ -211,14 +155,13 @@ class BertEmbedding(EntityExtractor):
 
         dataset = create_dataset(training_data.training_examples)
         self.ner_labels = dataset.ner_labels
-        self.num_ner_labels = len(dataset.ner_labels) + 1
+        self.num_ner_labels = len(dataset.ner_labels)
         self.intent_labels = dataset.intent_labels
         self.num_intent_labels = len(dataset.intent_labels)  # FIXME +1?
         all_features = self._prepare_features(dataset)
         train_examples = dataset.examples
         num_train_steps = int(
             len(train_examples) / self.config.train_batch_size * self.config.num_train_epochs)
-        num_warmup_steps = int(num_train_steps * self.config.warmup_proportion)
 
         tf.logging.info("***** Running training *****")
         tf.logging.info("  Num examples = %d", len(train_examples))
@@ -226,9 +169,16 @@ class BertEmbedding(EntityExtractor):
         tf.logging.info("  Num steps = %d", num_train_steps)
 
         intent_ner_model = BertForIntentAndNer(self.num_intent_labels, self.num_ner_labels)
-        intent_ner_model.compile(optimizer='adam',
-                                 loss={'intent': 'categorical_crossentropy', 'ner': 'categorical_crossentropy'})
-        intent_ner_model.fit_generator(self._batch_generator(all_features), self.config.train_batch_size)
+        if os.path.exists(self.config.tmp_model_dir):
+            intent_ner_model.load_weights(self.config.tmp_model_dir + '/saved_model_weights')
+        intent_ner_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, epsilon=1e-08, clipnorm=1.0),
+                                 loss={'output_1': 'categorical_crossentropy', 'output_2': 'categorical_crossentropy'},
+                                 loss_weights={'output_1': 1.0, 'output_2': 10.0},
+                                 metrics=['accuracy'])
+        train_x, train_y = self._batch_generator(all_features)
+        intent_ner_model.fit(train_x, train_y, validation_split=0.1, epochs=self.config.num_train_epochs)
+        self.model = intent_ner_model
+
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
         if n > 0:
@@ -252,16 +202,17 @@ class BertEmbedding(EntityExtractor):
         input_ids = self.convert_tokens_to_ids(self._pad(inputs, '[PAD]'))
         input_mask = self._pad([1 for _ in inputs], 0)
 
-        features = {"input_ids": [input_ids],
-                    "input_mask": [input_mask]}
-        return features
+        # features = {"input_ids": [input_ids],
+        #             "input_mask": [input_mask]}
+        # return features
+        return tf.constant([input_ids])
 
     def _create_single_feature(self, example: Sentence, dataset: Dataset):
         inputs = example.chars
         input_mask = self._pad([1 for _ in inputs], 0)
         input_ids = self.convert_tokens_to_ids(self._pad(inputs, '[PAD]'))
         ner_labels = self._pad(example.labels, '[PAD]')
-        ner_label_ids = dataset.ner_label2id(ner_labels)
+        ner_label_ids = dataset.ner_label2onehot(ner_labels)
         intent_label = example.intent
         ood_label_id = dataset.ood_label2id([intent_label])
         intent_label_id = dataset.intent_label2onehot(intent_label)
@@ -283,8 +234,16 @@ class BertEmbedding(EntityExtractor):
         return all_features
 
     def _batch_generator(self, all_features):
+        x = []
+        y1 = []
+        y2 = []
+        np.random.shuffle(all_features)
         for feature in all_features:
-            yield (feature['input_ids'], {'intent': feature['intent_label'], 'ner': feature['ner_label']})
+            x.append(feature["input_ids"])
+            y1.append(feature["intent_label_id"])
+            y2.append(feature["ner_label_ids"])
+        # return tf.constant(x, dtype=tf.int32), {'intent': tf.constant(y1, dtype=tf.int32),
+        return tf.constant(x), [tf.constant(y1), tf.constant(y2)]
 
     def process(self, message: Message, **kwargs: Any) -> None:
         ir, ner, embedding = self._predict(message.text)
@@ -303,21 +262,18 @@ class BertEmbedding(EntityExtractor):
         # 将bert最新checkpoint拷贝到rasa模型输出目录
         outdir = Path(model_dir) / self.MODEL_DIR
         outdir.mkdir(parents=True, exist_ok=True)
-        bert_tmp = Path(self.config.tmp_model_dir)
-        prefix = (bert_tmp / 'checkpoint').read_text().split(':')[-1].strip()[1:-1]
+        # bert_tmp = Path(self.config.tmp_model_dir)
 
         def save(src, dst):
             logger.error('Saving {}'.format(dst))
             shutil.copy(src, dst)
 
-        for suffix in ['.index', '.meta', '.data-00000-of-00001']:
-            # output/result_dir/ch
-            dst = outdir / (self.MODEL_NAME + suffix)
-            save(bert_tmp / (prefix + suffix), dst)
+        self.model.save_weights(self.config.tmp_model_dir + '/saved_model_weights')
         save(self.config.bert_config, outdir / self.CONFIG_NAME)
         save(self.config.vocab_file, outdir / self.VOCAB_NAME)
 
         self.ner_labels.save(outdir / 'ner_labels.json')
+        os.system(f'cp {self.config.tmp_model_dir}/* {outdir}')
         self.intent_labels.save(outdir / 'intent_labels.json')
 
         return {
@@ -328,34 +284,28 @@ class BertEmbedding(EntityExtractor):
 
     def _predict(self, message_text: str) -> (str, List[Dict[Text, Any]]):
         """Take a sentence and return entities in json format"""
-        # <class 'dict'>:
-        # {'start': 5, 'end': 7, 'value': '标间', 'entity': 'room_type',
-        # 'confidence': 0.9988710946115964, 'extractor': 'ner_crf'}
         result = self.predictor.predict(self._create_single_feature_from_message(message_text))
-        ner = result['ner'][0]
-        #ner = ner[:len(message_text)+2]
-        #crf_params = result['crf_params']
-        #from tensorflow.contrib import crf
-        #viterbi_seq, viterbi_score = crf.viterbi_decode(ner, crf_params)
-        ir = result['ir']
-        ir_label = self.intent_labels.decode(ir.tolist())[0]
-        #ner_labels = self.ner_labels.decode(viterbi_seq)
-        ner_labels = self.ner_labels.decode(ner)
-        # print(ner)
-        # print(ner_labels)
+        ner = result[1]
+        ner_indexs = np.argmax(ner, axis=-1)
+        ir = result[0]
+        ir_index = np.argmax(ir, axis=-1)
+        ir_confidence = np.max(ir, axis=-1)
+        print(f"ir indexs: {ir_index.tolist()}")
+        print(f"ner indexs: {ner_indexs.tolist()}")
+        ir_label = self.intent_labels.decode(ir_index.tolist())[0]
+        ner_labels = self.ner_labels.decode(ner_indexs.tolist()[0])
         print("message.text={}".format(message_text))
-        print("is_ood={}".format(result['ir_is_ood'][0].item()))
-        for l, p in zip(self.intent_labels.labels, result['ir_prob'][0]):
+        for l, p in zip(self.intent_labels.labels, ir[0]):
             bar = '#' * int(30*p)
             print("{:<32}:{:.3f} {}".format(l, p, bar))
 
-        entities = mark_message_with_labels(message_text, ner_labels[1:])
+        entities = mark_message_with_labels(message_text, ner_labels)
         entities = merge_entities(entities)
         ir = {
             'name': ir_label,
-            'confidence': 0 if result['ir_is_ood'] > 0.6 else result['ir_prob'][0][ir[0]].item()
+            'confidence': ir_confidence
         }
-        return ir, entities, result['embedding'][0]
+        return ir, entities, [0.0] * 768
 
     def test_predict(self, message_text, label):
         result = self.predictor.predict(self._create_single_feature_from_message(message_text))

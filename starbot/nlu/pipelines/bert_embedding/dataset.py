@@ -63,6 +63,16 @@ class Dataset:
         assert not isinstance(labels, str)
         return self.ner_labels.encode(labels)
 
+    def ner_label2onehot(self, labels):
+        cnt = len(self.ner_labels.labels)
+        label_ids = self.ner_labels.encode(labels)
+        one_hot = []
+        for label_id in label_ids[1:]:
+            onehot = [0.0] * cnt
+            onehot[label_id] = 1.0
+            one_hot.append(onehot)
+        return one_hot
+
     def intent_label2id(self, labels):
         assert not isinstance(labels, str)
         return self.intent_labels.encode(labels)
