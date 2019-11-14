@@ -11,7 +11,7 @@ import numpy as np
 from bert import modeling
 from bert.tokenization import load_vocab
 from rasa.nlu.extractors import EntityExtractor
-from starbot.nlu.pipelines.bert_embedding.model import model_fn_builder
+from starbot.nlu.pipelines.bert_embedding.model import BertForIntentAndNer
 from starbot.nlu.pipelines.bert_embedding.dataset import create_dataset, mark_message_with_labels, LabelMap
 
 # for type hint
@@ -200,64 +200,9 @@ class BertEmbedding(EntityExtractor):
             self.ner_labels = LabelMap.load(Path(base_dir)/'ner_labels.json')
             self.intent_labels = LabelMap.load(Path(base_dir)/'intent_labels.json')
         self.vocab = load_vocab(self.config.vocab_file)
-        self.estimator = self._create_estimator(meta['num_ner_labels'],
-                                                meta['num_intent_labels'], 0, 0, is_training=False)
         self.predictor = PredictServer(self.estimator)
         self.predictor.start()
         # TODO: predictor线程销毁时机?
-
-    def _create_estimator(self, num_ner_labels, num_intent_labels, num_train_steps, num_warmup_steps, is_training):
-        bert_config = modeling.BertConfig.from_json_file(self.config.bert_config)
-        if self.config.max_seq_length > bert_config.max_position_embeddings:
-            raise ValueError(
-                "Cannot use sequence length %d because the BERT model "
-                "was only trained up to sequence length %d" %
-                (self.config.max_seq_length, bert_config.max_position_embeddings)
-            )
-
-        tpu_cluster_resolver = None
-        if self.config.use_tpu and self.config.tpu_name:
-            tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
-                self.config.tpu_name, zone=self.config.tpu_zone, project=self.config.gcp_project)
-
-        is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
-        from tensorflow.core.protobuf import rewriter_config_pb2
-        session_config = tf.ConfigProto()
-        off = rewriter_config_pb2.RewriterConfig.OFF
-        session_config.graph_options.rewrite_options.arithmetic_optimization = off
-
-        run_config = tf.contrib.tpu.RunConfig(
-            cluster=tpu_cluster_resolver,
-            master=self.config.master,
-            model_dir=self.config.tmp_model_dir if is_training else None,
-            save_checkpoints_steps=self.config.save_checkpoints_steps,
-            tpu_config=tf.contrib.tpu.TPUConfig(
-                iterations_per_loop=self.config.iterations_per_loop,
-                num_shards=self.config.num_tpu_cores,
-                per_host_input_for_training=is_per_host),
-            session_config=session_config
-        )
-
-        model_fn = model_fn_builder(
-            bert_config=bert_config,
-            num_ner_labels=num_ner_labels,
-            num_intent_labels=num_intent_labels,
-            init_checkpoint=self.config.init_checkpoint,
-            learning_rate=self.config.learning_rate,
-            num_train_steps=num_train_steps,
-            num_warmup_steps=num_warmup_steps,
-            use_tpu=self.config.use_tpu,
-            use_one_hot_embeddings=self.config.use_tpu,
-            max_seq_length=self.config.max_seq_length
-        )
-
-        return tf.contrib.tpu.TPUEstimator(
-            use_tpu=self.config.use_tpu,
-            model_fn=model_fn,
-            config=run_config,
-            train_batch_size=self.config.train_batch_size,
-            eval_batch_size=self.config.eval_batch_size,
-            predict_batch_size=self.config.predict_batch_size)
 
     def train(self,
               training_data: TrainingData,
@@ -279,29 +224,11 @@ class BertEmbedding(EntityExtractor):
         tf.logging.info("  Num examples = %d", len(train_examples))
         tf.logging.info("  Batch size = %d", self.config.train_batch_size)
         tf.logging.info("  Num steps = %d", num_train_steps)
-        train_input_fn = self._input_fn_builder(all_features, is_training=True, drop_remainder=True)
-        self.estimator = self._create_estimator(num_ner_labels=self.num_ner_labels,
-                                                num_intent_labels=self.num_intent_labels,
-                                                num_train_steps=num_train_steps,
-                                                num_warmup_steps=num_warmup_steps,
-                                                is_training=True)
-        if not self.config.dry_run:
-            try:
-                self.estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
-            except KeyboardInterrupt:
-                if not self.config.allow_interrupt:
-                    raise
-        if not self.config.do_embedding:
-            return
-        with tempfile.TemporaryDirectory() as tempdir:
-            meta = self.persist('', tempdir)
-            predictor = BertEmbedding.load(meta, tempdir)
 
-            for example in training_data.training_examples:
-                ir, ner, emb = predictor._predict(example.text)
-                if self.config.do_embedding:
-                    example.set('bert_embedding', emb)
-
+        intent_ner_model = BertForIntentAndNer(self.num_intent_labels, self.num_ner_labels)
+        intent_ner_model.compile(optimizer='adam',
+                                 loss={'intent': 'categorical_crossentropy', 'ner': 'categorical_crossentropy'})
+        intent_ner_model.fit_generator(self._batch_generator(all_features), self.config.train_batch_size)
     def _pad(self, lst, v):
         n = self.config.input_length - len(lst)
         if n > 0:
@@ -355,27 +282,9 @@ class BertEmbedding(EntityExtractor):
             all_features.append(self._create_single_feature(example, dataset))
         return all_features
 
-    def _input_fn_builder(self, all_features, is_training, drop_remainder):
-        def input_fn(params):
-            # batch_size = params["batch_size"]
-            features = {
-                'input_ids': tf.constant([x['input_ids'] for x in all_features]),
-                'input_mask': tf.constant([x['input_mask'] for x in all_features]),
-            }
-            if is_training:
-                features.update({
-                    'segment_ids': tf.constant([x['segment_ids'] for x in all_features]),
-                    'ner_label_ids': tf.constant([x['ner_label_ids'] for x in all_features]),
-                    'intent_label_ids': tf.constant([x['intent_label_id'] for x in all_features]),
-                    'ood_label_ids': tf.constant([x['ood_label_id'] for x in all_features]),
-                })
-            ds = tf.data.Dataset.from_tensor_slices(features)
-
-            if is_training:
-                ds = ds.shuffle(1000, reshuffle_each_iteration=True).repeat()
-            return ds.batch(self.config.train_batch_size, drop_remainder)
-
-        return input_fn
+    def _batch_generator(self, all_features):
+        for feature in all_features:
+            yield (feature['input_ids'], {'intent': feature['intent_label'], 'ner': feature['ner_label']})
 
     def process(self, message: Message, **kwargs: Any) -> None:
         ir, ner, embedding = self._predict(message.text)
