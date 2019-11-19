@@ -176,7 +176,10 @@ class BertEmbedding(EntityExtractor):
                                  loss_weights={'output_1': 1.0, 'output_2': 10.0},
                                  metrics=['accuracy'])
         train_x, train_y = self._batch_generator(all_features)
-        intent_ner_model.fit(train_x, train_y, validation_split=0.1, epochs=self.config.num_train_epochs)
+        early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_output_1_accuracy', mode='max',
+                                                          min_delta=0.1, verbose=1, patience=3)
+        intent_ner_model.fit(train_x, train_y, validation_split=0.1, epochs=self.config.num_train_epochs,
+                             callbacks=[early_stopping])
         self.model = intent_ner_model
 
     def _pad(self, lst, v):
