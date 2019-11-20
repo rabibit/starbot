@@ -167,17 +167,16 @@ class BertEmbedding(EntityExtractor):
         tf.logging.info("  Batch size = %d", self.config.train_batch_size)
         tf.logging.info("  Num steps = %d", num_train_steps)
 
-        if os.path.exists(self.config.tmp_model_dir + 'saved_model'):
-            intent_ner_model = tf.saved_model.load(self.config.tmp_model_dir + '/saved_model')
-        else:
-            intent_ner_model = BertForIntentAndNer(self.num_intent_labels, self.num_ner_labels)
+        intent_ner_model = BertForIntentAndNer(self.num_intent_labels, self.num_ner_labels)
+        if os.path.exists(self.config.tmp_model_dir):
+            intent_ner_model.load_weights(self.config.tmp_model_dir + '/saved_model_weights')
         intent_ner_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, epsilon=1e-08, clipnorm=1.0),
                                  loss={'output_1': 'categorical_crossentropy', 'output_2': 'categorical_crossentropy'},
-                                 loss_weights={'output_1': 1.0, 'output_2': 50.0},
+                                 loss_weights={'output_1': 1.0, 'output_2': 70.0},
                                  metrics=['accuracy'])
         train_x, train_y = self._batch_generator(all_features)
         early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_output_1_accuracy', mode='max',
-                                                          min_delta=0.05, verbose=1, patience=3)
+                                                          min_delta=0.05, verbose=1, patience=10)
         intent_ner_model.fit(train_x, train_y, validation_split=0.1, epochs=self.config.num_train_epochs,
                              callbacks=[early_stopping])
         self.model = intent_ner_model
@@ -271,12 +270,14 @@ class BertEmbedding(EntityExtractor):
             logger.error('Saving {}'.format(dst))
             shutil.copy(src, dst)
 
+        os.system(f'rm -rf {self.config.tmp_model_dir}/*')
         self.model.save(self.config.tmp_model_dir + '/saved_model', save_format='tf')
+        os.system(f'mv {self.config.tmp_model_dir}/saved_model {outdir}')
+        self.model.save_weights(self.config.tmp_model_dir + '/saved_model_weights', save_format='tf')
         save(self.config.bert_config, outdir / self.CONFIG_NAME)
         save(self.config.vocab_file, outdir / self.VOCAB_NAME)
 
         self.ner_labels.save(outdir / 'ner_labels.json')
-        os.system(f'cp -rf {self.config.tmp_model_dir}/saved_model {outdir}')
         self.intent_labels.save(outdir / 'intent_labels.json')
 
         return {
@@ -306,7 +307,7 @@ class BertEmbedding(EntityExtractor):
         entities = merge_entities(entities)
         ir = {
             'name': ir_label,
-            'confidence': ir_confidence
+            'confidence': ir_confidence.item()
         }
         return ir, entities, [0.0] * 768
 

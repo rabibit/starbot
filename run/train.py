@@ -14,6 +14,8 @@ os.makedirs(tmpdir, exist_ok=True)
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import tensorflow as tf
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--model', default='bert', choices=['bert', 'mitie'], help='Using which model, bert or mitie')
 parser.add_argument('-m', '--module', default='all', choices=['all', 'core', 'nlu'], help='The module to be trained')
@@ -80,6 +82,9 @@ def main():
     args = parser.parse_args()
     config = args.model
 
+    physical_devices = tf.config.experimental.list_physical_devices('GPU')
+    if len(physical_devices) > 0:
+        tf.config.experimental.set_memory_growth(physical_devices[0], True)
     if config == 'bert':
         nlu_config_file = "bert_nlu_config.yml"
         download_bert_model_if_need()

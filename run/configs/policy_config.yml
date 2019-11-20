@@ -1,7 +1,7 @@
 policies:
-#  - name: starbot.policy.directaction.DirectAction
-#    priority: 4
-  - name: FallbackPolicy
+  - name: starbot.policy.directaction.DirectAction
+    priority: 4
+#  - name: FallbackPolicy
 #    fallback_action_name: 'action_default_fallback'
 #    priority: 3
 #  - name: FormPolicy

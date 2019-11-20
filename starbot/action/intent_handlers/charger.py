@@ -15,7 +15,7 @@ class ChargerHandler(BaseFormHandler):
 
     @property
     def charger_type(self):
-        return self.form.charger_type or self.form.brand
+        return self.form.brand or self.form.charger_type
 
     def validate(self, recovering: bool):
         if not recovering:

@@ -400,12 +400,15 @@ class BaseForm:
     ...  a: str = "a"
     ...  b: str
     ...
-    >>> f = MyForm(None)
+    >>> f = MyForm()
     >>> f.a
     'a'
     >>> f.b = 'b'
     >>> f.b
     'b'
+    >>> f.c = 'c'
+    >>> f.c
+    'c'
     >>> f.slot_filling_events()
     [{'event': 'slot', 'timestamp': None, 'name': 'b', 'value': 'b'}]
     >>> f.a = None

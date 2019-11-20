@@ -1,77 +1,11 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-import json
-import os
-import numpy as np
 import tensorflow as tf
-
-from starbot.policy.gpt2_extractor.gpt2 import model, sample
-from starbot.policy.gpt2_extractor.gpt2 import encoder
-from typing import Text, Optional
-
-
-def model_init(
-    model_dir='models',
-    model_name='355M',
-    seed=None,
-    nsamples=1,
-    batch_size=1,
-    length=20,
-    temperature=1,
-    top_k=1,
-    top_p=0.0
-):
-    """
-    Interactively run the model
-    :model_dir=models : String, where the model is
-    :model_name=355M : String, which model to use
-    :seed=None : Integer seed for random number generators, fix seed to reproduce
-     results
-    :nsamples=1 : Number of samples to return total
-    :batch_size=1 : Number of batches (only affects speed/memory).  Must divide nsamples.
-    :length=None : Number of tokens in generated text, if None (default), is
-     determined by model hyperparameters
-    :temperature=1 : Float value controlling randomness in boltzmann
-     distribution. Lower temperature results in less random completions. As the
-     temperature approaches zero, the model will become deterministic and
-     repetitive. Higher temperature results in more random completions.
-    :top_k=0 : Integer value controlling diversity. 1 means only 1 word is
-     considered for each step (token), resulting in deterministic completions,
-     while 40 means 40 words are considered at each step. 0 (default) is a
-     special setting meaning no restrictions. 40 generally is a good value.
-    :top_p=0.0 : Float value controlling diversity. Implements nucleus sampling,
-     overriding top_k if set to a value > 0. A good setting is 0.9.
-    """
-    if batch_size is None:
-        batch_size = 1
-    assert nsamples % batch_size == 0
-
-    enc = encoder.get_encoder(model_dir, model_name)
-    hparams = model.default_hparams()
-    with open(os.path.join(model_dir, model_name, 'hparams.json')) as f:
-        hparams.override_from_dict(json.load(f))
-
-    if length is None:
-        length = hparams.n_ctx // 2
-    elif length > hparams.n_ctx:
-        raise ValueError("Can't get samples longer than window size: %s" % hparams.n_ctx)
-
-    graph = tf.Graph()
-    sess = tf.Session(graph=graph)
-    with graph.as_default(), sess.as_default():
-        context = tf.placeholder(tf.int32, [batch_size, None])
-        tf.set_random_seed(seed)
-        output = sample.sample_sequence(
-            hparams=hparams, length=length,
-            context=context,
-            batch_size=batch_size,
-            temperature=temperature, top_k=top_k, top_p=top_p
-        )
-
-        saver = tf.train.Saver()
-        ckpt = tf.train.latest_checkpoint(os.path.join(model_dir, model_name))
-        saver.restore(sess, ckpt)
-        np.random.seed(seed)
-        return graph, sess, output, enc, context
+from transformers import GPT2Tokenizer, TFGPT2LMHeadModel as TFGPT2Model
+from typing import Any, Optional, Text, Dict
+from pathlib import Path
+import os
 
 
 def prepare_guide_words(items):
@@ -113,32 +47,68 @@ def preprocess(items, utter):
 
 class Gpt2Extractor(object):
 
-    def __init__(self, graph: tf.Graph, sess: tf.Session, output, enc, context):
-        self.graph = graph
-        self.sess = sess
-        self.output = output
-        self.enc = enc
-        self.context = context
+    MODEL_DIR = "gpt2"
+    TMP_MODEL_DIR = "output/result_dir"
+
+    def __init__(self, tokennizer: GPT2Tokenizer, generator, length: int):
+        self.tokennizer = tokennizer
+        self.generator = generator
+        self.length = length
 
     @classmethod
     def load(cls,
+             meta: Dict[Text, Any],
              model_dir: Optional[Text] = None,
              ) -> 'Gpt2Extractor':
-        graph, sess, output, enc, context = model_init(os.path.join(model_dir, 'models'))
-        return cls(graph, sess, output, enc, context)
+        # tokennizer = GPT2Tokenizer.from_pretrained('gpt2-medium')
+        # model = TFGPT2Model.from_pretrained('gpt2-medium')
+        # tokennizer.save_pretrained('/codes/starbot/run/huggpt2')
+        # model.save_pretrained('/codes/starbot/run/huggpt2')
+        tokennizer = GPT2Tokenizer.from_pretrained('/codes/starbot/run/huggpt2')
+        generator = tf.saved_model.load(str(Path(model_dir)/meta['gpt2']) + '/gpt2_saved_model')
+        # model = TFGPT2Model.from_pretrained(model_dir)
+        return cls(tokennizer, generator, 20)
+
+    def persist(self,
+                file_name: Text,
+                model_dir: Text) -> Optional[Dict[Text, Any]]:
+        """Persist this model into the passed directory.
+
+        Returns the metadata necessary to load the model again."""
+        # 将bert最新checkpoint拷贝到rasa模型输出目录
+        outdir = Path(model_dir)/self.MODEL_DIR
+        outdir.mkdir(parents=True, exist_ok=True)
+
+        model = generate_sequence('/codes/starbot/run/huggpt2')
+        os.system(f'rm -rf {self.TMP_MODEL_DIR}/*')
+        model.save(self.TMP_MODEL_DIR + '/gpt2_saved_model', save_format='tf')
+        os.system(f'mv {self.TMP_MODEL_DIR}/gpt2_saved_model {outdir}')
+
+        return {
+            "gpt2": self.MODEL_DIR,
+        }
 
     def process(self, prompt: [str], message: str) -> str:
         raw_text = preprocess(prompt, message)
-        batch_size = 1
-        text = None
-        context_tokens = self.enc.encode(raw_text)
-        generated = 0
-        with self.graph.as_default(), self.sess.as_default():
-            out = self.sess.run(self.output, feed_dict={
-                self.context: [context_tokens for _ in range(batch_size)]
-            })[:, len(context_tokens):]
-        for i in range(batch_size):
-            generated += 1
-            text = self.enc.decode(out[i])
+        context_tokens = tf.constant(self.tokennizer.encode(raw_text))[None, :]
+        ids = self.generator(context_tokens)
+        text = self.tokennizer.decode(ids.numpy().tolist()[0])[len(raw_text):]
 
         return text
+
+
+class generate_sequence(tf.keras.Model):
+    def __init__(self, model_dir):
+        super(generate_sequence, self).__init__()
+        self.model = TFGPT2Model.from_pretrained(model_dir)
+
+    @tf.function
+    def call(self, inputs):
+        generated = inputs
+        for _ in tf.range(self.length):
+            outputs = self.model(generated)
+            next_token_logits = outputs[0][:, -1, :]
+            next_token = tf.argmax(next_token_logits, axis=-1, output_type=tf.int32)
+            next_token = tf.reshape(next_token, (1, 1))
+            generated = tf.concat((generated, next_token), axis=-1)
+        return generated

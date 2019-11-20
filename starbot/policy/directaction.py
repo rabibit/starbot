@@ -62,7 +62,7 @@ class DirectAction(Policy):
             logger.info(f'user uttered:{Fg.red}{message.text}{reset}')
             logger.info(f'prompt is {Fg.red}{prompt}{reset}')
 
-            if prompt:
+            if prompt and prompt[0] not in ['used']:
                 gpt2out = self.gpt2_extractor.process(prompt, message.text)
                 logger.info(f'gpt2out:{Fg.red}{gpt2out}{reset}')
                 gpt2out = gpt2out.splitlines(keepends=False)[0]
@@ -87,7 +87,7 @@ class DirectAction(Policy):
     def persist(self, path: Text) -> None:
         logger.debug(f"path is {path}")
         os.system(f"mkdir -p '{path}'")
-        os.system(f"cp -r ../gpt2/* '{path}'")
+        os.system(f"cp -r /codes/starbot/run/huggpt2/* '{path}'")
         return None
 
     @classmethod

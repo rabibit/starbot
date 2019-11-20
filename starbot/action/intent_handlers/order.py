@@ -94,7 +94,10 @@ class SimpleOrderHandler(BaseFormHandler):
                 self.utter_message(f'请问你需要多少{form.thing}?')
             elif form.cart:
                 things = '，'.join([i["count"] + i['thing'] for i in form.cart])
-                self.utter_message(f'您要了{things}，请问你还需要其它吗？')
+                if from_gpt2out:
+                    self.utter_message(f'您要了{things}，请问你还需要其它吗？', prompt=['used'])
+                else:
+                    self.utter_message(f'您要了{things}，请问你还需要其它吗？')
             else:
                 self.utter_message("你有什么需要吗?")
             return False
@@ -160,7 +163,10 @@ class SimpleOrderHandler(BaseFormHandler):
             if fuzzy_thing:
                 form.thing = fuzzy_thing
             else:
-                self.utter_message("请问您还需要什么?")
+                if from_gpt2out:
+                    self.utter_message("请问您还需要什么?", prompt=['used'])
+                else:
+                    self.utter_message("请问您还需要什么?")
                 form.thing = None
             form.count = None
             return False
@@ -221,7 +227,10 @@ class SimpleOrderHandler(BaseFormHandler):
         else:
             cart.append({'thing': thing_complement if thing_complement else form.thing, 'count': count})
         form.cart = cart
-        self.utter_message(f"{form.count}{form.thing}，请问您还需要什么?")
+        if from_gpt2out:
+            self.utter_message(f"{form.count}{form.thing}，请问您还需要什么?", prompt=['used'])
+        else:
+            self.utter_message(f"{form.count}{form.thing}，请问您还需要什么?")
         form.thing = None
         form.count = None
         return False

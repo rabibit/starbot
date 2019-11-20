@@ -37,6 +37,7 @@ class BertForIntentAndNer(tf.keras.Model):
         self.ner3 = tf.keras.layers.Dense(num_ner_labels)
         self.ner_activation3 = tf.keras.layers.Activation('softmax', name='ner')
 
+    @tf.function
     def call(self, inputs):
         bert_embedding = self.bert(inputs)[0]
         intent_dense = self.intent1(bert_embedding[:, 0])
