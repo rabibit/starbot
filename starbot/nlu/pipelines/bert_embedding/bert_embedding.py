@@ -145,8 +145,7 @@ class BertEmbedding(EntityExtractor):
             self.ner_labels = LabelMap.load(Path(base_dir)/'ner_labels.json')
             self.intent_labels = LabelMap.load(Path(base_dir)/'intent_labels.json')
         self.vocab = load_vocab(self.config.vocab_file)
-        self.predictor = BertForIntentAndNer(len(self.intent_labels), len(self.ner_labels))
-        self.predictor.load_weights(str(base_dir/'saved_model_weights'))
+        self.predictor = tf.saved_model.load(str(base_dir/'saved_model'))
 
     def train(self,
               training_data: TrainingData,
@@ -168,16 +167,17 @@ class BertEmbedding(EntityExtractor):
         tf.logging.info("  Batch size = %d", self.config.train_batch_size)
         tf.logging.info("  Num steps = %d", num_train_steps)
 
-        intent_ner_model = BertForIntentAndNer(self.num_intent_labels, self.num_ner_labels)
-        if os.path.exists(self.config.tmp_model_dir):
-            intent_ner_model.load_weights(self.config.tmp_model_dir + '/saved_model_weights')
+        if os.path.exists(self.config.tmp_model_dir + 'saved_model'):
+            intent_ner_model = tf.saved_model.load(self.config.tmp_model_dir + '/saved_model')
+        else:
+            intent_ner_model = BertForIntentAndNer(self.num_intent_labels, self.num_ner_labels)
         intent_ner_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, epsilon=1e-08, clipnorm=1.0),
                                  loss={'output_1': 'categorical_crossentropy', 'output_2': 'categorical_crossentropy'},
-                                 loss_weights={'output_1': 1.0, 'output_2': 10.0},
+                                 loss_weights={'output_1': 1.0, 'output_2': 50.0},
                                  metrics=['accuracy'])
         train_x, train_y = self._batch_generator(all_features)
         early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_output_1_accuracy', mode='max',
-                                                          min_delta=0.1, verbose=1, patience=3)
+                                                          min_delta=0.05, verbose=1, patience=3)
         intent_ner_model.fit(train_x, train_y, validation_split=0.1, epochs=self.config.num_train_epochs,
                              callbacks=[early_stopping])
         self.model = intent_ner_model
@@ -271,12 +271,12 @@ class BertEmbedding(EntityExtractor):
             logger.error('Saving {}'.format(dst))
             shutil.copy(src, dst)
 
-        self.model.save_weights(self.config.tmp_model_dir + '/saved_model_weights')
+        self.model.save(self.config.tmp_model_dir + '/saved_model', save_format='tf')
         save(self.config.bert_config, outdir / self.CONFIG_NAME)
         save(self.config.vocab_file, outdir / self.VOCAB_NAME)
 
         self.ner_labels.save(outdir / 'ner_labels.json')
-        os.system(f'cp {self.config.tmp_model_dir}/* {outdir}')
+        os.system(f'cp -rf {self.config.tmp_model_dir}/saved_model {outdir}')
         self.intent_labels.save(outdir / 'intent_labels.json')
 
         return {
@@ -287,7 +287,7 @@ class BertEmbedding(EntityExtractor):
 
     def _predict(self, message_text: str) -> (str, List[Dict[Text, Any]]):
         """Take a sentence and return entities in json format"""
-        result = self.predictor.predict(self._create_single_feature_from_message(message_text))
+        result = self.predictor(self._create_single_feature_from_message(message_text))
         ner = result[1]
         ner_indexs = np.argmax(ner, axis=-1)
         ir = result[0]
