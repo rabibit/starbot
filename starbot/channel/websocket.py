@@ -36,6 +36,7 @@ class WebSocketInputServer(Thread):
     def __init__(self, channel):
         super().__init__()
         self.channel = channel
+        self.setDaemon(True)
 
     def run(self):
         logger.info("start websocket server on: {}".format(self.channel.port))
