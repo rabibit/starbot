@@ -18,6 +18,8 @@ def gelu(x):
     cdf = 0.5 * (1.0 + tf.tanh(
         (np.sqrt(2 / np.pi) * (x + 0.044715 * tf.pow(x, 3)))))
     return x * cdf
+
+
 class BertForIntentAndNer(tf.keras.Model):
     def __init__(self, num_intent_labels, num_ner_labels):
         super(BertForIntentAndNer, self).__init__()
@@ -37,7 +39,6 @@ class BertForIntentAndNer(tf.keras.Model):
         self.ner3 = tf.keras.layers.Dense(num_ner_labels)
         self.ner_activation3 = tf.keras.layers.Activation('softmax', name='ner')
 
-    @tf.function
     def call(self, inputs):
         bert_embedding = self.bert(inputs)[0]
         intent_dense = self.intent1(bert_embedding[:, 0])

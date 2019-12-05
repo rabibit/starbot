@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, Any, List, Text
+from typing import Any, Optional, Text, List
 from rasa.core.domain import Domain
 from rasa.core.featurizers import TrackerFeaturizer
 from rasa.core.policies.policy import Policy
@@ -88,10 +88,12 @@ class DirectAction(Policy):
         logger.debug(f"path is {path}")
         os.system(f"mkdir -p '{path}'")
         os.system(f"cp -r /codes/starbot/run/huggpt2/* '{path}'")
+        Gpt2Extractor.persist(path)
         return None
 
     @classmethod
-    def load(cls, path: Text) -> "DirectAction":
+    def load(cls,
+             path: Text) -> "DirectAction":
         slf = cls()
         slf.gpt2_extractor = Gpt2Extractor.load(path)
         return slf

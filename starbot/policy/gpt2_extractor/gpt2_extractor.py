@@ -2,10 +2,15 @@
 # -*- coding: utf-8 -*-
 
 import tensorflow as tf
-from transformers import GPT2Tokenizer, TFGPT2LMHeadModel as TFGPT2Model
+from transformers import GPT2Tokenizer, PretrainedConfig,  TFGPT2LMHeadModel as TFGPT2Model
 from typing import Any, Optional, Text, Dict
 from pathlib import Path
 import os
+import time
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def prepare_guide_words(items):
@@ -45,70 +50,99 @@ def preprocess(items, utter):
     return prepare_guide_words(items) + f'\n[{",".join(items)}]|{utter}='
 
 
+def get_past_shape(hparams, batch_size=None, sequence=None):
+    return [hparams.n_layer, batch_size, 2, hparams.n_head, sequence, hparams.n_embd // hparams.n_head]
+
+
 class Gpt2Extractor(object):
 
     MODEL_DIR = "gpt2"
     TMP_MODEL_DIR = "output/result_dir"
+    LENGTH = 15
+    PretrainedConfig.get_config = PretrainedConfig.to_dict
 
-    def __init__(self, tokennizer: GPT2Tokenizer, generator, length: int):
+    def __init__(self, tokennizer: GPT2Tokenizer, generator):
         self.tokennizer = tokennizer
         self.generator = generator
-        self.length = length
 
     @classmethod
     def load(cls,
-             meta: Dict[Text, Any],
              model_dir: Optional[Text] = None,
              ) -> 'Gpt2Extractor':
         # tokennizer = GPT2Tokenizer.from_pretrained('gpt2-medium')
         # model = TFGPT2Model.from_pretrained('gpt2-medium')
         # tokennizer.save_pretrained('/codes/starbot/run/huggpt2')
         # model.save_pretrained('/codes/starbot/run/huggpt2')
-        tokennizer = GPT2Tokenizer.from_pretrained('/codes/starbot/run/huggpt2')
-        generator = tf.saved_model.load(str(Path(model_dir)/meta['gpt2']) + '/gpt2_saved_model')
+        tokennizer = GPT2Tokenizer.from_pretrained(model_dir)
+        start = time.time()
+        # generator = tf.saved_model.load(str(Path(model_dir)/Gpt2Extractor.MODEL_DIR) + '/gpt2_saved_model')
+        generator = get_model(model_dir, Gpt2Extractor.LENGTH)
+        end = time.time()
+        logger.error(f'used {end - start}s to get ner')
         # model = TFGPT2Model.from_pretrained(model_dir)
-        return cls(tokennizer, generator, 20)
+        return cls(tokennizer, generator)
 
-    def persist(self,
-                file_name: Text,
-                model_dir: Text) -> Optional[Dict[Text, Any]]:
+    @staticmethod
+    def persist(model_dir: Text) -> None:
         """Persist this model into the passed directory.
 
         Returns the metadata necessary to load the model again."""
         # 将bert最新checkpoint拷贝到rasa模型输出目录
-        outdir = Path(model_dir)/self.MODEL_DIR
+        outdir = Path(model_dir)/Gpt2Extractor.MODEL_DIR
         outdir.mkdir(parents=True, exist_ok=True)
 
-        model = generate_sequence('/codes/starbot/run/huggpt2')
-        os.system(f'rm -rf {self.TMP_MODEL_DIR}/*')
-        model.save(self.TMP_MODEL_DIR + '/gpt2_saved_model', save_format='tf')
-        os.system(f'mv {self.TMP_MODEL_DIR}/gpt2_saved_model {outdir}')
-
-        return {
-            "gpt2": self.MODEL_DIR,
-        }
+        tokennizer = GPT2Tokenizer.from_pretrained(model_dir)
+        model = get_model(model_dir, Gpt2Extractor.LENGTH)
+        tf.keras.backend.set_learning_phase(1)
+        context_tokens = tf.constant(tokennizer.encode('你好小智'))[None, :]
+        model.predict(context_tokens)
+        os.system(f'rm -rf {Gpt2Extractor.TMP_MODEL_DIR}/*')
+        model.save(Gpt2Extractor.TMP_MODEL_DIR + '/gpt2_saved_model', save_format='tf')
+        os.system(f'mv {Gpt2Extractor.TMP_MODEL_DIR}/gpt2_saved_model {outdir}')
 
     def process(self, prompt: [str], message: str) -> str:
         raw_text = preprocess(prompt, message)
         context_tokens = tf.constant(self.tokennizer.encode(raw_text))[None, :]
+        start = time.time()
         ids = self.generator(context_tokens)
+        end = time.time()
+        logger.error(f'used {end - start}s to get ner')
         text = self.tokennizer.decode(ids.numpy().tolist()[0])[len(raw_text):]
 
         return text
 
 
-class generate_sequence(tf.keras.Model):
-    def __init__(self, model_dir):
-        super(generate_sequence, self).__init__()
-        self.model = TFGPT2Model.from_pretrained(model_dir)
+def get_model(model_dir, length):
+    model = TFGPT2Model.from_pretrained(model_dir)
 
-    @tf.function
-    def call(self, inputs):
-        generated = inputs
-        for _ in tf.range(self.length):
-            outputs = self.model(generated)
-            next_token_logits = outputs[0][:, -1, :]
+    class generate_sequence(tf.keras.Model):
+        def __init__(self, model, length):
+            super(generate_sequence, self).__init__()
+            self.model = model
+            self.length = length
+
+        @tf.function(input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.int32),
+                                        tf.TensorSpec(shape=get_past_shape(model.config), dtype=tf.float32)])
+        def _predict(self, inputs, past):
+            generated = inputs
+            past = tf.unstack(past)
+            past = tuple(past)
+            for _ in tf.range(self.length - 1):
+                outputs, past = self.model(generated[:, -1:], past=past)
+                next_token_logits = outputs[:, -1, :]
+                next_token = tf.argmax(next_token_logits, axis=-1, output_type=tf.int32)
+                next_token = tf.reshape(next_token, (1, 1))
+                generated = tf.concat((generated, next_token), axis=-1)
+            return generated
+
+        @tf.function(input_signature=[tf.TensorSpec(shape=[None, None], dtype=tf.int32)])
+        def call(self, inputs):
+            generated = inputs
+            outputs, past = self.model(generated)
+            next_token_logits = outputs[:, -1, :]
             next_token = tf.argmax(next_token_logits, axis=-1, output_type=tf.int32)
             next_token = tf.reshape(next_token, (1, 1))
             generated = tf.concat((generated, next_token), axis=-1)
-        return generated
+            return self._predict(generated, tf.stack(past))
+
+    return generate_sequence(model, length)
