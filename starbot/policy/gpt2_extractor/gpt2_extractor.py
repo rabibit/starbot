@@ -58,7 +58,7 @@ class Gpt2Extractor(object):
 
     MODEL_DIR = "gpt2"
     TMP_MODEL_DIR = "output/result_dir"
-    LENGTH = 15
+    LENGTH = 20
     PretrainedConfig.get_config = PretrainedConfig.to_dict
 
     def __init__(self, tokennizer: GPT2Tokenizer, generator):
@@ -77,8 +77,10 @@ class Gpt2Extractor(object):
         start = time.time()
         # generator = tf.saved_model.load(str(Path(model_dir)/Gpt2Extractor.MODEL_DIR) + '/gpt2_saved_model')
         generator = get_model(model_dir, Gpt2Extractor.LENGTH)
+        context_tokens = tf.constant(tokennizer.encode('你好小智'))[None, :]
+        generator(context_tokens)
         end = time.time()
-        logger.error(f'used {end - start}s to get ner')
+        logger.error(f'used {end - start}s to init gpt2')
         # model = TFGPT2Model.from_pretrained(model_dir)
         return cls(tokennizer, generator)
 
@@ -95,10 +97,10 @@ class Gpt2Extractor(object):
         model = get_model(model_dir, Gpt2Extractor.LENGTH)
         tf.keras.backend.set_learning_phase(1)
         context_tokens = tf.constant(tokennizer.encode('你好小智'))[None, :]
-        model.predict(context_tokens)
-        os.system(f'rm -rf {Gpt2Extractor.TMP_MODEL_DIR}/*')
-        model.save(Gpt2Extractor.TMP_MODEL_DIR + '/gpt2_saved_model', save_format='tf')
-        os.system(f'mv {Gpt2Extractor.TMP_MODEL_DIR}/gpt2_saved_model {outdir}')
+        # model.predict(context_tokens)
+        # os.system(f'rm -rf {Gpt2Extractor.TMP_MODEL_DIR}/*')
+        # model.save(Gpt2Extractor.TMP_MODEL_DIR + '/gpt2_saved_model', save_format='tf')
+        # os.system(f'mv {Gpt2Extractor.TMP_MODEL_DIR}/gpt2_saved_model {outdir}')
 
     def process(self, prompt: [str], message: str) -> str:
         raw_text = preprocess(prompt, message)
