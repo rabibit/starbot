@@ -15,6 +15,7 @@ from .greet import GreetHandler
 from .alarm_query import AlarmQueryHandler
 from .alarm_cancel import AlarmCancelHandler
 from .thanks import ThanksHandler
+from .agreement_price import AgreementPriceHandler
 
 
 handlers = [
@@ -22,6 +23,7 @@ handlers = [
     ThanksHandler,
     QuitHandler,
     WifiHandler,
+    AgreementPriceHandler,
     ByeHandler,
     AskIfFerryHandler,
     ChargerHandler,

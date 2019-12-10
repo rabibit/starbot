@@ -99,7 +99,7 @@ class SimpleOrderHandler(BaseFormHandler):
                 self.utter_message("你有什么需要吗?")
             return False
 
-        if self.tracker.latest_message.get('intent', {}).get('name') in {'ok', 'no'}:
+        if not gpt2out and self.tracker.latest_message.get('intent', {}).get('name') in {'ok', 'no'}:
             if not form.cart:
                 self.utter_message("你还没说你需要啥?")
                 return False
@@ -110,6 +110,7 @@ class SimpleOrderHandler(BaseFormHandler):
         counts = get_entities_from_message(self.tracker.latest_message, 'count')
         n_things = len(things)
         n_counts = len(counts)
+        thing_complement = None
         if n_things == n_counts and n_things >= 1:
             cart = self.context.get_slot('cart') or []
             fuzzy_thing = False
@@ -133,9 +134,12 @@ class SimpleOrderHandler(BaseFormHandler):
                             products.append(rt)
                     if product:
                         if len(products) == 1:
-                            thing = thing + '(' + products[0].name + ')'
+                            thing_complement = thing + '(' + products[0].name + ')'
                         else:
                             self.prompt_for_chosing(products, form)
+                            form.count = count
+                            if cart:
+                                self.context.set_slot('cart', cart)
                             return False
                     else:
                         self.utter_message("不好意思，我们这里没有{}".format(thing))
@@ -150,7 +154,7 @@ class SimpleOrderHandler(BaseFormHandler):
                         product['count'] = count
                         break
                 else:
-                    cart.append({'thing': thing, 'count': count})
+                    cart.append({'thing': thing_complement if thing_complement else thing, 'count': count})
                 self.utter_message(f'{count}{thing}')
             self.context.set_slot('cart', cart)
             if fuzzy_thing:
@@ -195,7 +199,7 @@ class SimpleOrderHandler(BaseFormHandler):
                     products.append(rt)
             if product:
                 if len(products) == 1:
-                    form.thing = form.thing + '(' + products[0].name + ')'
+                    thing_complement = form.thing + '(' + products[0].name + ')'
                 else:
                     self.prompt_for_chosing(products, form)
                     return False
@@ -215,7 +219,7 @@ class SimpleOrderHandler(BaseFormHandler):
                 product['count'] = count
                 break
         else:
-            cart.append({'thing': form.thing, 'count': count})
+            cart.append({'thing': thing_complement if thing_complement else form.thing, 'count': count})
         form.cart = cart
         self.utter_message(f"{form.count}{form.thing}，请问您还需要什么?")
         form.thing = None
@@ -225,8 +229,14 @@ class SimpleOrderHandler(BaseFormHandler):
     def commit(self):
         cart = self.form.cart or []
         things = ''
-        for thing in cart:
-            things += thing['thing']
+        if cart:
+            cart = [item['thing'] for item in cart]
+            last = cart[-1]
+            start = '，'.join(cart[:-1])
+            if start:
+                things = '和'.join([start, last])
+            else:
+                things = last
         self.utter_message("好的，您要的{}马上为您送过来".format(things))
 
     def cancel(self, force: bool):
