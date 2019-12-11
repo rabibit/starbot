@@ -288,7 +288,7 @@ class BertEmbedding(EntityExtractor):
 
     def _predict(self, message_text: str) -> (str, List[Dict[Text, Any]]):
         """Take a sentence and return entities in json format"""
-        result = self.predictor(self._create_single_feature_from_message(message_text))
+        result = self.predictor(self._create_single_feature_from_message(message_text), training=False)
         ner = result[1]
         ner_indexs = np.argmax(ner, axis=-1)
         ir = result[0]
