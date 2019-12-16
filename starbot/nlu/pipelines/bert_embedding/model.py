@@ -77,6 +77,7 @@ class TFBertSelfAttention(tf.keras.layers.Layer):
                                            kernel_initializer=get_initializer(config.initializer_range),
                                            name='value')
 
+        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name='LayerNorm')
         self.dropout = tf.keras.layers.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x, batch_size):
@@ -123,6 +124,7 @@ class TFBertSelfAttention(tf.keras.layers.Layer):
         context_layer = tf.reshape(context_layer,
                                    (batch_size, -1, self.all_head_size))  # (batch_size, seq_len_q, all_head_size)
 
+        context_layer = self.LayerNorm(context_layer)
         outputs = (context_layer, attention_probs) if self.output_attentions else (context_layer,)
         return outputs
 
@@ -150,6 +152,7 @@ class TFBertAttention(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super(TFBertAttention, self).__init__(**kwargs)
         self.self_attention = TFBertSelfAttention(config, name='self')
+        self.activation = layers.Activation(gelu)
         self.dense_output = TFBertSelfOutput(config, name='output')
         self.num_hidden_layers = config.num_hidden_layers
 
@@ -163,6 +166,7 @@ class TFBertAttention(tf.keras.layers.Layer):
 
         self_outputs = self.self_attention([input_tensor, attention_mask, head_mask], training=training)
         attention_output = self.dense_output([self_outputs[0], input_tensor], training=training)
+        attention_output = self.activation(attention_output)
         outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
         return outputs
 
