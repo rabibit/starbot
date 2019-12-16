@@ -8,6 +8,7 @@ import tensorflow as tf
 from queue import Queue
 from pathlib import Path
 import numpy as np
+import sklearn.metrics as sk
 
 from rasa.nlu.extractors import EntityExtractor
 from starbot.nlu.pipelines.bert_embedding.model import BertForIntentAndNer
@@ -179,6 +180,18 @@ class BertEmbedding(EntityExtractor):
                                                           min_delta=0.05, verbose=1, patience=10)
         intent_ner_model.fit(train_x, train_y, validation_split=0.1, epochs=self.config.num_train_epochs,
                              callbacks=[early_stopping])
+        logits = intent_ner_model(train_x)[0]
+        logits_right = tf.boolean_mask(logits, tf.equal(tf.argmax(logits, -1), tf.argmax(train_y[0], -1)))
+        s_right = tf.nn.softmax(logits_right)
+        s_right_prob = tf.reduce_max(s_right, axis=-1, keepdims=True)
+        logits_wrong = tf.boolean_mask(logits, tf.not_equal(tf.argmax(logits, -1), tf.argmax(train_y[0], -1)))
+        s_wrong = tf.nn.softmax(logits_wrong)
+        s_wrong_prob = tf.reduce_max(s_wrong, axis=-1, keepdims=True)
+        labels = np.zeros((s_right_prob.shape[0] + s_wrong_prob.shape[0]), dtype=np.int32)
+        labels[:s_right_prob.shape[0]] += 1
+        examples = np.squeeze(np.vstack((tf.reshape(s_right_prob, (-1, 1)), tf.reshape(s_wrong_prob, (-1, 1)))))
+        logger.error(f'AUROC: {sk.roc_auc_score(labels, examples)}')
+        logger.error(f'AUPR: {sk.average_precision_score(labels, examples)}')
         self.model = intent_ner_model
 
     def _pad(self, lst, v):
