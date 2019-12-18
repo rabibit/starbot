@@ -25,6 +25,23 @@ from starbot.nlu.pipelines.bert_embedding.dataset import Dataset, Sentence
 logger = logging.getLogger(__name__)
 
 
+def split_samples(smaples):
+    sample_indices = {202, 642, 313, 767, 132, 176, 128, 279, 496, 34, 658, 18, 259, 456, 471, 270, 786, 371, 496, 498,
+                      324, 28, 719, 463, 196, 333, 219, 633, 445, 338, 798, 339, 712, 665, 633, 768, 558, 803, 172, 131,
+                      306, 825, 742, 357, 545, 755, 76, 123, 2, 747, 399, 661, 110, 185, 161, 11, 371, 756, 279, 59,
+                      599, 748, 177, 745, 662, 511, 176, 485, 720, 379, 255, 656, 109, 732, 570, 211, 413, 153, 532,
+                      601, 240, 438, 80, 172}
+    train = []
+    evaluation = []
+    for i, sample in enumerate(smaples):
+        if i in sample_indices:
+            evaluation.append(sample)
+        else:
+            train.append(sample)
+
+    return train, evaluation
+
+
 def load_vocab(vocab_file):
     """Loads a vocabulary file into a dictionary."""
     vocab = collections.OrderedDict()
@@ -72,6 +89,20 @@ class Config:
 
     def __init__(self, config_dict):
         self.__dict__ = config_dict
+
+
+def f1(t, p):
+    score = sk.f1_score(t.numpy(), p.numpy(), average='macro')
+    return score
+
+
+def f1_score(y, pred):
+    y = tf.argmax(y, axis=-1)
+    y = tf.reshape(y, [-1])
+    pred = tf.argmax(pred, axis=-1)
+    pred = tf.reshape(pred, [-1])
+    score = tf.py_function(f1, [y, pred], tf.float32)
+    return score
 
 
 class BertEmbedding(EntityExtractor):
@@ -174,17 +205,19 @@ class BertEmbedding(EntityExtractor):
         intent_ner_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, epsilon=1e-08, clipnorm=1.0),
                                  loss={'output_1': 'categorical_crossentropy', 'output_2': 'categorical_crossentropy'},
                                  loss_weights={'output_1': 1.0, 'output_2': 70.0},
-                                 metrics=['accuracy'])
-        train_x, train_y = self._batch_generator(all_features)
+                                 metrics=['accuracy', f1_score])
+        training_data, eval_data = split_samples(all_features)
+        train_x, train_y = self._batch_generator(training_data)
+        eval_x, eval_y = self._batch_generator(eval_data)
         early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_output_1_accuracy', mode='max',
                                                           min_delta=0.05, verbose=1, patience=10)
-        intent_ner_model.fit(train_x, train_y, validation_split=0.1, epochs=self.config.num_train_epochs,
+        intent_ner_model.fit(train_x, train_y, validation_data=[eval_x, eval_y], epochs=self.config.num_train_epochs,
                              callbacks=[early_stopping])
-        logits = intent_ner_model(train_x)[0]
-        logits_right = tf.boolean_mask(logits, tf.equal(tf.argmax(logits, -1), tf.argmax(train_y[0], -1)))
+        logits = intent_ner_model(eval_x)[0]
+        logits_right = tf.boolean_mask(logits, tf.equal(tf.argmax(logits, -1), tf.argmax(eval_y[0], -1)))
         s_right = tf.nn.softmax(logits_right)
         s_right_prob = tf.reduce_max(s_right, axis=-1, keepdims=True)
-        logits_wrong = tf.boolean_mask(logits, tf.not_equal(tf.argmax(logits, -1), tf.argmax(train_y[0], -1)))
+        logits_wrong = tf.boolean_mask(logits, tf.not_equal(tf.argmax(logits, -1), tf.argmax(eval_y[0], -1)))
         s_wrong = tf.nn.softmax(logits_wrong)
         s_wrong_prob = tf.reduce_max(s_wrong, axis=-1, keepdims=True)
         labels = np.zeros((s_right_prob.shape[0] + s_wrong_prob.shape[0]), dtype=np.int32)
@@ -201,6 +234,14 @@ class BertEmbedding(EntityExtractor):
         else:
             return lst
 
+    def _fenci_pad(self, fenci_vec):
+        n = self.config.input_length - len(fenci_vec)
+        dim = len(fenci_vec[0])
+        if n > 0:
+            return fenci_vec + [[0]*dim] * n
+        else:
+            return fenci_vec
+
     def _create_int_feature(self, values):
         # return tf.train.Feature(int64_list=tf.train.Int64List(value=self._pad(list(values), 0)))
         return self._pad(list(values), 0)
@@ -212,15 +253,16 @@ class BertEmbedding(EntityExtractor):
             result.append(self.vocab.get(token, unk))
         return result
 
-    def _create_single_feature_from_message(self, message_text: str):
+    def _create_single_feature_from_message(self, message_text: str, fenci_vec: List[List[int]]):
         inputs = ['[CLS]'] + list(message_text) + ['[SEP]']
         input_ids = self.convert_tokens_to_ids(self._pad(inputs, '[PAD]'))
         input_mask = self._pad([1 for _ in inputs], 0)
+        fenci_vec = self._fenci_pad(fenci_vec)
 
         # features = {"input_ids": [input_ids],
         #             "input_mask": [input_mask]}
         # return features
-        return tf.constant([input_ids])
+        return [tf.constant([input_ids]), tf.constant([fenci_vec], dtype=tf.float32)]
 
     def _create_single_feature(self, example: Sentence, dataset: Dataset):
         inputs = example.chars
@@ -232,6 +274,7 @@ class BertEmbedding(EntityExtractor):
         ood_label_id = dataset.ood_label2id([intent_label])
         intent_label_id = dataset.intent_label2onehot(intent_label)
         seg_ids = [0 for _ in input_ids]
+        fenci_vec = self._fenci_pad(example.fenci_vec)
 
         features = {"input_ids": input_ids,
                     "input_mask": input_mask,
@@ -239,6 +282,7 @@ class BertEmbedding(EntityExtractor):
                     "ner_label_ids": ner_label_ids,
                     "intent_label_id": intent_label_id,
                     "ood_label_id": ood_label_id,
+                    "fenci_vec": fenci_vec,
                     }
         return features
 
@@ -250,18 +294,20 @@ class BertEmbedding(EntityExtractor):
 
     def _batch_generator(self, all_features):
         x = []
+        input_fencis = []
         y1 = []
         y2 = []
         np.random.shuffle(all_features)
         for feature in all_features:
             x.append(feature["input_ids"])
+            input_fencis.append(feature["fenci_vec"])
             y1.append(feature["intent_label_id"])
             y2.append(feature["ner_label_ids"])
         # return tf.constant(x, dtype=tf.int32), {'intent': tf.constant(y1, dtype=tf.int32),
-        return tf.constant(x), [tf.constant(y1), tf.constant(y2)]
+        return [tf.constant(x), tf.constant(input_fencis, dtype=tf.float32)], [tf.constant(y1), tf.constant(y2)]
 
     def process(self, message: Message, **kwargs: Any) -> None:
-        ir, ner, embedding = self._predict(message.text)
+        ir, ner, embedding = self._predict(message.text, message.get("tokens"))
         extracted = self.add_extractor_name(ner)
         message.set("entities", message.get("entities", []) + extracted,
                     add_to_output=True)
@@ -299,9 +345,9 @@ class BertEmbedding(EntityExtractor):
             "num_intent_labels": self.num_intent_labels,
         }
 
-    def _predict(self, message_text: str) -> (str, List[Dict[Text, Any]]):
+    def _predict(self, message_text: str, fenci_vec: List[List[int]]) -> (str, List[Dict[Text, Any]]):
         """Take a sentence and return entities in json format"""
-        result = self.predictor(self._create_single_feature_from_message(message_text), training=False)
+        result = self.predictor(self._create_single_feature_from_message(message_text, fenci_vec), training=False)
         ner = result[1]
         ner_indexs = np.argmax(ner, axis=-1)
         ir = result[0]

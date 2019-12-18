@@ -181,17 +181,17 @@ class Block(tf.keras.layers.Layer):
         self.normalizer1 = layers.LayerNormalization()
         self.normalizer2 = layers.LayerNormalization()
         self.normalizer3 = layers.LayerNormalization()
-        self.activation1 = layers.Activation(gelu)
-        self.activation2 = layers.Activation(gelu)
+        # self.activation1 = layers.Activation(gelu)
+        # self.activation2 = layers.Activation(gelu)
         self.activation3 = layers.Activation(gelu)
         self.intermediate = layers.Dense(2 * units)
         self.dense = layers.Dense(units)
 
     def call(self, inputs, **kwargs):
         output1 = self.normalizer1(inputs + self.attention(inputs))
-        output1 = self.activation1(output1)
+        # output1 = self.activation1(output1)
         output2 = self.normalizer2(self.intermediate(output1))
-        output2 = self.activation2(output2)
+        # output2 = self.activation2(output2)
         output3 = self.normalizer3(output1 + self.dense(output2))
         output = self.activation3(output3)
         return output
@@ -209,21 +209,27 @@ class BertForIntentAndNer(tf.keras.Model):
         # self.normalizer = layers.LayerNormalization()
         self.intent_block0 = Block(768)
         self.intent_block = Block(768)
+        self.fenci_embedding = layers.Dense(768)
+        self.fenci_normalizer = layers.LayerNormalization()
         self.ner_block0 = Block(768)
         self.ner_block = Block(768)
-        self.dropout1 = tf.keras.layers.Dropout(0.1)
-        self.dropout2 = tf.keras.layers.Dropout(0.1)
+        self.dropout1 = layers.Dropout(0.1)
+        self.dropout2 = layers.Dropout(0.1)
         self.intent_linear = Linear(num_intent_labels)
         self.ner_linear = Linear(num_ner_labels)
 
     def call(self, inputs, **kwargs):
-        bert_hiddens = self.bert(inputs)[2]
+        bert_hiddens = self.bert(inputs[0])[2]
         bert_embedding = self.intent_block0(bert_hiddens[7])[0]
         bert_embedding = self.intent_block(bert_embedding)[0]
         bert_embedding = self.intent_block(bert_embedding)[0]
         bert_embedding = self.dropout1(bert_embedding, training=kwargs.get('training', False))
         intent_output = self.intent_linear(bert_embedding[:, 0])
-        bert_embedding = self.ner_block0(bert_hiddens[11])[0]
+        bert_embedding = bert_hiddens[11]
+        fenci_embedding = self.fenci_embedding(inputs[1])
+        fenci_embedding = self.fenci_normalizer(fenci_embedding)
+        bert_embedding = bert_embedding + tf.reshape(fenci_embedding, [-1, 128, 768])
+        bert_embedding = self.ner_block0(bert_embedding)[0]
         bert_embedding = self.ner_block(bert_embedding)[0]
         bert_embedding = self.ner_block(bert_embedding)[0]
         bert_embedding = self.ner_block(bert_embedding)[0]

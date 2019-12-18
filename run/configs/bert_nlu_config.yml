@@ -1,5 +1,6 @@
 language: "zh"
 pipeline:
+  - name: "starbot.ThulacTokenizer"
   - name: "starbot.BertEmbedding"
     # env
     use_tpu: false
@@ -17,7 +18,7 @@ pipeline:
     save_checkpoints_steps: 1000  # How often to save the model checkpoint.
     iterations_per_loop: 1000  # How many steps to make in each estimator call.
     train_batch_size: 32
-    num_train_epochs: 10
+    num_train_epochs: 30
     warmup_proportion: 0.1  # Proportion of training to perform linear learning rate warmup for.
     learning_rate: 5e-5
     eval_batch_size: 8

@@ -44,6 +44,7 @@ class Sentence(typing.NamedTuple):
     labels: List[str]
     intent: str
     message: Message
+    fenci_vec: List[List[int]]
 
 
 class Dataset:
@@ -91,7 +92,7 @@ class Dataset:
         assert not isinstance(labels, str)
         return [1.0 if 'other' == label else 0.0 for label in labels]
 
-
+"""
 def create_dataset(examples: Iterable[Message]) -> Dataset:
     sentences = []
     global_labels = {'O', '[CLS]', '[SEP]'}
@@ -121,6 +122,8 @@ def create_dataset(examples: Iterable[Message]) -> Dataset:
 def mark_message_with_labels(message_text, labels):
     entities = []
     name = None
+"""
+
 
 def create_dataset(examples: Iterable[Message]) -> Dataset:
     sentences = []
@@ -130,6 +133,7 @@ def create_dataset(examples: Iterable[Message]) -> Dataset:
     for msg in examples:
         entities = msg.data.get('entities') or []
         intent = msg.data.get('intent')
+        fenci_vec = msg.get('tokens')
         global_intents.add(intent)
         chars = list(msg.text)
         labels = ['O' for _ in chars]
@@ -144,7 +148,7 @@ def create_dataset(examples: Iterable[Message]) -> Dataset:
             global_labels.add("I-" + name)
         chars = ['[CLS]'] + chars + ['[SEP]']
         labels = ['[CLS]'] + labels + ['[SEP]']
-        sentences.append(Sentence(chars=chars, labels=labels, intent=intent, message=msg))
+        sentences.append(Sentence(chars=chars, labels=labels, intent=intent, message=msg, fenci_vec=fenci_vec))
     return Dataset(sentences, global_labels, global_intents)
 
 

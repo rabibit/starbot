@@ -12,6 +12,20 @@ from rasa.nlu.training_data import Message
 from rasa.nlu.training_data import TrainingData
 
 
+cixing = ['uw', 'i', 'ni', 'id', 'j', 'f', 'x', 'u', 'q', 'm', 'g', 'r', 'p', 'o', 'v', 'd', 's', 'c', 'n', 'k', 'ns', 'w', 'e', 'np', 'a', 'nz', 'h', 't']
+num_cixing = len(cixing)
+cixing_map = {}
+for i in range(len(cixing)):
+    cixing_map[cixing[i]] = i
+
+
+fenci = ['B', 'I', 'S']
+num_fenci = len(fenci)
+fenci_map = {}
+for i in range(len(fenci)):
+    fenci_map[fenci[i]] = i
+
+
 class ThulacTokenizer(Tokenizer, Component):
     provides = ["tokens"]
 
@@ -34,13 +48,26 @@ class ThulacTokenizer(Tokenizer, Component):
         message.set("tokens", self.tokenize(message.text))
 
     def tokenize(self, text):
-        # type: (Doc) -> List[Token]
+        # type: (Doc) -> List[List[int]]
         tokens = []
-        start = 0
 
-        for tk, _ in self.thulac.cut(text):
-            tokens.append(Token(tk, start))
-            start += len(tk)
+        print(text)
+        for a, b in self.thulac.cut(text):
+            if len(a) > 1:
+                fenci_vec = [0]*(num_cixing + num_fenci)
+                fenci_vec[fenci_map['B']] = 1
+                fenci_vec[cixing_map[b] + num_fenci] = 1
+                tokens.append(fenci_vec)
+                for sub_a in a[1:]:
+                    fenci_vec = [0] * (num_cixing + num_fenci)
+                    fenci_vec[fenci_map['I']] = 1
+                    fenci_vec[cixing_map[b] + num_fenci] = 1
+                    tokens.append(fenci_vec)
+            else:
+                fenci_vec = [0]*(num_cixing + num_fenci)
+                fenci_vec[fenci_map['B']] = 1
+                fenci_vec[cixing_map[b] + num_fenci] = 1
+                tokens.append(fenci_vec)
 
         return tokens
 
@@ -48,5 +75,6 @@ class ThulacTokenizer(Tokenizer, Component):
     def thulac(self):
         if not hasattr(self, '_thulac'):
             import thulac
-            self._thulac = thulac.thulac(seg_only=True)
+            self._thulac = thulac.thulac(user_dict='/codes/starbot/run/mydict', seg_only=False)
+            self._thulac._thulac__userDict.tag = 'n'  # chang uw to n
         return self._thulac
