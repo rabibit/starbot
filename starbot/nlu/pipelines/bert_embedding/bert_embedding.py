@@ -9,6 +9,7 @@ from queue import Queue
 from pathlib import Path
 import numpy as np
 import sklearn.metrics as sk
+import datetime
 
 from rasa.nlu.extractors import EntityExtractor
 from starbot.nlu.pipelines.bert_embedding.model import BertForIntentAndNer
@@ -26,11 +27,12 @@ logger = logging.getLogger(__name__)
 
 
 def split_samples(smaples):
-    sample_indices = {202, 642, 313, 767, 132, 176, 128, 279, 496, 34, 658, 18, 259, 456, 471, 270, 786, 371, 496, 498,
-                      324, 28, 719, 463, 196, 333, 219, 633, 445, 338, 798, 339, 712, 665, 633, 768, 558, 803, 172, 131,
-                      306, 825, 742, 357, 545, 755, 76, 123, 2, 747, 399, 661, 110, 185, 161, 11, 371, 756, 279, 59,
-                      599, 748, 177, 745, 662, 511, 176, 485, 720, 379, 255, 656, 109, 732, 570, 211, 413, 153, 532,
-                      601, 240, 438, 80, 172}
+    sample_indices = {606, 446, 706, 147, 639, 448, 784, 432, 658, 625, 194, 755, 92, 7, 239, 342, 152, 189, 83, 139,
+                      815, 120, 273, 416, 229, 796, 451, 605, 829, 421, 640, 579, 280, 761, 13, 838, 564, 768, 508, 19,
+                      401, 675, 665, 325, 574, 770, 24, 174, 707, 32, 64, 190, 319, 699, 313, 30, 99, 681, 573, 438,
+                      662, 570, 217, 69, 395, 198, 366, 552, 499, 587, 537, 351, 182, 676, 771, 381, 551, 637, 422, 343,
+                      801, 469, 390, 740}
+
     train = []
     evaluation = []
     for i, sample in enumerate(smaples):
@@ -105,6 +107,55 @@ def f1_score(y, pred):
     return score
 
 
+class RocAndPRCallback(tf.keras.callbacks.Callback):
+    """get the UNROC and UNPR
+
+    Arguments:
+        eval_x: the evaluation inputs
+        eval_y: the evaluation labels
+        ood_id: use to detect the ood
+    """
+
+    def __init__(self, eval_x, eval_y, ood_id):
+        super(RocAndPRCallback, self).__init__()
+        self.eval_x = eval_x
+        self.eval_y = eval_y
+        self.ood_id = tf.constant(ood_id, dtype=tf.int64)
+
+    def on_epoch_end(self, epoch, logs=None):
+        logits = self.model(self.eval_x)[0]
+        logits_right = tf.boolean_mask(logits, tf.equal(tf.argmax(logits, -1), tf.argmax(self.eval_y[0], -1)))
+        s_right = logits_right
+        s_right_prob = tf.reduce_max(s_right, axis=-1, keepdims=True)
+        logits_wrong = tf.boolean_mask(logits, tf.not_equal(tf.argmax(logits, -1), tf.argmax(self.eval_y[0], -1)))
+        s_wrong = logits_wrong
+        s_wrong_prob = tf.reduce_max(s_wrong, axis=-1, keepdims=True)
+        labels = np.zeros((s_right_prob.shape[0] + s_wrong_prob.shape[0]), dtype=np.int32)
+        labels[:s_right_prob.shape[0]] += 1
+        examples = np.squeeze(np.vstack((tf.reshape(s_right_prob, (-1, 1)), tf.reshape(s_wrong_prob, (-1, 1)))))
+        logger.error(f'examples: {examples}')
+        logger.error(f'epoch {epoch}, AUROC for misclassified: {sk.roc_auc_score(labels, examples)}')
+        logger.error(f'epoch {epoch}, AUPR for misclassified: {sk.average_precision_score(labels, examples)}')
+        logger.error(f'detect the ood')
+        mul_factor = tf.cast(tf.not_equal(self.ood_id, tf.argmax(logits, -1)), dtype=tf.float32)
+        mul_factor = tf.reshape(mul_factor, [-1, 1])
+        logits = logits * mul_factor
+        logits_right = tf.boolean_mask(logits, tf.equal(self.ood_id, tf.argmax(self.eval_y[0], -1)))
+        s_right = logits_right
+        s_right_prob = tf.reduce_max(s_right, axis=-1, keepdims=True)
+        logits_wrong = tf.boolean_mask(logits, tf.not_equal(self.ood_id, tf.argmax(self.eval_y[0], -1)))
+        s_wrong = logits_wrong
+        s_wrong_prob = tf.reduce_max(s_wrong, axis=-1, keepdims=True)
+        labels = np.zeros((s_right_prob.shape[0] + s_wrong_prob.shape[0]), dtype=np.int32)
+        labels[:s_right_prob.shape[0]] += 1
+        logger.error(f'labels: {labels}')
+        examples = np.squeeze(np.vstack((tf.reshape(s_right_prob, (-1, 1)), tf.reshape(s_wrong_prob, (-1, 1)))))
+        examples = -1 * examples
+        logger.error(f'examples: {examples}')
+        logger.error(f'epoch {epoch}, AUROC for ood: {sk.roc_auc_score(labels, examples)}')
+        logger.error(f'epoch {epoch}, AUPR for ood: {sk.average_precision_score(labels, examples)}')
+
+
 class BertEmbedding(EntityExtractor):
     provides = ["entities", "bert_embedding"]
     ner_labels: LabelMap
@@ -166,18 +217,18 @@ class BertEmbedding(EntityExtractor):
         # The model_dir will be removed by rasa after loaded.
         # So we need to move it to keep it live
         self.tmp_model_dir = tempfile.TemporaryDirectory()
-        base_dir = Path(self.tmp_model_dir.name)/meta['bert_ner_dir']
+        base_dir = Path(self.tmp_model_dir.name) / meta['bert_ner_dir']
         logger.info(f'moving bert model to {base_dir}')
-        shutil.move(str(Path(model_dir)/meta['bert_ner_dir']), base_dir)
+        shutil.move(str(Path(model_dir) / meta['bert_ner_dir']), base_dir)
 
-        self.config.bert_config = str(base_dir/self.CONFIG_NAME)
-        self.config.init_checkpoint = str(base_dir/self.MODEL_NAME)
-        self.config.vocab_file = str(base_dir/self.VOCAB_NAME)
+        self.config.bert_config = str(base_dir / self.CONFIG_NAME)
+        self.config.init_checkpoint = str(base_dir / self.MODEL_NAME)
+        self.config.vocab_file = str(base_dir / self.VOCAB_NAME)
         if load_labels:
-            self.ner_labels = LabelMap.load(Path(base_dir)/'ner_labels.json')
-            self.intent_labels = LabelMap.load(Path(base_dir)/'intent_labels.json')
+            self.ner_labels = LabelMap.load(Path(base_dir) / 'ner_labels.json')
+            self.intent_labels = LabelMap.load(Path(base_dir) / 'intent_labels.json')
         self.vocab = load_vocab(self.config.vocab_file)
-        self.predictor = tf.saved_model.load(str(base_dir/'saved_model'))
+        self.predictor = tf.saved_model.load(str(base_dir / 'saved_model'))
 
     def train(self,
               training_data: TrainingData,
@@ -209,22 +260,15 @@ class BertEmbedding(EntityExtractor):
         training_data, eval_data = split_samples(all_features)
         train_x, train_y = self._batch_generator(training_data)
         eval_x, eval_y = self._batch_generator(eval_data)
-        early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_output_1_accuracy', mode='max',
-                                                          min_delta=0.05, verbose=1, patience=10)
+        early_stopping = tf.keras.callbacks.EarlyStopping(monitor='val_output_2_f1_score', mode='max',
+                                                          min_delta=0.05, verbose=1, patience=50,
+                                                          restore_best_weights=True)
+        log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        tensor_board = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1, profile_batch=0)
+
+        ood_id = dataset.intent_label2id(['other'])[0]
         intent_ner_model.fit(train_x, train_y, validation_data=[eval_x, eval_y], epochs=self.config.num_train_epochs,
-                             callbacks=[early_stopping])
-        logits = intent_ner_model(eval_x)[0]
-        logits_right = tf.boolean_mask(logits, tf.equal(tf.argmax(logits, -1), tf.argmax(eval_y[0], -1)))
-        s_right = tf.nn.softmax(logits_right)
-        s_right_prob = tf.reduce_max(s_right, axis=-1, keepdims=True)
-        logits_wrong = tf.boolean_mask(logits, tf.not_equal(tf.argmax(logits, -1), tf.argmax(eval_y[0], -1)))
-        s_wrong = tf.nn.softmax(logits_wrong)
-        s_wrong_prob = tf.reduce_max(s_wrong, axis=-1, keepdims=True)
-        labels = np.zeros((s_right_prob.shape[0] + s_wrong_prob.shape[0]), dtype=np.int32)
-        labels[:s_right_prob.shape[0]] += 1
-        examples = np.squeeze(np.vstack((tf.reshape(s_right_prob, (-1, 1)), tf.reshape(s_wrong_prob, (-1, 1)))))
-        logger.error(f'AUROC: {sk.roc_auc_score(labels, examples)}')
-        logger.error(f'AUPR: {sk.average_precision_score(labels, examples)}')
+                             callbacks=[early_stopping, tensor_board, RocAndPRCallback(eval_x, eval_y, ood_id)])
         self.model = intent_ner_model
 
     def _pad(self, lst, v):
@@ -238,7 +282,7 @@ class BertEmbedding(EntityExtractor):
         n = self.config.input_length - len(fenci_vec)
         dim = len(fenci_vec[0])
         if n > 0:
-            return fenci_vec + [[0]*dim] * n
+            return fenci_vec + [[0] * dim] * n
         else:
             return fenci_vec
 
@@ -323,6 +367,7 @@ class BertEmbedding(EntityExtractor):
         # 将bert最新checkpoint拷贝到rasa模型输出目录
         outdir = Path(model_dir) / self.MODEL_DIR
         outdir.mkdir(parents=True, exist_ok=True)
+
         # bert_tmp = Path(self.config.tmp_model_dir)
 
         def save(src, dst):
@@ -359,7 +404,7 @@ class BertEmbedding(EntityExtractor):
         ner_labels = self.ner_labels.decode(ner_indexs.tolist()[0])
         print("message.text={}".format(message_text))
         for l, p in zip(self.intent_labels.labels, ir[0]):
-            bar = '#' * int(30*p)
+            bar = '#' * int(30 * p)
             print("{:<32}:{:.3f} {}".format(l, p, bar))
 
         entities = mark_message_with_labels(message_text, ner_labels)
@@ -380,7 +425,8 @@ class BertEmbedding(EntityExtractor):
         ir = result['intent']
         pred_label = self.intent_labels.decode(ir.tolist())[0]
         if sum < 0.9:
-            print('[{:.3f} {:<30} {:<15}/{:<15}] {}'.format(sum, "#" * int(30*float(sum)), pred_label, label, message_text))
+            print('[{:.3f} {:<30} {:<15}/{:<15}] {}'.format(sum, "#" * int(30 * float(sum)), pred_label, label,
+                                                            message_text))
 
     # =========== utils ============
     @property
@@ -418,7 +464,6 @@ def to_one_hot(vector, one_hot_size):
 
 
 def merge_entities(entities: []) -> list:
-    
     """
     
     :param entities: 
@@ -456,4 +501,3 @@ def merge_entities(entities: []) -> list:
             entities_merged = entity
     result.append(entities_merged)
     return result
-

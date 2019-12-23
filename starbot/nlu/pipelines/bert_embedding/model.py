@@ -188,7 +188,7 @@ class Block(tf.keras.layers.Layer):
         self.dense = layers.Dense(units)
 
     def call(self, inputs, **kwargs):
-        output1 = self.normalizer1(inputs + self.attention(inputs))
+        output1 = self.normalizer1(inputs + self.attention(inputs)[0])
         # output1 = self.activation1(output1)
         output2 = self.normalizer2(self.intermediate(output1))
         # output2 = self.activation2(output2)
@@ -220,19 +220,19 @@ class BertForIntentAndNer(tf.keras.Model):
 
     def call(self, inputs, **kwargs):
         bert_hiddens = self.bert(inputs[0])[2]
-        bert_embedding = self.intent_block0(bert_hiddens[7])[0]
-        bert_embedding = self.intent_block(bert_embedding)[0]
-        bert_embedding = self.intent_block(bert_embedding)[0]
+        bert_embedding = self.intent_block0(bert_hiddens[7])
+        bert_embedding = self.intent_block(bert_embedding)
+        bert_embedding = self.intent_block(bert_embedding)
         bert_embedding = self.dropout1(bert_embedding, training=kwargs.get('training', False))
         intent_output = self.intent_linear(bert_embedding[:, 0])
         bert_embedding = bert_hiddens[11]
         fenci_embedding = self.fenci_embedding(inputs[1])
         fenci_embedding = self.fenci_normalizer(fenci_embedding)
         bert_embedding = bert_embedding + tf.reshape(fenci_embedding, [-1, 128, 768])
-        bert_embedding = self.ner_block0(bert_embedding)[0]
-        bert_embedding = self.ner_block(bert_embedding)[0]
-        bert_embedding = self.ner_block(bert_embedding)[0]
-        bert_embedding = self.ner_block(bert_embedding)[0]
+        bert_embedding = self.ner_block0(bert_embedding)
+        bert_embedding = self.ner_block(bert_embedding)
+        bert_embedding = self.ner_block(bert_embedding)
+        bert_embedding = self.ner_block(bert_embedding)
         bert_embedding = self.dropout2(bert_embedding, training=kwargs.get('training', False))
         ner_output = self.ner_linear(bert_embedding[:, 1:])
         return [intent_output, ner_output]
