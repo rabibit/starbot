@@ -80,8 +80,7 @@ class Dataset:
 
     def intent_label2onehot(self, label):
         cnt = len(self.intent_labels.labels)
-        # if label == "other":
-        if False:
+        if label == "other":
             onehot = [1.0 / cnt] * cnt
             label_id = self.intent_labels.encode([label])[0]
             onehot[label_id] *= 1.1

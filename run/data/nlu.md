@@ -86,8 +86,10 @@
 - 错了
 - oh，no
 
-@time: 今晚|明晚|今天|后天|周末|周六|一号|二号|十一号|二十号|二号下午|后天下午
-@person: 张三|李四|王麻子|杨康|穆念慈|郭啸天|李萍|杨铁心|包惜弱|完颜洪烈|柯镇恶|朱聪|韩宝驹|南希仁|张阿生|全金发|韩小莹|刘女士|王先生
+@time: 今晚|明晚|今天|后天|周末|周六|一号|二号|十一号|二十号|二号下午|后天下午|半小时
+@person: 张三|李四|王麻子|杨康|穆念慈|郭啸天|李萍|杨铁心|包惜弱|完颜洪烈|柯镇恶|朱聪
+@thing: 勇闯天涯|怡宝|八宝粥|水杯|王老吉|羽毛球|乒乓球|玉米|青椒肉丝|胡萝卜
+@subject_of_phone_number: 老板娘|超市|经理|前台|客房
 
 ## intent:info
 - [房间](room_type)
@@ -587,7 +589,7 @@
 - 这个厕所的[垃圾桶](thing)好脏，能换[一个](count)吗
 - 那个[卷纸](thing)浸水了，麻烦换[一个](count)
 
-## intent: ask_eor_phone_number
+## intent: ask_for_phone_number
 - 喂，你好，你们这个[订餐](subject_of_phone_number)电话是多少
 - 喂，你这个[订餐](subject_of_phone_number)的电话是多少啦
 - [餐厅](subject_of_phone_number)电话是多少
