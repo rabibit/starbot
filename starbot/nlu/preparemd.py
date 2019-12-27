@@ -276,6 +276,6 @@ def convert(infilename, outfilename, repeat=1):
 
 
 if __name__ == '__main__':
-    convert("nlu.md", "tmp-nlu.md")
+    convert("../../run/data/nlu.md", "tmp-nlu.md")
     # print(converts("nlu.md"))
 
