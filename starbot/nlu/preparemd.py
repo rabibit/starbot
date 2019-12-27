@@ -25,7 +25,7 @@ class MDReader(MarkdownReader):
     def _parse_training_example(self, example):
         msg = super(MDReader, self)._parse_training_example(example)
         msg.questions = self.questions
-        msg.entity_space = self.entity_values
+        msg.entity_space = self.entity_values.copy()
         return msg
 
     def _parse_item(self, line):
@@ -37,7 +37,7 @@ class MDReader(MarkdownReader):
                 self.entity_values[key.strip()] = self.entity_values[values[1:].strip()]
             else:
                 values = values.split('|')
-                self.entity_values[key.strip()].extend([v.strip() for v in values])
+                self.entity_values[key.strip()] = [v.strip() for v in values]
             return
 
         if line.startswith("?"):
@@ -56,7 +56,6 @@ available_sections = [INTENT, SYNONYM, REGEX, LOOKUP]
 
 
 class MDWriter(MarkdownWriter):
-    extend_corpus = False
 
     def __init__(self, repeat=1):
         self.repeat = repeat
@@ -87,7 +86,7 @@ class MDWriter(MarkdownWriter):
     def _generate_message_md2(self, message):
         """generates markdown for a message object."""
         items = [self._generate_message_md(message.as_dict())]
-        if self.extend_corpus:
+        if 'true' in message.entity_space.get('_expand_entities', ''):
             for item in self._generate_extra_msg_md(message):
                 items.append(item)
             for md in items[:]:
