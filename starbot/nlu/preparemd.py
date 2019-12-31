@@ -3,6 +3,7 @@
 from rasa.nlu.training_data.formats.markdown import MarkdownReader, MarkdownWriter
 from rasa.nlu.training_data import Message
 from collections import defaultdict
+import re
 
 
 def intent(self):
@@ -10,6 +11,31 @@ def intent(self):
 
 
 Message.intent = property(intent)
+
+
+ent_regex = re.compile(
+    r"\[(?P<entity_text>[^\]]+)" r"\]\((?P<entity>[^:)]*?)" r"(?:\:(?P<value>[^)]+))?\)"
+)
+
+
+def _parse_training_example(self, example):
+    """Extract entities and synonyms, and convert to plain text."""
+    from rasa.nlu.training_data import Message
+
+    entities = self._find_entities_in_training_example(example)
+    plain_text = re.sub(ent_regex, lambda m: m.groupdict()["entity_text"], example)
+    self._add_synonyms(self, plain_text, entities)
+    message = Message(plain_text, {"intent": self.current_title})
+    if len(entities) > 0:
+        if entities[0]['entity'] == 'wrong' or entities[0]['entity'] == 'right':
+            message.set("modify_info", entities)
+        else:
+            message.set("entities", entities)
+    return message
+
+
+from types import MethodType
+MarkdownReader._parse_training_example = MethodType(_parse_training_example, MarkdownReader)
 
 
 class MDReader(MarkdownReader):
@@ -100,6 +126,9 @@ class MDWriter(MarkdownWriter):
         message = msgobj.as_dict()
         entities = sorted(message.get('entities', []),
                           key=lambda k: k['start'])
+        if not entities:
+            entities = sorted(message.get('modify_info', []),
+                              key=lambda k: k['start'])
 
         def yield_msgs(msg, prefix, pos, entities):
             if not entities:
@@ -197,51 +226,9 @@ class MDWriter(MarkdownWriter):
         text = message.get('text', "")
         entities = sorted(message.get('entities', []),
                           key=lambda k: k['start'])
-
-        pos = 0
-        for entity in entities:
-            md += text[pos:entity['start']]
-            md += self._generate_entity_md(text, entity)
-            pos = entity['end']
-
-        md += text[pos:]
-
-        return md
-
-    @staticmethod
-    def _generate_entity_md(text, entity):
-        """generates markdown for an entity object."""
-        entity_text = text[entity['start']:entity['end']]
-        entity_type = entity['entity']
-        if entity_text != entity['value']:
-            # add synonym suffix
-            entity_type += ":{}".format(entity['value'])
-
-        return '[{}]({})'.format(entity_text, entity_type)
-
-    @staticmethod
-    def _generate_section_header_md(section_type, title,
-                                    prepend_newline=True):
-        """generates markdown section header."""
-        prefix = "\n" if prepend_newline else ""
-        return prefix + "## {}:{}\n".format(section_type, title)
-
-    @staticmethod
-    def _generate_item_md(text):
-        """generates markdown for a list item."""
-        return "- {}\n".format(text)
-
-    @staticmethod
-    def _generate_fname_md(text):
-        """generates markdown for a lookup table file path."""
-        return "  {}\n".format(text)
-
-    def _generate_message_md(self, message):
-        """generates markdown for a message object."""
-        md = ''
-        text = message.get('text', "")
-        entities = sorted(message.get('entities', []),
-                          key=lambda k: k['start'])
+        if not entities:
+            entities = sorted(message.get('modify_info', []),
+                              key=lambda k: k['start'])
 
         pos = 0
         for entity in entities:
@@ -276,6 +263,6 @@ def convert(infilename, outfilename, repeat=1):
 
 
 if __name__ == '__main__':
-    convert("../../run/data/nlu.md", "tmp-nlu.md")
+    convert("nlu.md", "tmp-nlu.md")
     # print(converts("nlu.md"))
 

@@ -159,9 +159,11 @@ class RocAndPRCallback(tf.keras.callbacks.Callback):
 class BertEmbedding(EntityExtractor):
     provides = ["entities", "bert_embedding"]
     ner_labels: LabelMap
+    modify_info_labels: LabelMap
     intent_labels: LabelMap
     predictor: BertForIntentAndNer
     num_ner_labels: int
+    num_modify_info_labels: int
     num_intent_labels: int
     vocab: Dict[str, int]
     MODEL_DIR = "bert_ner"
@@ -226,6 +228,7 @@ class BertEmbedding(EntityExtractor):
         self.config.vocab_file = str(base_dir / self.VOCAB_NAME)
         if load_labels:
             self.ner_labels = LabelMap.load(Path(base_dir) / 'ner_labels.json')
+            self.modify_info_labels = LabelMap.load(Path(base_dir) / 'modify_info_labels.json')
             self.intent_labels = LabelMap.load(Path(base_dir) / 'intent_labels.json')
         self.vocab = load_vocab(self.config.vocab_file)
         self.predictor = tf.saved_model.load(str(base_dir / 'saved_model'))
@@ -238,6 +241,8 @@ class BertEmbedding(EntityExtractor):
         dataset = create_dataset(training_data.training_examples)
         self.ner_labels = dataset.ner_labels
         self.num_ner_labels = len(dataset.ner_labels)
+        self.modify_info_labels = dataset.modify_info_labels
+        self.num_modify_info_labels = len(dataset.modify_info_labels)
         self.intent_labels = dataset.intent_labels
         self.num_intent_labels = len(dataset.intent_labels)  # FIXME +1?
         all_features = self._prepare_features(dataset)
@@ -250,12 +255,14 @@ class BertEmbedding(EntityExtractor):
         tf.logging.info("  Batch size = %d", self.config.train_batch_size)
         tf.logging.info("  Num steps = %d", num_train_steps)
 
-        intent_ner_model = BertForIntentAndNer(self.num_intent_labels, self.num_ner_labels)
+        intent_ner_model = BertForIntentAndNer(self.num_intent_labels, self.num_ner_labels, self.num_modify_info_labels)
         if os.path.exists(self.config.tmp_model_dir):
             intent_ner_model.load_weights(self.config.tmp_model_dir + '/saved_model_weights')
         intent_ner_model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4, epsilon=1e-08, clipnorm=1.0),
-                                 loss={'output_1': 'categorical_crossentropy', 'output_2': 'categorical_crossentropy'},
-                                 loss_weights={'output_1': 1.0, 'output_2': 70.0},
+                                 loss={'output_1': 'categorical_crossentropy',
+                                       'output_2': 'categorical_crossentropy',
+                                       'output_3': 'categorical_crossentropy'},
+                                 loss_weights={'output_1': 1.0, 'output_2': 50.0, 'output_3': 50.0},
                                  metrics=['accuracy', f1_score])
         training_data, eval_data = split_samples(all_features)
         train_x, train_y = self._batch_generator(training_data)
@@ -314,6 +321,8 @@ class BertEmbedding(EntityExtractor):
         input_ids = self.convert_tokens_to_ids(self._pad(inputs, '[PAD]'))
         ner_labels = self._pad(example.labels, '[PAD]')
         ner_label_ids = dataset.ner_label2onehot(ner_labels)
+        modify_info_labels = self._pad(example.modify_info_labels, '[PAD]')
+        modify_info_label_ids = dataset.modify_info_label2onehot(modify_info_labels)
         intent_label = example.intent
         ood_label_id = dataset.ood_label2id([intent_label])
         intent_label_id = dataset.intent_label2onehot(intent_label)
@@ -327,6 +336,7 @@ class BertEmbedding(EntityExtractor):
                     "intent_label_id": intent_label_id,
                     "ood_label_id": ood_label_id,
                     "fenci_vec": fenci_vec,
+                    "modify_info_label_ids": modify_info_label_ids,
                     }
         return features
 
@@ -341,19 +351,24 @@ class BertEmbedding(EntityExtractor):
         input_fencis = []
         y1 = []
         y2 = []
+        y3 = []
         np.random.shuffle(all_features)
         for feature in all_features:
             x.append(feature["input_ids"])
             input_fencis.append(feature["fenci_vec"])
             y1.append(feature["intent_label_id"])
             y2.append(feature["ner_label_ids"])
+            y3.append(feature["modify_info_label_ids"])
         # return tf.constant(x, dtype=tf.int32), {'intent': tf.constant(y1, dtype=tf.int32),
-        return [tf.constant(x), tf.constant(input_fencis, dtype=tf.float32)], [tf.constant(y1), tf.constant(y2)]
+        return [tf.constant(x), tf.constant(input_fencis, dtype=tf.float32)], [tf.constant(y1), tf.constant(y2), tf.constant(y3)]
 
     def process(self, message: Message, **kwargs: Any) -> None:
-        ir, ner, embedding = self._predict(message.text, message.get("tokens"))
+        ir, ner, modify_infos, embedding = self._predict(message.text, message.get("tokens"))
         extracted = self.add_extractor_name(ner)
         message.set("entities", message.get("entities", []) + extracted,
+                    add_to_output=True)
+        extracted = self.add_extractor_name(modify_infos)
+        message.set("modify_info", message.get("modify_info", []) + extracted,
                     add_to_output=True)
         message.set("intent", ir, add_to_output=True)
         message.set("bert_embedding", embedding, add_to_output=True)
@@ -382,11 +397,13 @@ class BertEmbedding(EntityExtractor):
         save(self.config.vocab_file, outdir / self.VOCAB_NAME)
 
         self.ner_labels.save(outdir / 'ner_labels.json')
+        self.modify_info_labels.save(outdir / 'modify_info_labels.json')
         self.intent_labels.save(outdir / 'intent_labels.json')
 
         return {
             "bert_ner_dir": self.MODEL_DIR,
             "num_ner_labels": self.num_ner_labels,
+            "num_modify_info_labels": self.num_modify_info_labels,
             "num_intent_labels": self.num_intent_labels,
         }
 
@@ -395,6 +412,8 @@ class BertEmbedding(EntityExtractor):
         result = self.predictor(self._create_single_feature_from_message(message_text, fenci_vec), training=False)
         ner = result[1]
         ner_indexs = np.argmax(ner, axis=-1)
+        modify_info = result[2]
+        modify_info_indexs = np.argmax(modify_info, axis=-1)
         ir = result[0]
         ir_index = np.argmax(ir, axis=-1)
         ir_confidence = np.max(ir, axis=-1)
@@ -402,6 +421,7 @@ class BertEmbedding(EntityExtractor):
         print(f"ner indexs: {ner_indexs.tolist()}")
         ir_label = self.intent_labels.decode(ir_index.tolist())[0]
         ner_labels = self.ner_labels.decode(ner_indexs.tolist()[0])
+        modify_info_labels = self.modify_info_labels.decode(modify_info_indexs.tolist()[0])
         print("message.text={}".format(message_text))
         for l, p in zip(self.intent_labels.labels, ir[0]):
             bar = '#' * int(30 * p)
@@ -409,11 +429,13 @@ class BertEmbedding(EntityExtractor):
 
         entities = mark_message_with_labels(message_text, ner_labels)
         entities = merge_entities(entities)
+        modify_infos = mark_message_with_labels(message_text, modify_info_labels)
+        entities = merge_entities(modify_infos)
         ir = {
             'name': ir_label,
             'confidence': ir_confidence.item()
         }
-        return ir, entities, [0.0] * 768
+        return ir, entities, modify_infos, [0.0] * 768
 
     def test_predict(self, message_text, label):
         result = self.predictor.predict(self._create_single_feature_from_message(message_text))

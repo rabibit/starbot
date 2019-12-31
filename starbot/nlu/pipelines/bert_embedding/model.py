@@ -198,7 +198,7 @@ class Block(tf.keras.layers.Layer):
 
 
 class BertForIntentAndNer(tf.keras.Model):
-    def __init__(self, num_intent_labels, num_ner_labels, **kwargs):
+    def __init__(self, num_intent_labels, num_ner_labels, num_modify_info_labels, **kwargs):
         super(BertForIntentAndNer, self).__init__(**kwargs)
         # self.bert = TFBertModel.from_pretrained('bert-base-chinese')
         config = BertConfig.from_pretrained('/codes/starbot/run/hugcheckpoint')
@@ -213,10 +213,14 @@ class BertForIntentAndNer(tf.keras.Model):
         # self.fenci_normalizer = layers.LayerNormalization()
         self.ner_block0 = Block(768)
         self.ner_block = Block(768)
+        self.modify_block0 = Block(768)
+        self.modify_block = Block(768)
         self.dropout1 = layers.Dropout(0.1)
         self.dropout2 = layers.Dropout(0.1)
+        self.dropout3 = layers.Dropout(0.1)
         self.intent_linear = Linear(num_intent_labels)
         self.ner_linear = Linear(num_ner_labels)
+        self.modify_linear = Linear(num_modify_info_labels)
 
     def call(self, inputs, **kwargs):
         bert_hiddens = self.bert(inputs[0])[2]
@@ -235,6 +239,13 @@ class BertForIntentAndNer(tf.keras.Model):
         bert_embedding = self.ner_block(bert_embedding)
         bert_embedding = self.dropout2(bert_embedding, training=kwargs.get('training', False))
         ner_output = self.ner_linear(bert_embedding[:, 1:])
-        return [intent_output, ner_output]
+        bert_embedding = bert_hiddens[11]
+        bert_embedding = self.modify_block0(bert_embedding)
+        bert_embedding = self.modify_block(bert_embedding)
+        bert_embedding = self.modify_block(bert_embedding)
+        bert_embedding = self.modify_block(bert_embedding)
+        bert_embedding = self.dropout3(bert_embedding, training=kwargs.get('training', False))
+        modify_output = self.modify_linear(bert_embedding[:, 1:])
+        return [intent_output, ner_output, modify_output]
         
 

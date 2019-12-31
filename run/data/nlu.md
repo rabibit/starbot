@@ -1112,3 +1112,20 @@
 - 我现在有哪些闹钟
 - 我有哪些闹钟
 - 帮我看看有哪些闹钟
+
+@_expand_entities: true
+@wrong: 电风扇|加湿器|烟|电脑
+@right: 天籁|王萌|摩托|美国|中国
+## intent: modify_info
+- 我不要[苹果](wrong)
+- 不要[方便面](wrong)
+- 不是[啤酒](wrong)
+- 搞错了，不是[花生](wrong)
+- 我要的是[炒饭](right)，而不是[花生](wrong)
+- 我不要[苹果](wrong)，我要[螃蟹](right)
+- 不要[方便面](wrong)，要[蛋炒饭](right)
+- 不是[啤酒](wrong)，是[西瓜](right)
+- 搞错了，不是[花生](wrong)，我点的是[鲍鱼](right)
+- 把[小王](wrong)改成[张三](right)
+- 我要[小王](right)而不是[张三](wrong)
+@_expand_entities: false
