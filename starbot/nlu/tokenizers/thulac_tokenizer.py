@@ -51,7 +51,6 @@ class ThulacTokenizer(Tokenizer, Component):
         # type: (Doc) -> List[List[int]]
         tokens = []
 
-        print(text)
         for a, b in self.thulac.cut(text):
             if len(a) > 1:
                 fenci_vec = [0]*(num_cixing + num_fenci)

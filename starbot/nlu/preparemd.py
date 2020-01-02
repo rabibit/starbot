@@ -24,18 +24,24 @@ def _parse_training_example(self, example):
 
     entities = self._find_entities_in_training_example(example)
     plain_text = re.sub(ent_regex, lambda m: m.groupdict()["entity_text"], example)
-    self._add_synonyms(self, plain_text, entities)
+    self._add_synonyms(plain_text, entities)
     message = Message(plain_text, {"intent": self.current_title})
     if len(entities) > 0:
-        if entities[0]['entity'] == 'wrong' or entities[0]['entity'] == 'right':
-            message.set("modify_info", entities)
-        else:
-            message.set("entities", entities)
+        modify_infos = []
+        for i, entity in enumerate(entities):
+            if entity['entity'].startswith('!'):
+                tmp = entity.copy()
+                tmp['bak'] = entity['entity']
+                entities[i]['entity'] = entity['entity'][1:]
+                tmp['entity'] = 'wrong'
+                modify_infos.append(tmp)
+        if len(modify_infos) > 0:
+            message.set("modify_info", modify_infos)
+        message.set("entities", entities)
     return message
 
 
-from types import MethodType
-MarkdownReader._parse_training_example = MethodType(_parse_training_example, MarkdownReader)
+MarkdownReader._parse_training_example = _parse_training_example
 
 
 class MDReader(MarkdownReader):
@@ -126,9 +132,13 @@ class MDWriter(MarkdownWriter):
         message = msgobj.as_dict()
         entities = sorted(message.get('entities', []),
                           key=lambda k: k['start'])
-        if not entities:
-            entities = sorted(message.get('modify_info', []),
-                              key=lambda k: k['start'])
+        modify_infos = sorted(message.get('modify_info', []),
+                          key=lambda k: k['start'])
+        if entities:
+            for modify_info in modify_infos:
+                for entity in entities:
+                    if entity['value'] == modify_info['value']:
+                        entity['entity'] = modify_info['bak']
 
         def yield_msgs(msg, prefix, pos, entities):
             if not entities:
@@ -226,9 +236,13 @@ class MDWriter(MarkdownWriter):
         text = message.get('text', "")
         entities = sorted(message.get('entities', []),
                           key=lambda k: k['start'])
-        if not entities:
-            entities = sorted(message.get('modify_info', []),
+        modify_infos = sorted(message.get('modify_info', []),
                               key=lambda k: k['start'])
+        if entities:
+            for modify_info in modify_infos:
+                for entity in entities:
+                    if entity['value'] == modify_info['value']:
+                        entity['entity'] = modify_info['bak']
 
         pos = 0
         for entity in entities:

@@ -33,6 +33,10 @@ reg_str = r"""(百事|可口)(可乐)?
 |美年达
 |农夫果园
 |果粒橙
+|奔驰
+|宝马
+|电风扇
+|空调
 |统一方便面
 |康师傅方便面
 |康师傅
@@ -44,7 +48,7 @@ reg_str = r"""(百事|可口)(可乐)?
 result = db_orm_query_all(Inform)
 for rt in result:
     if rt.variety == 'product':
-        reg_str = reg_str + rt.name
+        reg_str = reg_str + '\n|' + rt.name
 
 pattern = re.compile(reg_str, re.X | re.I)
 
@@ -93,19 +97,27 @@ class GoodsExtractor(EntityExtractor):
             entities = merge_entities_goods(entities, brands)
             entities.sort(key=lambda x: x['start'])
             message.set("entities", entities, add_to_output=True)
+            modify_infos = message.get('modify_info') or []
+            modify_infos = merge_entities_goods(modify_infos, brands, keep=True)
+            modify_infos.sort(key=lambda x: x['start'])
+            message.set("modify_info", modify_infos, add_to_output=True)
 
 
-def merge_entities_goods(entities: list, goods: list) -> list:
+def merge_entities_goods(entities: list, goods: list, keep: bool=False) -> list:
     """
 
     :param entities: got from network
     :param goods: got form  regex
+    :param keep: if the entity name will be changed
     :return: entities modified by goods
     >>> merge_entities_goods([], [])
     []
 
     >>> merge_entities_goods([], [{'start': 4, 'end': 6, 'entity': 'goods', 'value': '可乐'}])
     [{'start': 4, 'end': 6, 'entity': 'thing', 'value': '可乐'}]
+
+    >>> merge_entities_goods([], [{'start': 4, 'end': 6, 'entity': 'goods', 'value': '可乐'}], keep=True)
+    []
 
     >>> merge_entities_goods([{'start': 0, 'end': 2, 'entity': 'goods', 'value': '百事'},
     ... {'start': 2, 'end': 4, 'entity': 'goods', 'value': '可乐'},
@@ -117,22 +129,43 @@ def merge_entities_goods(entities: list, goods: list) -> list:
     ... [{'start': 0, 'end': 5, 'entity': 'goods', 'value': '统一方便面'}])
     [{'start': 0, 'end': 5, 'entity': 'thing', 'value': '统一方便面'}]
 
+    >>> merge_entities_goods([{'start': 2, 'end': 5, 'entity': 'wrong', 'value': '方便面'}],
+    ... [{'start': 0, 'end': 5, 'entity': 'goods', 'value': '统一方便面'}], keep=True)
+    [{'start': 0, 'end': 5, 'entity': 'wrong', 'value': '统一方便面'}]
+
     >>> merge_entities_goods([{'start': 0, 'end': 4, 'entity': 'thing', 'value': '康师傅'}],
     ... [{'start': 0, 'end': 6, 'entity': 'goods', 'value': '康师傅方便面'}])
     [{'start': 0, 'end': 6, 'entity': 'thing', 'value': '康师傅方便面'}]
     """
 
     result = entities.copy()
-    for good in goods:
-        for entity in entities:
-            if good['start'] <= entity['start'] <= good['end'] or good['start'] <= entity['end'] <= good['end']:
-                result.remove(entity)
-        result.append({
-            "start": good['start'],
-            "end": good['end'],
-            "entity": 'thing',
-            "value": good['value']
-        })
+    if keep:
+        for good in goods:
+            entity_tmp = None
+            merge = False
+            for entity in entities:
+                if good['start'] <= entity['start'] <= good['end'] or good['start'] <= entity['end'] <= good['end']:
+                    entity_tmp = entity
+                    result.remove(entity)
+                    merge = True
+            if merge:
+                result.append({
+                    "start": good['start'],
+                    "end": good['end'],
+                    "entity": entity_tmp['entity'],
+                    "value": good['value']
+                })
+    else:
+        for good in goods:
+            for entity in entities:
+                if good['start'] <= entity['start'] <= good['end'] or good['start'] <= entity['end'] <= good['end']:
+                    result.remove(entity)
+            result.append({
+                "start": good['start'],
+                "end": good['end'],
+                "entity": 'thing',
+                "value": good['value']
+            })
     return result
 
 

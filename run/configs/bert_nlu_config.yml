@@ -1,5 +1,7 @@
 language: "zh"
 pipeline:
+  - name: "starbot.PrepareDataset"
+    train: "train.md"
   - name: "starbot.ThulacTokenizer"
   - name: "starbot.BertEmbedding"
     # env
@@ -41,5 +43,5 @@ pipeline:
 #    max_seq_length: 128
 #    batch_size: 32
 #    epochs: 10
-#  - name: "starbot.ClearEmbedding"
+  - name: "starbot.ClearEmbedding"
 #  - name: "starbot.CharFreqClassifier"

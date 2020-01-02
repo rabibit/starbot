@@ -224,12 +224,12 @@ class BertForIntentAndNer(tf.keras.Model):
 
     def call(self, inputs, **kwargs):
         bert_hiddens = self.bert(inputs[0])[2]
-        bert_embedding = self.intent_block0(bert_hiddens[7])
+        bert_embedding = self.intent_block0(bert_hiddens[6])
         bert_embedding = self.intent_block(bert_embedding)
         bert_embedding = self.intent_block(bert_embedding)
         bert_embedding = self.dropout1(bert_embedding, training=kwargs.get('training', False))
         intent_output = self.intent_linear(bert_embedding[:, 0])
-        bert_embedding = bert_hiddens[11]
+        bert_embedding = bert_hiddens[8]
         # fenci_embedding = self.fenci_embedding(inputs[1])
         # fenci_embedding = self.fenci_normalizer(fenci_embedding)
         # bert_embedding = bert_embedding + tf.reshape(fenci_embedding, [-1, 128, 768])

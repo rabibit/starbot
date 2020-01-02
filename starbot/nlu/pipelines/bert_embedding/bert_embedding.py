@@ -430,7 +430,7 @@ class BertEmbedding(EntityExtractor):
         entities = mark_message_with_labels(message_text, ner_labels)
         entities = merge_entities(entities)
         modify_infos = mark_message_with_labels(message_text, modify_info_labels)
-        entities = merge_entities(modify_infos)
+        modify_infos = merge_entities(modify_infos)
         ir = {
             'name': ir_label,
             'confidence': ir_confidence.item()
