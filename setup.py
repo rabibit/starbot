@@ -15,6 +15,7 @@ VERSION = '0.1.0'
 REQUIRED = ["rasa==1.1.4",
             "tensorflow-gpu==2.0.0",
             "gpt2==0.0.4",
+            "thulac",
             "transformers==2.1.1", 'websockets', 'sqlalchemy']
 
 EXTRAS = {}

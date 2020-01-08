@@ -79,7 +79,56 @@ class SimpleOrderHandler(BaseFormHandler):
 
         gpt2out = self.tracker.latest_message.get('gpt2out')
         from_gpt2out = False
-        print(f'gpt2out is {gpt2out}')
+        from_modify_info = False
+        intent = self.tracker.latest_message.get('intent', {}).get('name')
+        modify_info = self.tracker.latest_message.get('modify_info', [])
+        print(f'intent: {intent}, modify_info: {modify_info}')
+        wrong = None
+        right = None
+
+        if intent == 'modify_info':
+            for entity in get_entities_from_message(self.tracker.latest_message, 'thing'):
+                for info in modify_info:
+                    if entity == info['value']:
+                        wrong = entity
+                    else:
+                        right = entity
+
+        print(f'gpt2out: {gpt2out}, wrong: {wrong}, right: {right}')
+        if wrong:
+            gpt2out = None
+            if right:
+                form.thing = right
+                cart = self.context.get_slot('cart') or []
+                new_cart = cart.copy()
+                not_found = True
+                for product in cart:
+                    if product['thing'] == wrong:
+                        not_found = False
+                        new_cart.remove(product)
+                if not_found:
+                    self.utter_message(f'不好意思，{wrong}不在您的购物车里面')
+                    return False
+                else:
+                    form.cart = new_cart
+                    self.utter_message(f'好的, {wrong}换成{right}')
+                from_modify_info = True
+            else:
+                cart = self.context.get_slot('cart') or []
+                new_cart = cart.copy()
+                not_found = True
+                for product in cart:
+                    if product['thing'] == wrong:
+                        not_found = False
+                        new_cart.remove(product)
+                form.cart = new_cart
+                if not_found:
+                    self.utter_message(f'不好意思，{wrong}不在您的购物车里面')
+                    return False
+                else:
+                    self.utter_message(f'好的, {wrong}不要了，请问您还需要别的什么?')
+                return False
+
         if gpt2out:
             result = db_orm_query(Inform, name=gpt2out)
             for rt in result:
@@ -91,7 +140,26 @@ class SimpleOrderHandler(BaseFormHandler):
             if form.count is not None and form.thing is None:
                 self.utter_message(f'不好意思, 你刚才说需要{form.count}什么?')
             elif form.thing is not None and form.count is None:
-                self.utter_message(f'请问你需要多少{form.thing}?')
+                result = db_orm_query(Inform, name=form.thing)
+                for rt in result:
+                    if rt.variety == 'product':
+                        self.utter_message(f'请问你需要多少{form.thing}?')
+                        return False
+                result = db_orm_query(Inform, form.thing, form.thing)
+                product = False
+                products = []
+                for rt in result:
+                    if rt.variety == 'product':
+                        product = True
+                        products.append(rt)
+                if product:
+                    self.prompt_for_chosing(products, form)
+                    return False
+                else:
+                    self.utter_message("不好意思，我们这里没有{}".format(form.thing))
+                    form.thing = None
+                    form.count = None
+                    return False
             elif form.cart:
                 things = '，'.join([i["count"] + i['thing'] for i in form.cart])
                 if from_gpt2out:
@@ -171,7 +239,7 @@ class SimpleOrderHandler(BaseFormHandler):
             form.count = None
             return False
 
-        if (n_things, n_counts) not in ((0, 1), (1, 0)) and not from_gpt2out:
+        if (n_things, n_counts) not in ((0, 1), (1, 0)) and not from_gpt2out and not from_modify_info:
             self.skip()
             # self.skip_if_intended()
             # self.utter_message("你说啥，我没听清?")

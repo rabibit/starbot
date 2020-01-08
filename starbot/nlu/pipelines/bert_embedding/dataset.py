@@ -44,6 +44,8 @@ class Sentence(typing.NamedTuple):
     labels: List[str]
     intent: str
     message: Message
+    fenci_vec: List[List[int]]
+    modify_info_labels: List[str]
 
 
 class Dataset:
@@ -54,9 +56,11 @@ class Dataset:
     def __init__(self,
                  examples: Iterable[Sentence],
                  ner_labels: Iterable[str],
-                 intent_labels: Iterable[str]):
+                 intent_labels: Iterable[str],
+                 modify_info_labels: Iterable[str]):
         self.examples = list(examples)
         self.ner_labels = LabelMap(['[PAD]'] + sorted(ner_labels))
+        self.modify_info_labels = LabelMap(['[PAD]'] + sorted(modify_info_labels))
         self.intent_labels = LabelMap(['[PAD]'] + sorted(intent_labels))
 
     def ner_label2id(self, labels):
@@ -73,6 +77,16 @@ class Dataset:
             one_hot.append(onehot)
         return one_hot
 
+    def modify_info_label2onehot(self, labels):
+        cnt = len(self.modify_info_labels.labels)
+        label_ids = self.modify_info_labels.encode(labels)
+        one_hot = []
+        for label_id in label_ids[1:]:
+            onehot = [0.0] * cnt
+            onehot[label_id] = 1.0
+            one_hot.append(onehot)
+        return one_hot
+
     def intent_label2id(self, labels):
         assert not isinstance(labels, str)
         return self.intent_labels.encode(labels)
@@ -80,7 +94,10 @@ class Dataset:
     def intent_label2onehot(self, label):
         cnt = len(self.intent_labels.labels)
         if label == "other":
-            return [1.0 / cnt] * cnt
+            onehot = [1.0 / cnt] * cnt
+            label_id = self.intent_labels.encode([label])[0]
+            onehot[label_id] *= 1.1
+            return onehot
         else:
             label_id = self.intent_labels.encode([label])[0]
             onehot = [0.0] * cnt
@@ -91,7 +108,7 @@ class Dataset:
         assert not isinstance(labels, str)
         return [1.0 if 'other' == label else 0.0 for label in labels]
 
-
+"""
 def create_dataset(examples: Iterable[Message]) -> Dataset:
     sentences = []
     global_labels = {'O', '[CLS]', '[SEP]'}
@@ -121,18 +138,24 @@ def create_dataset(examples: Iterable[Message]) -> Dataset:
 def mark_message_with_labels(message_text, labels):
     entities = []
     name = None
+"""
+
 
 def create_dataset(examples: Iterable[Message]) -> Dataset:
     sentences = []
     global_labels = {'O', '[CLS]', '[SEP]'}
+    global_modify_info_labels = {'O', '[CLS]', '[SEP]'}
     global_intents = set()
 
     for msg in examples:
         entities = msg.data.get('entities') or []
+        modify_infos = msg.data.get('modify_info') or []
         intent = msg.data.get('intent')
+        fenci_vec = msg.get('tokens')
         global_intents.add(intent)
         chars = list(msg.text)
         labels = ['O' for _ in chars]
+        modify_info_labels = ['O' for _ in chars]
         for entity in entities:
             s = entity['start']
             e = entity['end']
@@ -142,10 +165,21 @@ def create_dataset(examples: Iterable[Message]) -> Dataset:
                 labels[i] = "I-" + name
             global_labels.add("B-" + name)
             global_labels.add("I-" + name)
+        for entity in modify_infos:
+            s = entity['start']
+            e = entity['end']
+            name = entity['entity']
+            modify_info_labels[s] = "B-" + name
+            for i in range(s+1, e):
+                modify_info_labels[i] = "I-" + name
+            global_modify_info_labels.add("B-" + name)
+            global_modify_info_labels.add("I-" + name)
         chars = ['[CLS]'] + chars + ['[SEP]']
         labels = ['[CLS]'] + labels + ['[SEP]']
-        sentences.append(Sentence(chars=chars, labels=labels, intent=intent, message=msg))
-    return Dataset(sentences, global_labels, global_intents)
+        modify_info_labels = ['[CLS]'] + modify_info_labels + ['[SEP]']
+        sentences.append(Sentence(chars=chars, labels=labels, intent=intent, message=msg, fenci_vec=fenci_vec,
+                                  modify_info_labels=modify_info_labels))
+    return Dataset(sentences, global_labels, global_intents, global_modify_info_labels)
 
 
 def mark_message_with_labels(message_text, labels):

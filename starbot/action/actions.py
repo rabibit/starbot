@@ -83,7 +83,6 @@ key_intents = {
     'where_is_laundry_room',
     'other_issue_needs_service',
     'air_conditioner_problem',
-    'checkout',
     'query_checkout_time',
     'urge',
     'account_issues',

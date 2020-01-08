@@ -77,6 +77,7 @@ class TFBertSelfAttention(tf.keras.layers.Layer):
                                            kernel_initializer=get_initializer(config.initializer_range),
                                            name='value')
 
+        self.LayerNorm = tf.keras.layers.LayerNormalization(epsilon=config.layer_norm_eps, name='LayerNorm')
         self.dropout = tf.keras.layers.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x, batch_size):
@@ -123,6 +124,7 @@ class TFBertSelfAttention(tf.keras.layers.Layer):
         context_layer = tf.reshape(context_layer,
                                    (batch_size, -1, self.all_head_size))  # (batch_size, seq_len_q, all_head_size)
 
+        context_layer = self.LayerNorm(context_layer)
         outputs = (context_layer, attention_probs) if self.output_attentions else (context_layer,)
         return outputs
 
@@ -150,6 +152,7 @@ class TFBertAttention(tf.keras.layers.Layer):
     def __init__(self, config, **kwargs):
         super(TFBertAttention, self).__init__(**kwargs)
         self.self_attention = TFBertSelfAttention(config, name='self')
+        self.activation = layers.Activation(gelu)
         self.dense_output = TFBertSelfOutput(config, name='output')
         self.num_hidden_layers = config.num_hidden_layers
 
@@ -163,6 +166,7 @@ class TFBertAttention(tf.keras.layers.Layer):
 
         self_outputs = self.self_attention([input_tensor, attention_mask, head_mask], training=training)
         attention_output = self.dense_output([self_outputs[0], input_tensor], training=training)
+        attention_output = self.activation(attention_output)
         outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
         return outputs
 
@@ -177,24 +181,24 @@ class Block(tf.keras.layers.Layer):
         self.normalizer1 = layers.LayerNormalization()
         self.normalizer2 = layers.LayerNormalization()
         self.normalizer3 = layers.LayerNormalization()
-        self.activation1 = layers.Activation(gelu)
-        self.activation2 = layers.Activation(gelu)
+        # self.activation1 = layers.Activation(gelu)
+        # self.activation2 = layers.Activation(gelu)
         self.activation3 = layers.Activation(gelu)
         self.intermediate = layers.Dense(2 * units)
         self.dense = layers.Dense(units)
 
     def call(self, inputs, **kwargs):
-        output1 = self.normalizer1(inputs + self.attention(inputs))
-        output1 = self.activation1(output1)
+        output1 = self.normalizer1(inputs + self.attention(inputs)[0])
+        # output1 = self.activation1(output1)
         output2 = self.normalizer2(self.intermediate(output1))
-        output2 = self.activation2(output2)
+        # output2 = self.activation2(output2)
         output3 = self.normalizer3(output1 + self.dense(output2))
         output = self.activation3(output3)
         return output
 
 
 class BertForIntentAndNer(tf.keras.Model):
-    def __init__(self, num_intent_labels, num_ner_labels, **kwargs):
+    def __init__(self, num_intent_labels, num_ner_labels, num_modify_info_labels, **kwargs):
         super(BertForIntentAndNer, self).__init__(**kwargs)
         # self.bert = TFBertModel.from_pretrained('bert-base-chinese')
         config = BertConfig.from_pretrained('/codes/starbot/run/hugcheckpoint')
@@ -205,26 +209,43 @@ class BertForIntentAndNer(tf.keras.Model):
         # self.normalizer = layers.LayerNormalization()
         self.intent_block0 = Block(768)
         self.intent_block = Block(768)
+        # self.fenci_embedding = layers.Dense(768)
+        # self.fenci_normalizer = layers.LayerNormalization()
         self.ner_block0 = Block(768)
         self.ner_block = Block(768)
-        self.dropout1 = tf.keras.layers.Dropout(0.1)
-        self.dropout2 = tf.keras.layers.Dropout(0.1)
+        self.modify_block0 = Block(768)
+        self.modify_block = Block(768)
+        self.dropout1 = layers.Dropout(0.1)
+        self.dropout2 = layers.Dropout(0.1)
+        self.dropout3 = layers.Dropout(0.1)
         self.intent_linear = Linear(num_intent_labels)
         self.ner_linear = Linear(num_ner_labels)
+        self.modify_linear = Linear(num_modify_info_labels)
 
     def call(self, inputs, **kwargs):
-        bert_hiddens = self.bert(inputs)[2]
-        bert_embedding = self.intent_block0(bert_hiddens[7])[0]
-        bert_embedding = self.intent_block(bert_embedding)[0]
-        bert_embedding = self.intent_block(bert_embedding)[0]
+        bert_hiddens = self.bert(inputs[0])[2]
+        bert_embedding = self.intent_block0(bert_hiddens[6])
+        bert_embedding = self.intent_block(bert_embedding)
+        bert_embedding = self.intent_block(bert_embedding)
         bert_embedding = self.dropout1(bert_embedding, training=kwargs.get('training', False))
         intent_output = self.intent_linear(bert_embedding[:, 0])
-        bert_embedding = self.ner_block0(bert_hiddens[11])[0]
-        bert_embedding = self.ner_block(bert_embedding)[0]
-        bert_embedding = self.ner_block(bert_embedding)[0]
-        bert_embedding = self.ner_block(bert_embedding)[0]
+        bert_embedding = bert_hiddens[8]
+        # fenci_embedding = self.fenci_embedding(inputs[1])
+        # fenci_embedding = self.fenci_normalizer(fenci_embedding)
+        # bert_embedding = bert_embedding + tf.reshape(fenci_embedding, [-1, 128, 768])
+        bert_embedding = self.ner_block0(bert_embedding)
+        bert_embedding = self.ner_block(bert_embedding)
+        bert_embedding = self.ner_block(bert_embedding)
+        bert_embedding = self.ner_block(bert_embedding)
         bert_embedding = self.dropout2(bert_embedding, training=kwargs.get('training', False))
         ner_output = self.ner_linear(bert_embedding[:, 1:])
-        return [intent_output, ner_output]
+        bert_embedding = bert_hiddens[11]
+        bert_embedding = self.modify_block0(bert_embedding)
+        bert_embedding = self.modify_block(bert_embedding)
+        bert_embedding = self.modify_block(bert_embedding)
+        bert_embedding = self.modify_block(bert_embedding)
+        bert_embedding = self.dropout3(bert_embedding, training=kwargs.get('training', False))
+        modify_output = self.modify_linear(bert_embedding[:, 1:])
+        return [intent_output, ner_output, modify_output]
         
 

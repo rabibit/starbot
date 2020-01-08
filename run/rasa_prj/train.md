@@ -173,8 +173,8 @@
 
 
 ## intent:change_info
-@wrong_time: =time
-@wrong_name: =person
+@!thing_time: =time
+@!thing_name: =person
 - 名字不对，应该是[大锤](person)
 - 时间错了，是[后天下午](time)
 - 你好，美女原来我是预定你们[二十号](time)是[一个](count)[标间](thing)，[一个](count)[单人](thing)，现在想订[两个](count)[标间](thing)
@@ -1113,19 +1113,31 @@
 - 我有哪些闹钟
 - 帮我看看有哪些闹钟
 
-@_expand_entities: true
-@wrong: 电风扇|加湿器|烟|电脑
-@right: 天籁|王萌|摩托|美国|中国
 ## intent: modify_info
-- 我不要[苹果](wrong)
-- 不要[方便面](wrong)
-- 不是[啤酒](wrong)
-- 搞错了，不是[花生](wrong)
-- 我要的是[炒饭](right)，而不是[花生](wrong)
-- 我不要[苹果](wrong)，我要[螃蟹](right)
-- 不要[方便面](wrong)，要[蛋炒饭](right)
-- 不是[啤酒](wrong)，是[西瓜](right)
-- 搞错了，不是[花生](wrong)，我点的是[鲍鱼](right)
-- 把[小王](wrong)改成[张三](right)
-- 我要[小王](right)而不是[张三](wrong)
-@_expand_entities: false
+- 我不要[美国](!thing)
+- 不要[方便面](!thing)
+- 不是[啤酒](!thing)
+- [充电器](!thing)不要了
+- [牙刷](!thing)不要了，我要[毛巾](thing)
+- 搞错了，不是[花生](!thing)
+- 我不要[苹果](!thing)，我要[螃蟹](thing)
+- 我不要[王萌](!thing)我要[螃蟹](thing)
+- 不要[方便面](!thing)，要[蛋炒饭](thing)
+- 不要[统一方便面](!thing)要[蛋炒饭](thing)
+- 不是[啤酒](!thing)，是[西瓜](thing)
+- 不是[啤酒](!thing)是[饼干](thing)
+- 搞错了，不是[花生](!thing)，我点的是[鲍鱼](thing)
+- 我不要[奔驰](!thing)了，帮我换成[宝马](thing)吧
+- 我不想要[口香糖](!thing)要[泡泡糖](thing)
+- 我不想要[口香糖](!thing)，我想要[泡泡糖](thing)
+- 我想把[手机](!thing)换成[汽车](thing)
+- 我要的是[烟](thing)，而不是[花生](!thing)
+- 我要的是[炒饭](thing)而不是[中国](!thing)
+- 要[方便面](thing)，不要[蛋炒饭](!thing)
+- 要[统一方便面](thing)不要[蛋炒饭](!thing)
+- 是[啤酒](thing)，不是[西瓜](!thing)
+- 是[啤酒](thing)不是[面包](!thing)
+- 搞错了，我点的是[鲍鱼](thing)，不是[花生](!thing)
+- 我要[摩托](thing)而不是[张三](!thing)
+- 我要[加湿器](thing)不要[电脑](!thing)
+- 我想要[番茄](thing)不想要[坚果](!thing)

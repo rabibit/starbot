@@ -97,14 +97,10 @@ def main():
         print("Usage ./train.py bert|mitie")
         sys.exit()
 
-    mdfile = base/'data'/'nlu.md'
     tmp_nlu_config_file = base/'tmp_nlu_config.yml'
 
     if not tmp_nlu_config_file.exists():
         shutil.copy(base/'configs'/nlu_config_file, tmp_nlu_config_file)
-
-    from starbot.nlu.preparemd import convert
-    convert(mdfile, "rasa_prj/data/nlu.md")
 
     os.system('cat {} configs/policy_config.yml > rasa_prj/config.yml'.format(tmp_nlu_config_file))
     from rasa.__main__ import main
