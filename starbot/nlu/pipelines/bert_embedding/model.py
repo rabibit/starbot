@@ -213,6 +213,7 @@ class BertForIntentAndNer(tf.keras.Model):
         # self.fenci_normalizer = layers.LayerNormalization()
         self.ner_block0 = Block(768)
         self.ner_block = Block(768)
+        self.ner_global = Block(768)
         self.modify_block0 = Block(768)
         self.modify_block = Block(768)
         self.dropout1 = layers.Dropout(0.1)
@@ -238,6 +239,8 @@ class BertForIntentAndNer(tf.keras.Model):
         bert_embedding = self.ner_block(bert_embedding)
         bert_embedding = self.ner_block(bert_embedding)
         bert_embedding = self.dropout2(bert_embedding, training=kwargs.get('training', False))
+        ner_global = self.ner_global(bert_embedding)[:, 0:1, :]
+        bert_embedding = ner_global + bert_embedding
         ner_output = self.ner_linear(bert_embedding[:, 1:])
         bert_embedding = bert_hiddens[11]
         bert_embedding = self.modify_block0(bert_embedding)
